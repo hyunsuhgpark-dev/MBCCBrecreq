@@ -1,0 +1,150 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* MBC Brand Colors */
+  --color-primary: #004F9A;
+  --color-primary-dark: #003A73;
+  --color-primary-light: #1A6DB5;
+  --color-accent: #E1002D;
+  --color-accent-dark: #B5002A;
+  --color-surface: #FFFFFF;
+  --color-muted: #F3F4F6;
+  --color-border: #E5E7EB;
+
+  /* Schedule Status Colors */
+  --color-conflict: #F97316;
+  --color-conflict-bg: #FFF7ED;
+  --color-conflict-border: #FDBA74;
+  --color-pending: #6B7280;
+  --color-pending-bg: #F9FAFB;
+  --color-pending-border: #D1D5DB;
+  --color-confirmed: #16A34A;
+  --color-confirmed-bg: #F0FDF4;
+  --color-confirmed-border: #86EFAC;
+  --color-rejected: #DC2626;
+  --color-rejected-bg: #FEF2F2;
+  --color-rejected-border: #FCA5A5;
+
+  --background: var(--color-surface);
+  --foreground: #111827;
+  --card: var(--color-surface);
+  --card-foreground: #111827;
+  --popover: var(--color-surface);
+  --popover-foreground: #111827;
+  --primary: var(--color-primary);
+  --primary-foreground: #FFFFFF;
+  --secondary: var(--color-muted);
+  --secondary-foreground: #374151;
+  --muted: var(--color-muted);
+  --muted-foreground: #6B7280;
+  --accent: var(--color-muted);
+  --accent-foreground: #111827;
+  --destructive: var(--color-accent);
+  --destructive-foreground: #FFFFFF;
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: var(--color-primary);
+  --radius: 0.625rem;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+body {
+  background-color: var(--color-muted);
+  color: var(--foreground);
+}
+
+/* LIVE 인디케이터 애니메이션 */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.9); }
+}
+
+.live-dot {
+  animation: live-pulse 1.2s ease-in-out infinite;
+}
+
+/* 인쇄 최적화 */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  body {
+    background: white;
+    font-size: 12pt;
+  }
+}
+
+/* 스크롤바 스타일 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-muted);
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* 캘린더 카드 공통 스타일 */
+.schedule-card {
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-left: 4px solid transparent;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.schedule-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.schedule-card.conflict {
+  background: var(--color-conflict-bg);
+  border-left-color: var(--color-conflict);
+  color: #9A3412;
+}
+
+.schedule-card.pending {
+  background: var(--color-pending-bg);
+  border-left-color: var(--color-pending);
+  color: #374151;
+}
+
+.schedule-card.confirmed {
+  background: var(--color-confirmed-bg);
+  border-left-color: var(--color-confirmed);
+  color: #14532D;
+}
+
+.schedule-card.rejected {
+  background: var(--color-rejected-bg);
+  border-left-color: var(--color-rejected);
+  color: #7F1D1D;
+}

@@ -1,0 +1,26 @@
+{
+  "name": "MBC 방송 일정 관리",
+  "short_name": "MBC 일정",
+  "description": "녹화의뢰서 기반 방송 일정 관리 및 스태프 승인 워크플로우",
+  "start_url": "/calendar",
+  "display": "standalone",
+  "background_color": "#004F9A",
+  "theme_color": "#004F9A",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "business"],
+  "lang": "ko"
+}
