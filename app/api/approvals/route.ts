@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
   if (!profile?.is_approved) return NextResponse.json({ error: '???' }, { status: 403 })
 
-  const allowedRoles = ['Staff_Office', 'Staff_SubControl', 'Admin']
+  const allowedRoles = ['ENG', 'CAM', 'Admin']
   if (!allowedRoles.includes(profile.role ?? '')) {
     return NextResponse.json({ error: '?? ??' }, { status: 403 })
   }
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
   }
 
   // ??? ?? ??
-  const part = profile.role === 'Staff_Office' ? 'office' : 'sub_control'
+  const part = profile.role === 'ENG' ? 'office' : 'sub_control'
 
   // ??/?? ??
   const updateData: Record<string, unknown> = {

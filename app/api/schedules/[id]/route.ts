@@ -63,7 +63,7 @@ export async function PATCH(
     const { data: staffProfiles } = await supabase
       .from('profiles')
       .select('id, fcm_token')
-      .in('role', ['Staff_Office', 'Staff_SubControl'])
+      .in('role', ['ENG', 'CAM'])
       .eq('is_approved', true)
 
     for (const sp of staffProfiles ?? []) {

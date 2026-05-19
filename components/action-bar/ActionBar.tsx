@@ -39,8 +39,8 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
 
   const isProducer = profile.role === 'Producer'
   const isOwner = schedule.created_by === profile.id
-  const isStaffOffice = profile.role === 'Staff_Office'
-  const isStaffSubControl = profile.role === 'Staff_SubControl'
+  const isStaffOffice = profile.role === 'ENG'
+  const isStaffSubControl = profile.role === 'CAM'
   const isAdmin = profile.role === 'Admin'
   const isStaff = isStaffOffice || isStaffSubControl
 

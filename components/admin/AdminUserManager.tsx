@@ -25,22 +25,22 @@ interface AdminUserManagerProps {
 
 const roleOptions: { value: UserRole; label: string }[] = [
   { value: 'Producer', label: 'PD / 제작진' },
-  { value: 'Staff_Office', label: '스태프 (기술국)' },
-  { value: 'Staff_SubControl', label: '스태프 (영상국)' },
+  { value: 'ENG', label: '스태프 (기술국)' },
+  { value: 'CAM', label: '스태프 (영상국)' },
   { value: 'Admin', label: '관리자' },
 ]
 
 const roleColors: Record<string, string> = {
   Admin: 'bg-red-100 text-red-700 border-red-200',
-  Staff_Office: 'bg-blue-100 text-blue-700 border-blue-200',
-  Staff_SubControl: 'bg-purple-100 text-purple-700 border-purple-200',
+  ENG: 'bg-blue-100 text-blue-700 border-blue-200',
+  CAM: 'bg-purple-100 text-purple-700 border-purple-200',
   Producer: 'bg-green-100 text-green-700 border-green-200',
 }
 
 const roleLabels: Record<string, string> = {
   Admin: '관리자',
-  Staff_Office: '기술국',
-  Staff_SubControl: '영상국',
+  ENG: '기술국',
+  CAM: '영상국',
   Producer: 'PD',
 }
 

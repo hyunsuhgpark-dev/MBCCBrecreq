@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
     const { data: staffProfiles } = await supabase
       .from('profiles')
       .select('id, fcm_token')
-      .in('role', ['Staff_Office', 'Staff_SubControl'])
+      .in('role', ['ENG', 'CAM'])
       .eq('is_approved', true)
 
     const staffTokens = (staffProfiles ?? [])

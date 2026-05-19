@@ -17,15 +17,15 @@ interface AppShellProps {
 
 const roleLabels: Record<string, string> = {
   Admin: '관리자',
-  Staff_Office: '기술국',
-  Staff_SubControl: '영상국',
+  ENG: '기술국',
+  CAM: '영상국',
   Producer: 'PD',
 }
 
 const roleColors: Record<string, string> = {
   Admin: 'bg-red-100 text-red-700',
-  Staff_Office: 'bg-blue-100 text-blue-700',
-  Staff_SubControl: 'bg-purple-100 text-purple-700',
+  ENG: 'bg-blue-100 text-blue-700',
+  CAM: 'bg-purple-100 text-purple-700',
   Producer: 'bg-green-100 text-green-700',
 }
 
