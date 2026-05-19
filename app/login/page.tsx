@@ -69,7 +69,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-2xl mb-4">
             <Tv className="w-8 h-8 text-[#004F9A]" />
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">MBC 방송 일정 관리</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">MBC충북 제작 일정</h1>
           <p className="text-blue-200 text-sm mt-1">녹화의뢰서 디지털 워크플로우</p>
         </div>
 

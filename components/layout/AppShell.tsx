@@ -74,7 +74,7 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
               <Tv className="w-5 h-5" />
             </div>
             <span className="font-bold text-base tracking-tight hidden sm:block">
-              MBC 방송일정
+              MBC충북 제작 일정
             </span>
           </Link>
 

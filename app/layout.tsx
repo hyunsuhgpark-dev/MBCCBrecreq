@@ -3,7 +3,7 @@ import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
 
 export const metadata: Metadata = {
-  title: 'MBC 방송 일정 관리 시스템',
+  title: 'MBC충북 제작 일정',
   description: '녹화의뢰서 기반 방송 일정 관리 및 스태프 승인 워크플로우 시스템',
   manifest: '/manifest.json',
   appleWebApp: {
