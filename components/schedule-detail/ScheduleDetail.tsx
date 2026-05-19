@@ -35,8 +35,8 @@ const statusConfig = {
 }
 
 const partLabels: Record<string, string> = {
-  office: '사무실',
-  sub_control: '부조정실',
+  office: '기술국',
+  sub_control: '영상국',
 }
 
 function fmt(dt: string | null | undefined, withDay = true) {

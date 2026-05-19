@@ -25,8 +25,8 @@ interface AdminUserManagerProps {
 
 const roleOptions: { value: UserRole; label: string }[] = [
   { value: 'Producer', label: 'PD / 제작진' },
-  { value: 'Staff_Office', label: '스태프 (사무실)' },
-  { value: 'Staff_SubControl', label: '스태프 (부조정실)' },
+  { value: 'Staff_Office', label: '스태프 (기술국)' },
+  { value: 'Staff_SubControl', label: '스태프 (영상국)' },
   { value: 'Admin', label: '관리자' },
 ]
 
@@ -39,8 +39,8 @@ const roleColors: Record<string, string> = {
 
 const roleLabels: Record<string, string> = {
   Admin: '관리자',
-  Staff_Office: '사무실',
-  Staff_SubControl: '부조정실',
+  Staff_Office: '기술국',
+  Staff_SubControl: '영상국',
   Producer: 'PD',
 }
 

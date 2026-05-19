@@ -17,8 +17,8 @@ interface AppShellProps {
 
 const roleLabels: Record<string, string> = {
   Admin: '관리자',
-  Staff_Office: '사무실',
-  Staff_SubControl: '부조정실',
+  Staff_Office: '기술국',
+  Staff_SubControl: '영상국',
   Producer: 'PD',
 }
 

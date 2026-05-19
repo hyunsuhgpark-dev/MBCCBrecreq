@@ -207,7 +207,7 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
                 <div className="flex items-center gap-2 mt-1">
                   {/* 파트별 승인 현황 체크리스트 */}
                   {schedule.approvals?.map((a) => {
-                    const partLabel = a.part === 'office' ? '사무실' : '부조정실'
+                    const partLabel = a.part === 'office' ? '기술국' : '영상국'
                     const isApproved = a.status === 'approved'
                     const isRejected = a.status === 'rejected'
                     return (
