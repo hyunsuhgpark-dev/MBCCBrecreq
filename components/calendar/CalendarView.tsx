@@ -279,7 +279,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                             <span className={cn(
                               'text-sm leading-tight truncate',
                               schedule.status === 'confirmed'
-                                ? 'font-bold text-[#003A8C]'
+                                ? 'font-bold text-[#312E81]'
                                 : 'font-medium'
                             )}>
                               {schedule.program_name}
