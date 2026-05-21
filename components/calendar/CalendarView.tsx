@@ -273,10 +273,15 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                             {schedule.is_live && (
                               <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shrink-0" />
                             )}
-                            <span className="text-sm font-semibold tabular-nums shrink-0 leading-tight">
+                            <span className="text-[10px] font-medium tabular-nums shrink-0 leading-tight opacity-70">
                               {startTime}
                             </span>
-                            <span className="text-sm font-medium leading-tight truncate">
+                            <span className={cn(
+                              'text-sm leading-tight truncate',
+                              schedule.status === 'confirmed'
+                                ? 'font-bold text-[#003A8C]'
+                                : 'font-medium'
+                            )}>
                               {schedule.program_name}
                             </span>
                           </div>
