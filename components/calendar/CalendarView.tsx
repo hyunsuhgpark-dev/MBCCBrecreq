@@ -278,9 +278,10 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                             </span>
                             <span className={cn(
                               'text-sm leading-tight truncate',
-                              schedule.status === 'confirmed'
-                                ? 'font-bold text-[#312E81]'
-                                : 'font-medium'
+                              schedule.status === 'confirmed' && 'font-bold text-[#065F46]',
+                              schedule.status === 'conflict'  && 'font-bold text-[#B45309]',
+                              schedule.status === 'rejected'  && 'font-bold text-[#B91C1C]',
+                              schedule.status === 'pending'   && 'font-medium',
                             )}>
                               {schedule.program_name}
                             </span>
