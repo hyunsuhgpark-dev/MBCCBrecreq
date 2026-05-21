@@ -5,9 +5,6 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { Tv, Eye, EyeOff, Loader2 } from 'lucide-react'
 
@@ -22,13 +19,9 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: form.email,
-          password: form.password,
-        })
+        const { error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password })
         if (error) throw error
         router.push('/calendar')
         router.refresh()
@@ -36,9 +29,7 @@ export default function LoginPage() {
         const { error } = await supabase.auth.signUp({
           email: form.email,
           password: form.password,
-          options: {
-            data: { full_name: form.fullName },
-          },
+          options: { data: { full_name: form.fullName } },
         })
         if (error) throw error
         toast.success('가입 완료! 관리자 승인 후 이용 가능합니다.')
@@ -52,127 +43,162 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#003A73] via-[#004F9A] to-[#1A6DB5] relative overflow-hidden">
-      {/* 배경 패턴 */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0"
-          style={{
-            backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 40px, white 40px, white 41px)',
-          }}
-        />
-      </div>
+    <div
+      className="min-h-screen flex items-center justify-center relative overflow-hidden"
+      style={{ backgroundColor: 'var(--bg-body)' }}
+    >
+      {/* 배경 미묘한 그라디언트 */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(74,158,232,0.07) 0%, transparent 70%)',
+        }}
+      />
 
-      {/* 로고 및 폼 카드 */}
-      <div className="relative z-10 w-full max-w-sm mx-4">
-        {/* 로고 영역 */}
+      <div className="relative z-10 w-full max-w-[360px] mx-4">
+
+        {/* 로고 */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-2xl mb-4">
-            <Tv className="w-8 h-8 text-[#004F9A]" />
+          <div
+            className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4"
+            style={{ backgroundColor: 'var(--accent)' }}
+          >
+            <Tv className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">MBC충북 제작 일정</h1>
-          <p className="text-blue-200 text-sm mt-1">녹화의뢰서 디지털 워크플로우</p>
+          <h1
+            className="text-[22px] font-bold tracking-tight"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            MBC충북 제작 일정
+          </h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+            녹화의뢰서 디지털 워크플로우
+          </p>
         </div>
 
         {/* 카드 */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
+        <div
+          className="rounded-2xl p-7 border"
+          style={{
+            backgroundColor: 'var(--bg-surface)',
+            borderColor: 'var(--border-default)',
+          }}
+        >
           {/* 탭 */}
-          <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
-            <button
-              onClick={() => setIsLogin(true)}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
-                isLogin ? 'bg-white shadow text-[#004F9A]' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              로그인
-            </button>
-            <button
-              onClick={() => setIsLogin(false)}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
-                !isLogin ? 'bg-white shadow text-[#004F9A]' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              회원가입
-            </button>
+          <div
+            className="flex rounded-xl p-1 mb-6"
+            style={{ backgroundColor: 'var(--bg-body)' }}
+          >
+            {['로그인', '회원가입'].map((label, i) => {
+              const active = i === 0 ? isLogin : !isLogin
+              return (
+                <button
+                  key={label}
+                  onClick={() => setIsLogin(i === 0)}
+                  className="flex-1 py-2 text-sm font-semibold rounded-lg transition-all"
+                  style={{
+                    backgroundColor: active ? 'var(--bg-elevated)' : 'transparent',
+                    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <div className="space-y-1.5">
-                <Label htmlFor="fullName" className="text-sm font-medium text-gray-700">
+                <label className="text-[12px] font-semibold tracking-wide" style={{ color: 'var(--text-secondary)' }}>
                   이름
-                </Label>
-                <Input
-                  id="fullName"
+                </label>
+                <input
                   type="text"
                   placeholder="홍길동"
                   value={form.fullName}
-                  onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
+                  onChange={(e) => setForm(f => ({ ...f, fullName: e.target.value }))}
                   required={!isLogin}
-                  className="h-12 text-base border-gray-200 focus:border-[#004F9A] focus:ring-[#004F9A]"
+                  className="w-full h-11 px-3.5 rounded-xl text-sm outline-none transition-all"
+                  style={{
+                    backgroundColor: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-primary)',
+                  }}
                 />
               </div>
             )}
 
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+              <label className="text-[12px] font-semibold tracking-wide" style={{ color: 'var(--text-secondary)' }}>
                 이메일
-              </Label>
-              <Input
-                id="email"
+              </label>
+              <input
                 type="email"
-                placeholder="name@mbc.co.kr"
+                placeholder="name@mbccb.co.kr"
                 value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
                 required
-                className="h-12 text-base border-gray-200 focus:border-[#004F9A] focus:ring-[#004F9A]"
+                className="w-full h-11 px-3.5 rounded-xl text-sm outline-none transition-all"
+                style={{
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-primary)',
+                }}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+              <label className="text-[12px] font-semibold tracking-wide" style={{ color: 'var(--text-secondary)' }}>
                 비밀번호
-              </Label>
+              </label>
               <div className="relative">
-                <Input
-                  id="password"
+                <input
                   type={showPw ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={form.password}
-                  onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                  onChange={(e) => setForm(f => ({ ...f, password: e.target.value }))}
                   required
                   minLength={6}
-                  className="h-12 text-base border-gray-200 focus:border-[#004F9A] focus:ring-[#004F9A] pr-12"
+                  className="w-full h-11 px-3.5 pr-11 rounded-xl text-sm outline-none transition-all"
+                  style={{
+                    backgroundColor: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-primary)',
+                  }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ color: 'var(--text-muted)' }}
                 >
-                  {showPw ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            <Button
+            <button
               type="submit"
               disabled={loading}
-              className="w-full h-12 text-base font-semibold bg-[#004F9A] hover:bg-[#003A73] text-white rounded-xl transition-all"
+              className="w-full h-11 text-sm font-bold rounded-xl transition-all text-white mt-2"
+              style={{ backgroundColor: loading ? 'var(--accent-dark)' : 'var(--accent)' }}
             >
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : isLogin ? '로그인' : '가입 신청'}
-            </Button>
+              {loading
+                ? <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                : isLogin ? '로그인' : '가입 신청'
+              }
+            </button>
           </form>
 
           {!isLogin && (
-            <p className="text-xs text-gray-400 text-center mt-4">
-              가입 후 관리자 승인이 완료되어야 서비스 이용이 가능합니다.
+            <p className="text-[11px] text-center mt-4" style={{ color: 'var(--text-muted)' }}>
+              가입 후 관리자 승인이 완료되어야 서비스 이용 가능합니다.
             </p>
           )}
         </div>
 
-        {/* 하단 브랜드 */}
-        <p className="text-center text-blue-200 text-xs mt-6 opacity-70">
+        <p className="text-center text-[11px] mt-5" style={{ color: 'var(--text-muted)' }}>
           MBC 방송문화진흥회 © 2026
         </p>
       </div>

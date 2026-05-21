@@ -3,51 +3,100 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── MBC NEW 폰트 ── */
+@font-face {
+  font-family: 'MBCNew';
+  src: url('/fonts/MBC NEW L.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'MBCNew';
+  src: url('/fonts/MBC NEW M.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'MBCNew';
+  src: url('/fonts/MBC NEW SB.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'MBCNew';
+  src: url('/fonts/MBC NEW B.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'MBCNew';
+  src: url('/fonts/MBC NEW EB.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── 다크 차콜 테마 CSS 변수 ── */
 :root {
-  /* MBC Brand Colors */
-  --color-primary: #004F9A;
-  --color-primary-dark: #003A73;
-  --color-primary-light: #1A6DB5;
-  --color-accent: #E1002D;
-  --color-accent-dark: #B5002A;
-  --color-surface: #FFFFFF;
-  --color-muted: #F3F4F6;
-  --color-border: #E5E7EB;
+  /* Surfaces */
+  --bg-body:     #141416;
+  --bg-surface:  #1E1E20;
+  --bg-elevated: #2A2A2C;
+  --bg-hover:    #333335;
 
-  /* Schedule Status Colors */
-  --color-conflict: #F97316;
-  --color-conflict-bg: #FFF7ED;
-  --color-conflict-border: #FDBA74;
-  --color-pending: #6B7280;
-  --color-pending-bg: #F9FAFB;
-  --color-pending-border: #D1D5DB;
-  --color-confirmed: #16A34A;
-  --color-confirmed-bg: #F0FDF4;
-  --color-confirmed-border: #86EFAC;
-  --color-rejected: #DC2626;
-  --color-rejected-bg: #FEF2F2;
-  --color-rejected-border: #FCA5A5;
+  /* Borders */
+  --border-subtle: #2A2A2C;
+  --border-default: #3A3A3C;
+  --border-strong: #4A4A4C;
 
-  --background: var(--color-surface);
-  --foreground: #111827;
-  --card: var(--color-surface);
-  --card-foreground: #111827;
-  --popover: var(--color-surface);
-  --popover-foreground: #111827;
-  --primary: var(--color-primary);
-  --primary-foreground: #FFFFFF;
-  --secondary: var(--color-muted);
-  --secondary-foreground: #374151;
-  --muted: var(--color-muted);
-  --muted-foreground: #6B7280;
-  --accent: var(--color-muted);
-  --accent-foreground: #111827;
-  --destructive: var(--color-accent);
+  /* Text */
+  --text-primary:   #F0F0F2;
+  --text-secondary: #A0A0A8;
+  --text-muted:     #606068;
+
+  /* Accent */
+  --accent:      #4A9EE8;
+  --accent-dark: #2B80CC;
+
+  /* Status */
+  --color-conflict:        #F59E0B;
+  --color-conflict-bg:     #2D1E00;
+  --color-conflict-border: #78450A;
+  --color-pending:         #6B7280;
+  --color-pending-bg:      #1E1E20;
+  --color-pending-border:  #3A3A3C;
+  --color-confirmed:       #34D399;
+  --color-confirmed-bg:    #07291C;
+  --color-confirmed-border: #065F46;
+  --color-rejected:        #F87171;
+  --color-rejected-bg:     #2D0A0A;
+  --color-rejected-border: #7F1D1D;
+
+  /* shadcn/ui 호환 변수 */
+  --background:          #1E1E20;
+  --foreground:          #F0F0F2;
+  --card:                #1E1E20;
+  --card-foreground:     #F0F0F2;
+  --popover:             #2A2A2C;
+  --popover-foreground:  #F0F0F2;
+  --primary:             #4A9EE8;
+  --primary-foreground:  #FFFFFF;
+  --secondary:           #2A2A2C;
+  --secondary-foreground: #A0A0A8;
+  --muted:               #2A2A2C;
+  --muted-foreground:    #A0A0A8;
+  --accent:              #2A2A2C;
+  --accent-foreground:   #F0F0F2;
+  --destructive:         #EF4444;
   --destructive-foreground: #FFFFFF;
-  --border: var(--color-border);
-  --input: var(--color-border);
-  --ring: var(--color-primary);
-  --radius: 0.625rem;
+  --border:              #3A3A3C;
+  --input:               #3A3A3C;
+  --ring:                #4A9EE8;
+  --radius:              0.625rem;
 }
 
 * {
@@ -56,95 +105,74 @@
   margin: 0;
 }
 
-html,
-body {
+html, body {
   max-width: 100vw;
   overflow-x: hidden;
-  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'MBCNew', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 400;
 }
 
 body {
-  background-color: var(--color-muted);
-  color: var(--foreground);
+  background-color: var(--bg-body);
+  color: var(--text-primary);
 }
 
-/* LIVE 인디케이터 애니메이션 */
+/* ── LIVE 인디케이터 ── */
 @keyframes live-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.9); }
 }
-
 .live-dot {
   animation: live-pulse 1.2s ease-in-out infinite;
 }
 
-/* 인쇄 최적화 */
+/* ── 인쇄 최적화 ── */
 @media print {
-  .no-print {
-    display: none !important;
-  }
-  .print-only {
-    display: block !important;
-  }
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
   body {
     background: white;
+    color: black;
     font-size: 12pt;
   }
 }
 
-/* 스크롤바 스타일 */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: var(--color-muted);
-}
-::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
-}
+/* ── 스크롤바 ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-body); }
+::-webkit-scrollbar-thumb { background: #3A3A3C; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #4A4A4C; }
 
-/* 캘린더 카드 공통 스타일 */
+/* ── 캘린더 카드 공통 ── */
 .schedule-card {
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 12px;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
-  border-left: 4px solid transparent;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: all 0.12s ease;
+  border-left: 3px solid transparent;
 }
-
 .schedule-card:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  filter: brightness(1.12);
 }
-
 .schedule-card.conflict {
   background: var(--color-conflict-bg);
   border-left-color: var(--color-conflict);
-  color: #9A3412;
+  color: #FCD34D;
 }
-
 .schedule-card.pending {
   background: var(--color-pending-bg);
   border-left-color: var(--color-pending);
-  color: #374151;
+  color: #9CA3AF;
 }
-
 .schedule-card.confirmed {
   background: var(--color-confirmed-bg);
   border-left-color: var(--color-confirmed);
-  color: #14532D;
+  color: #6EE7B7;
 }
-
 .schedule-card.rejected {
   background: var(--color-rejected-bg);
   border-left-color: var(--color-rejected);
-  color: #7F1D1D;
+  color: #FCA5A5;
 }
