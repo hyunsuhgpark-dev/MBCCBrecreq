@@ -54,20 +54,20 @@ export default function DateTimePicker({ value, onChange, error, className }: Da
   }
 
   const selectCls = cn(
-    'h-8 rounded border text-sm px-1 bg-white focus:outline-none focus:border-[#004F9A] cursor-pointer',
-    error ? 'border-red-400' : 'border-gray-300'
+    'h-8 rounded border text-sm px-1 bg-white text-slate-800 focus:outline-none focus:border-[#004F9A] cursor-pointer',
+    error ? 'border-red-400' : 'border-slate-400'
   )
 
   return (
-    <div className={cn('flex items-center gap-1.5 flex-wrap', className)}>
+    <div className={cn('flex items-center gap-1.5 flex-wrap [color-scheme:light]', className)}>
       {/* 날짜 */}
       <input
         type="date"
         value={date}
         onChange={(e) => { setDate(e.target.value); emit(e.target.value, ampm, hour, minute) }}
         className={cn(
-          'h-8 rounded border text-sm px-1.5 bg-white focus:outline-none focus:border-[#004F9A] cursor-pointer',
-          error ? 'border-red-400' : 'border-gray-300'
+          'h-8 rounded border text-sm px-1.5 bg-white text-slate-800 focus:outline-none focus:border-[#004F9A] cursor-pointer',
+          error ? 'border-red-400' : 'border-slate-400'
         )}
       />
 

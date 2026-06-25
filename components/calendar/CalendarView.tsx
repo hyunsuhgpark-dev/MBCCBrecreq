@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Schedule, Profile } from '@/lib/types'
 import {
@@ -77,6 +78,7 @@ const statusConfig = {
 }
 
 export default function CalendarView({ profile }: CalendarViewProps) {
+  const router = useRouter()
   const supabase = createClient()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [schedules, setSchedules] = useState<Schedule[]>([])
@@ -125,6 +127,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
 
   const totalThisMonth = schedules.length
   const confirmedThisMonth = schedules.filter(s => s.status === 'confirmed').length
+  const canCreate = profile.role === 'Producer' || profile.role === 'Admin'
+
+  function handleEmptyDayClick(date: Date, daySchedules: Schedule[]) {
+    if (!canCreate || daySchedules.length > 0) return
+    router.push(`/schedules/new?date=${format(date, 'yyyy-MM-dd')}`)
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-5">
@@ -265,10 +273,24 @@ export default function CalendarView({ profile }: CalendarViewProps) {
               const isTodayDate = isToday(date)
               const dow = date.getDay()
 
+              const isEmptyDay = daySchedules.length === 0
+
               return (
                 <div
                   key={idx}
-                  className="min-h-[128px] p-1.5 flex flex-col"
+                  role={canCreate && isEmptyDay ? 'button' : undefined}
+                  tabIndex={canCreate && isEmptyDay ? 0 : undefined}
+                  onClick={() => handleEmptyDayClick(date, daySchedules)}
+                  onKeyDown={(e) => {
+                    if (canCreate && isEmptyDay && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault()
+                      handleEmptyDayClick(date, daySchedules)
+                    }
+                  }}
+                  className={cn(
+                    'min-h-[128px] p-1.5 flex flex-col',
+                    canCreate && isEmptyDay && 'cursor-pointer hover:bg-[rgba(74,158,232,0.05)] transition-colors'
+                  )}
                   style={{
                     backgroundColor: !isCurrentMonth
                       ? 'rgba(0,0,0,0.15)'
@@ -310,7 +332,11 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                       const cfg = statusConfig[schedule.status]
                       const startTime = format(parseISO(schedule.broadcast_start), 'HH:mm')
                       return (
-                        <Link key={schedule.id} href={`/schedules/${schedule.id}`}>
+                        <Link
+                          key={schedule.id}
+                          href={`/schedules/${schedule.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <div
                             className="flex items-center gap-1 px-1.5 py-[3px] rounded-[5px] border-l-[3px] cursor-pointer transition-all duration-100 hover:brightness-125"
                             style={{
@@ -338,7 +364,11 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                       )
                     })}
                     {daySchedules.length > 3 && (
-                      <div className="text-[9px] pl-1 pt-0.5" style={{ color: 'var(--text-muted)' }}>
+                      <div
+                        className="text-[9px] pl-1 pt-0.5"
+                        style={{ color: 'var(--text-muted)' }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         +{daySchedules.length - 3}건
                       </div>
                     )}

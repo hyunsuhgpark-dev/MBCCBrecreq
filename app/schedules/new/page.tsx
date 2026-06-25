@@ -3,7 +3,14 @@ import { redirect } from 'next/navigation'
 import AppShell from '@/components/layout/AppShell'
 import ScheduleForm from '@/components/schedule-form/ScheduleForm'
 
-export default async function NewSchedulePage() {
+export default async function NewSchedulePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string }>
+}) {
+  const { date } = await searchParams
+  const prefillDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -27,7 +34,7 @@ export default async function NewSchedulePage() {
           <h1 className="text-2xl font-bold text-gray-900">녹화 의뢰서 작성</h1>
           <p className="text-gray-500 text-sm mt-1">아래 양식을 작성하여 녹화를 의뢰하세요.</p>
         </div>
-        <ScheduleForm />
+        <ScheduleForm prefillDate={prefillDate} />
       </div>
     </AppShell>
   )

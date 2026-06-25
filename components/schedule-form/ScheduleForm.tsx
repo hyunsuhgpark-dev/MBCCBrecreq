@@ -36,6 +36,7 @@ type FormValues = z.infer<typeof schema>
 interface ScheduleFormProps {
   initialData?: Partial<Schedule>
   scheduleId?: string
+  prefillDate?: string // YYYY-MM-DD
 }
 
 function toLocalIso(dt: string | null | undefined): string {
@@ -51,7 +52,7 @@ function computeDuration(start?: string | null, end?: string | null): number {
   return Math.max(1, Math.min(24, Math.round(diff / (1000 * 60 * 60))))
 }
 
-export default function ScheduleForm({ initialData, scheduleId }: ScheduleFormProps) {
+export default function ScheduleForm({ initialData, scheduleId, prefillDate }: ScheduleFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const isEdit = !!scheduleId
@@ -69,7 +70,11 @@ export default function ScheduleForm({ initialData, scheduleId }: ScheduleFormPr
     defaultValues: {
       program_name: initialData?.program_name ?? '',
       responsible_pd: initialData?.responsible_pd ?? '',
-      broadcast_start: toLocalIso(initialData?.broadcast_start),
+      broadcast_start: initialData?.broadcast_start
+        ? toLocalIso(initialData.broadcast_start)
+        : prefillDate
+          ? `${prefillDate}T09:00`
+          : '',
       duration_hours: computeDuration(initialData?.broadcast_start, initialData?.broadcast_end),
       broadcast_at: toLocalIso(initialData?.broadcast_at),
       venue: initialData?.venue ?? '',
@@ -148,8 +153,8 @@ export default function ScheduleForm({ initialData, scheduleId }: ScheduleFormPr
   const border = 'border border-slate-200'
   // 라벨 셀: 브랜드 블루 미묘한 틴트
   const labelCls = cn(border, 'bg-[#EEF3FB] px-3 py-2 font-bold text-[#1a3a6b] text-sm text-center flex items-center justify-center tracking-wider select-none')
-  // 값 셀
-  const valueCls = cn(border, 'px-3 py-2 bg-white')
+  // 값 셀 (전역 다크 테마 글자색 상속 방지)
+  const valueCls = cn(border, 'px-3 py-2 bg-white text-slate-800')
   // 텍스트 입력
   const inputCls = 'w-full bg-transparent border-0 border-b border-slate-200 rounded-none h-8 text-sm px-1 text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-[#004F9A] transition-colors'
 
@@ -163,7 +168,7 @@ export default function ScheduleForm({ initialData, scheduleId }: ScheduleFormPr
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="max-w-4xl mx-auto">
       {/* 양식 카드 */}
-      <div className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-[0_4px_24px_rgba(0,79,154,0.08)]">
+      <div className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-[0_4px_24px_rgba(0,79,154,0.08)] text-slate-800 [color-scheme:light]">
 
         {/* ── 제목 헤더 ── */}
         <div className="relative bg-[#004F9A] py-5 text-center overflow-hidden">
@@ -194,7 +199,7 @@ export default function ScheduleForm({ initialData, scheduleId }: ScheduleFormPr
                   <Checkbox
                     checked={checked}
                     onCheckedChange={(v) => setValue(key, !!v)}
-                    className="border-slate-400 data-[state=checked]:bg-[#004F9A] data-[state=checked]:border-[#004F9A]"
+                    className="border-slate-500 data-checked:bg-[#004F9A] data-checked:border-[#004F9A] data-checked:text-white"
                   />
                 </div>
               </div>
@@ -268,9 +273,9 @@ export default function ScheduleForm({ initialData, scheduleId }: ScheduleFormPr
                 <Checkbox
                   checked={watchLive}
                   onCheckedChange={(v) => setValue('is_live', !!v)}
-                  className="border-red-300 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
+                  className="border-red-500 data-checked:bg-red-600 data-checked:border-red-600 data-checked:text-white"
                 />
-                <span className="text-sm font-semibold text-red-500 group-hover:text-red-600 transition-colors">생방송</span>
+                <span className="text-sm font-bold text-red-600 group-hover:text-red-700 transition-colors">생방송</span>
               </label>
               {errors.broadcast_start && (
                 <p className="text-red-500 text-[11px] w-full">{errors.broadcast_start.message}</p>
