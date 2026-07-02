@@ -170,14 +170,21 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
   }
 
   /* ─── 스타일 상수 ─── */
-  // 셀 테두리: 부드러운 slate 계열
-  const border = 'border border-slate-200'
-  // 라벨 셀: 브랜드 블루 미묘한 틴트
-  const labelCls = cn(border, 'bg-[#EEF3FB] px-3 py-2 font-bold text-[#1a3a6b] text-sm text-center flex items-center justify-center tracking-wider select-none')
-  // 값 셀 (전역 다크 테마 글자색 상속 방지)
-  const valueCls = cn(border, 'px-3 py-2 bg-white text-slate-800')
-  // 텍스트 입력
-  const inputCls = 'w-full bg-transparent border-0 border-b border-slate-200 rounded-none h-8 text-sm px-1 text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-[#004F9A] transition-colors'
+  // 캘린더(다크 차콜 테마)와 동일한 CSS 변수 기반 스타일
+  const border = 'border border-[var(--border-default)]'
+  const labelCls = cn(
+    border,
+    'bg-[var(--bg-elevated)] px-3 py-2 font-bold text-[var(--text-secondary)] text-sm text-center flex items-center justify-center tracking-wider select-none'
+  )
+  const valueCls = cn(
+    border,
+    'px-3 py-2 bg-[var(--bg-surface)] text-[var(--text-primary)]'
+  )
+  const inputCls = cn(
+    'w-full bg-transparent border-0 border-b rounded-none h-8 text-sm px-1',
+    'text-[var(--text-primary)] placeholder:text-[var(--text-muted)]',
+    'border-[var(--border-default)] focus:outline-none focus:border-[var(--accent)] transition-colors'
+  )
 
   const checkboxItems = [
     { label: '중 계 차', key: 'use_relay_car' as const, checked: watchRelaycar },
@@ -189,38 +196,43 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="max-w-4xl mx-auto">
       {/* 양식 카드 */}
-      <div className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-[0_4px_24px_rgba(0,79,154,0.08)] text-slate-800 [color-scheme:light]">
+      <div
+        className={cn(
+          'rounded-2xl overflow-hidden border shadow-[0_10px_40px_rgba(0,0,0,0.35)]',
+          'bg-[var(--bg-surface)] border-[var(--border-default)] text-[var(--text-primary)]'
+        )}
+      >
 
         {/* ── 제목 헤더 ── */}
-        <div className="relative bg-[#004F9A] py-5 text-center overflow-hidden">
+        <div className="relative py-5 text-center overflow-hidden" style={{ backgroundColor: 'var(--bg-elevated)' }}>
           {/* 배경 워터마크 느낌 */}
-          <div className="absolute inset-0 opacity-[0.06] bg-[repeating-linear-gradient(45deg,#fff_0px,#fff_1px,transparent_1px,transparent_8px)]" />
-          <h1 className="relative text-2xl font-bold tracking-[0.5em] text-white drop-shadow-sm">
+          <div className="absolute inset-0 opacity-[0.08] bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.22)_0px,rgba(255,255,255,0.22)_1px,transparent_1px,transparent_8px)]" />
+          <h1 className="relative text-2xl font-bold tracking-[0.5em]" style={{ color: 'var(--text-primary)' }}>
             녹 화 의 뢰 서
           </h1>
-          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 h-px" style={{ backgroundColor: 'var(--border-default)' }} />
         </div>
 
         {/* ── 장비 체크박스(세로) + 오류 신고 결재란 ── */}
-        <div className="grid grid-cols-[70%_30%] border-b border-slate-200">
+        <div className="grid grid-cols-[70%_30%] border-b border-[var(--border-default)]">
           {/* 왼쪽 70%: 세로 체크박스 */}
-          <div className="border-r border-slate-200">
+          <div className="border-r border-[var(--border-default)]">
             {checkboxItems.map(({ label, key, checked }, i) => (
               <div
                 key={key}
                 className={cn(
                   'grid grid-cols-[112px_1fr] items-center',
-                  i > 0 && 'border-t border-slate-200'
+                  i > 0 && 'border-t border-[var(--border-default)]'
                 )}
               >
-                <div className={cn(labelCls, 'border-0 border-r border-slate-200 h-full text-xs')}>
+                <div className={cn(labelCls, 'border-0 border-r border-[var(--border-default)] h-full text-xs')}>
                   {label}
                 </div>
                 <div className="px-4 py-2.5">
                   <Checkbox
                     checked={checked}
                     onCheckedChange={(v) => setValue(key, !!v)}
-                    className="border-slate-500 data-checked:bg-[#004F9A] data-checked:border-[#004F9A] data-checked:text-white"
+                    className="border-[var(--border-strong)] data-checked:bg-[var(--accent)] data-checked:border-[var(--accent)] data-checked:text-white"
                   />
                 </div>
               </div>
@@ -229,12 +241,12 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
 
           {/* 오른쪽 30%: 오류 신고 결재란 */}
           <div className="flex flex-col">
-            <div className="bg-[#004F9A] px-3 py-2 text-xs font-bold text-center text-white tracking-widest">
+            <div className="px-3 py-2 text-xs font-bold text-center tracking-widest" style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
               프로그램 오류 신고
             </div>
-            <div className="flex-1 flex flex-col items-center justify-center px-3 py-4 bg-[#EEF3FB] gap-1">
-              <p className="text-sm font-bold text-[#1a3a6b] tracking-wide">박현서</p>
-              <p className="text-sm text-[#004F9A] font-medium tracking-wider">010-4523-0464</p>
+            <div className="flex-1 flex flex-col items-center justify-center px-3 py-4 gap-1" style={{ backgroundColor: 'var(--bg-surface)' }}>
+              <p className="text-sm font-bold tracking-wide" style={{ color: 'var(--text-primary)' }}>박현서</p>
+              <p className="text-sm font-medium tracking-wider" style={{ color: 'var(--accent)' }}>010-4523-0464</p>
             </div>
           </div>
         </div>
@@ -243,7 +255,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
         <div>
 
           {/* 프로그램명 + 담당PD */}
-          <div className="grid grid-cols-[112px_1fr_72px_152px] border-b border-slate-200">
+          <div className="grid grid-cols-[112px_1fr_72px_152px] border-b border-[var(--border-default)]">
             <div className={labelCls}>프 로 그 램 명</div>
             <div className={cn(valueCls, 'border-t-0 border-b-0')}>
               <input
@@ -268,7 +280,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
           </div>
 
           {/* 제작일시 */}
-          <div className="grid grid-cols-[112px_1fr] border-b border-slate-200">
+          <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
             <div className={labelCls}>제 작 일 시</div>
             <div className={cn(valueCls, 'flex items-center gap-2 flex-wrap py-2.5 border-l-0')}>
               <Controller
@@ -294,6 +306,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
                     value={field.value}
                     onChange={field.onChange}
                     hideDate
+                    anchorDate={(watch('broadcast_start') ?? '').split('T')[0]}
                     error={!!errors.broadcast_end}
                   />
                 )}
@@ -302,7 +315,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
                 <Checkbox
                   checked={watchLive}
                   onCheckedChange={(v) => setValue('is_live', !!v)}
-                  className="border-red-500 data-checked:bg-red-600 data-checked:border-red-600 data-checked:text-white"
+                  className="border-red-400 data-checked:bg-red-600 data-checked:border-red-600 data-checked:text-white"
                 />
                 <span className="text-sm font-bold text-red-600 group-hover:text-red-700 transition-colors">생방송</span>
               </label>
@@ -317,7 +330,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
 
           {/* 방송일시 (ON-AIR) — 생방송 시 숨김 */}
           {!watchLive && (
-            <div className="grid grid-cols-[112px_1fr] border-b border-slate-200">
+            <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
               <div className={labelCls}>방 송 일 시</div>
               <div className={cn(valueCls, 'flex items-center gap-2 py-2.5 border-l-0')}>
                 <Controller
@@ -332,19 +345,19 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
           )}
 
           {/* 녹화내용 */}
-          <div className="grid grid-cols-[112px_1fr] border-b border-slate-200">
+          <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
             <div className={labelCls}>녹 화 내 용</div>
             <div className={cn(valueCls, 'border-l-0')}>
               <Textarea
                 placeholder="녹화 내용을 입력하세요..."
                 {...register('record_content')}
-                className="border-0 rounded-none focus:ring-0 bg-transparent text-sm resize-none min-h-[80px] text-slate-800 placeholder:text-slate-300"
+                className="border-0 rounded-none focus:ring-0 bg-transparent text-sm resize-none min-h-[80px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
               />
             </div>
           </div>
 
           {/* 녹화장소 */}
-          <div className="grid grid-cols-[112px_1fr] border-b border-slate-200">
+          <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
             <div className={labelCls}>녹 화 장 소</div>
             <div className={cn(valueCls, 'flex items-center gap-2 border-l-0')}>
               <input
@@ -353,7 +366,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
                 {...register('venue')}
                 className={cn(inputCls, 'flex-1', errors.venue && 'border-red-400 focus:border-red-400')}
               />
-              <span className="text-xs text-slate-300 whitespace-nowrap">자원ID</span>
+              <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>자원ID</span>
               <input
                 type="text"
                 placeholder="내부 코드"
@@ -370,7 +383,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
               <Textarea
                 placeholder={`특기사항 및 비고를 자유롭게 입력하세요.\n예: 후보자 2명 출연 예정 / 사회자 이황주`}
                 {...register('notes')}
-                className="border-0 rounded-none focus:ring-0 bg-transparent text-sm resize-none min-h-[100px] text-slate-800 placeholder:text-slate-300"
+                className="border-0 rounded-none focus:ring-0 bg-transparent text-sm resize-none min-h-[100px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
               />
             </div>
           </div>

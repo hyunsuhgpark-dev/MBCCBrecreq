@@ -9,6 +9,11 @@ interface DateTimePickerProps {
   error?: boolean
   className?: string
   hideDate?: boolean
+  /**
+   * hideDate 모드에서 날짜가 비어있을 때 사용할 앵커 날짜 (YYYY-MM-DD).
+   * 종료 시간 입력처럼 "시간만" 바꿀 때도 폼 값이 비지 않도록 합니다.
+   */
+  anchorDate?: string
 }
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1)   // 1 ~ 12
@@ -33,7 +38,7 @@ function toIso(date: string, ampm: 'AM' | 'PM', hour: number, minute: number): s
   return `${date}T${String(h24).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
 }
 
-export default function DateTimePicker({ value, onChange, error, className, hideDate }: DateTimePickerProps) {
+export default function DateTimePicker({ value, onChange, error, className, hideDate, anchorDate }: DateTimePickerProps) {
   const parsed = parseValue(value)
   const [date, setDate] = useState(parsed.date)
   const [ampm, setAmpm] = useState<'AM' | 'PM'>(parsed.ampm)
@@ -49,18 +54,25 @@ export default function DateTimePicker({ value, onChange, error, className, hide
     setMinute(p.minute)
   }, [value])
 
+  function getEffectiveDate(d: string) {
+    if (d) return d
+    if (hideDate && anchorDate) return anchorDate
+    return d
+  }
+
   function emit(d: string, a: 'AM' | 'PM', h: number, m: number) {
-    const iso = toIso(d, a, h, m)
+    const iso = toIso(getEffectiveDate(d), a, h, m)
     onChange(iso)
   }
 
   const selectCls = cn(
-    'h-8 rounded border text-sm px-1 bg-white text-slate-800 focus:outline-none focus:border-[#004F9A] cursor-pointer',
-    error ? 'border-red-400' : 'border-slate-400'
+    'h-8 rounded border text-sm px-1 focus:outline-none focus:border-[var(--accent)] cursor-pointer transition-colors',
+    'bg-[var(--bg-elevated)] text-[var(--text-primary)]',
+    error ? 'border-red-400' : 'border-[var(--border-default)]'
   )
 
   return (
-    <div className={cn('flex items-center gap-1.5 flex-wrap [color-scheme:light]', className)}>
+    <div className={cn('flex items-center gap-1.5 flex-wrap', className)}>
       {/* 날짜 */}
       {!hideDate && (
         <input
@@ -68,8 +80,9 @@ export default function DateTimePicker({ value, onChange, error, className, hide
           value={date}
           onChange={(e) => { setDate(e.target.value); emit(e.target.value, ampm, hour, minute) }}
           className={cn(
-            'h-8 rounded border text-sm px-1.5 bg-white text-slate-800 focus:outline-none focus:border-[#004F9A] cursor-pointer',
-            error ? 'border-red-400' : 'border-slate-400'
+            'h-8 rounded border text-sm px-1.5 focus:outline-none focus:border-[var(--accent)] cursor-pointer transition-colors',
+            'bg-[var(--bg-elevated)] text-[var(--text-primary)]',
+            error ? 'border-red-400' : 'border-[var(--border-default)]'
           )}
         />
       )}
