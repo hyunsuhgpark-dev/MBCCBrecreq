@@ -17,7 +17,8 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#004F9A',
+  // 캘린더 다크 차콜 테마와 동일 톤
+  themeColor: '#141416',
 }
 
 export default function RootLayout({

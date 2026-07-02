@@ -396,14 +396,15 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
           type="button"
           variant="outline"
           onClick={() => router.back()}
-          className="min-h-11 px-6 border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all"
+          className="min-h-11 px-6 border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] transition-all"
         >
           취소
         </Button>
         <Button
           type="submit"
           disabled={loading}
-          className="min-h-11 px-8 bg-[#004F9A] hover:bg-[#003A73] text-white gap-2 font-semibold shadow-md hover:shadow-lg transition-all"
+          className="min-h-11 px-8 text-white gap-2 font-semibold shadow-md hover:shadow-lg transition-all"
+          style={{ backgroundColor: 'var(--accent)' }}
         >
           {loading ? (
             <Loader2 className="w-4 h-4 animate-spin" />

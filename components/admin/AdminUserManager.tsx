@@ -31,10 +31,10 @@ const roleOptions: { value: UserRole; label: string }[] = [
 ]
 
 const roleColors: Record<string, string> = {
-  Admin: 'bg-red-100 text-red-700 border-red-200',
-  ENG: 'bg-blue-100 text-blue-700 border-blue-200',
-  CAM: 'bg-purple-100 text-purple-700 border-purple-200',
-  Producer: 'bg-green-100 text-green-700 border-green-200',
+  Admin: 'bg-rose-950/35 text-rose-200 border-rose-800',
+  ENG: 'bg-sky-950/35 text-sky-200 border-sky-800',
+  CAM: 'bg-purple-950/35 text-purple-200 border-purple-800',
+  Producer: 'bg-emerald-950/35 text-emerald-200 border-emerald-800',
 }
 
 const roleLabels: Record<string, string> = {
@@ -87,19 +87,23 @@ export default function AdminUserManager({ users: initialUsers, currentUserId }:
       {pendingUsers.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <h2 className="font-semibold text-gray-800">승인 대기</h2>
-            <Badge className="bg-amber-100 text-amber-700 border-amber-200 border">
+            <h2 className="font-semibold text-[var(--text-primary)]">승인 대기</h2>
+            <Badge className="bg-amber-950/35 text-amber-200 border-amber-800 border">
               {pendingUsers.length}명
             </Badge>
           </div>
           <div className="space-y-2">
             {pendingUsers.map((user) => (
-              <div key={user.id} className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <div
+                key={user.id}
+                className="border rounded-xl p-4"
+                style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
+              >
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div>
-                    <p className="font-semibold text-gray-900">{user.full_name || '이름 없음'}</p>
-                    <p className="text-sm text-gray-500">{user.email}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="font-semibold text-[var(--text-primary)]">{user.full_name || '이름 없음'}</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{user.email}</p>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                       가입: {format(parseISO(user.created_at), 'M/d HH:mm', { locale: ko })}
                     </p>
                   </div>
@@ -112,7 +116,7 @@ export default function AdminUserManager({ users: initialUsers, currentUserId }:
                         )
                       }
                     >
-                      <SelectTrigger className="w-36 h-9 text-sm">
+                      <SelectTrigger className="w-36 h-9 text-sm border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-primary)]">
                         <SelectValue placeholder="역할 선택" />
                       </SelectTrigger>
                       <SelectContent>
@@ -132,7 +136,8 @@ export default function AdminUserManager({ users: initialUsers, currentUserId }:
                           isApproved: true,
                         })
                       }
-                      className="bg-green-600 hover:bg-green-700 text-white gap-1.5 min-h-9"
+                      className="text-white gap-1.5 min-h-9"
+                      style={{ backgroundColor: 'var(--accent)' }}
                     >
                       {loadingId === user.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -153,39 +158,44 @@ export default function AdminUserManager({ users: initialUsers, currentUserId }:
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-gray-800">활성 사용자</h2>
-            <Badge className="bg-green-100 text-green-700 border-green-200 border">
+            <h2 className="font-semibold text-[var(--text-primary)]">활성 사용자</h2>
+            <Badge className="bg-emerald-950/35 text-emerald-200 border-emerald-800 border">
               {approvedUsers.length}명
             </Badge>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => router.refresh()} className="gap-1.5 text-gray-500">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.refresh()}
+            className="gap-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]"
+          >
             <RefreshCw className="w-4 h-4" />
             새로고침
           </Button>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="rounded-xl border overflow-hidden" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="border-b" style={{ backgroundColor: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}>
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">이름</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">이메일</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">역할</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">가입일</th>
+                  <th className="text-left px-4 py-3 font-medium text-[var(--text-secondary)]">이름</th>
+                  <th className="text-left px-4 py-3 font-medium text-[var(--text-secondary)]">이메일</th>
+                  <th className="text-left px-4 py-3 font-medium text-[var(--text-secondary)]">역할</th>
+                  <th className="text-left px-4 py-3 font-medium text-[var(--text-secondary)]">가입일</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y" style={{ '--tw-divide-color': 'var(--border-subtle)' } as React.CSSProperties}>
                 {approvedUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-gray-900">
+                  <tr key={user.id} className="hover:bg-[var(--bg-elevated)] transition-colors">
+                    <td className="px-4 py-3 font-medium text-[var(--text-primary)]">
                       {user.full_name || '이름 없음'}
                       {user.id === currentUserId && (
-                        <span className="ml-1.5 text-[10px] text-[#004F9A] bg-blue-50 px-1 py-0.5 rounded">나</span>
+                        <span className="ml-1.5 text-[10px] px-1 py-0.5 rounded bg-white/5 border border-white/10 text-[var(--accent)]">나</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-500">{user.email}</td>
+                    <td className="px-4 py-3 text-[var(--text-secondary)]">{user.email}</td>
                     <td className="px-4 py-3">
                       {user.id !== currentUserId ? (
                         <Select
@@ -193,7 +203,7 @@ export default function AdminUserManager({ users: initialUsers, currentUserId }:
                           onValueChange={(v) => updateUser(user.id, { role: v as UserRole })}
                           disabled={loadingId === user.id}
                         >
-                          <SelectTrigger className="w-32 h-7 text-xs border-gray-200">
+                          <SelectTrigger className="w-32 h-7 text-xs border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-primary)]">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -205,12 +215,12 @@ export default function AdminUserManager({ users: initialUsers, currentUserId }:
                           </SelectContent>
                         </Select>
                       ) : (
-                        <Badge className={cn('text-xs border', roleColors[user.role ?? ''] ?? 'bg-gray-100 text-gray-500')}>
+                        <Badge className={cn('text-xs border', roleColors[user.role ?? ''] ?? 'bg-white/5 text-[var(--text-secondary)] border-[var(--border-default)]')}>
                           {roleLabels[user.role ?? ''] ?? user.role}
                         </Badge>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-400 text-xs">
+                    <td className="px-4 py-3 text-[var(--text-muted)] text-xs">
                       {format(parseISO(user.created_at), 'yy.M.d', { locale: ko })}
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -218,7 +228,7 @@ export default function AdminUserManager({ users: initialUsers, currentUserId }:
                         <button
                           onClick={() => updateUser(user.id, { isApproved: false })}
                           disabled={loadingId === user.id}
-                          className="text-xs text-red-400 hover:text-red-600 transition-colors p-1"
+                          className="text-xs text-rose-300 hover:text-rose-200 transition-colors p-1"
                           title="승인 취소"
                         >
                           {loadingId === user.id ? (

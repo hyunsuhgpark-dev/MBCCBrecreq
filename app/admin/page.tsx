@@ -27,8 +27,8 @@ export default async function AdminPage() {
     <AppShell profile={profile}>
       <div className="max-w-5xl mx-auto px-4 py-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">사용자 관리</h1>
-          <p className="text-gray-500 text-sm mt-1">가입 승인 및 역할 지정을 관리합니다.</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">사용자 관리</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>가입 승인 및 역할 지정을 관리합니다.</p>
         </div>
         <AdminUserManager users={users ?? []} currentUserId={user.id} />
       </div>

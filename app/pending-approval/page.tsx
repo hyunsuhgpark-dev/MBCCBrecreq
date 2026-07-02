@@ -17,16 +17,19 @@ export default function PendingApprovalPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#003A73] via-[#004F9A] to-[#1A6DB5]">
-      <div className="bg-white rounded-2xl shadow-2xl p-10 max-w-md mx-4 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-50 rounded-2xl mb-4">
-          <Tv className="w-8 h-8 text-[#004F9A]" />
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: 'var(--bg-body)' }}>
+      <div
+        className="rounded-2xl shadow-[0_20px_80px_rgba(0,0,0,0.55)] p-10 max-w-md w-full text-center border"
+        style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
+      >
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 border" style={{ backgroundColor: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}>
+          <Tv className="w-8 h-8" style={{ color: 'var(--accent)' }} />
         </div>
-        <div className="inline-flex items-center justify-center w-12 h-12 bg-amber-50 rounded-full mb-4">
-          <Clock className="w-6 h-6 text-amber-500" />
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-4 border" style={{ backgroundColor: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}>
+          <Clock className="w-6 h-6 text-amber-300" />
         </div>
-        <h2 className="text-xl font-bold text-gray-900 mb-2">승인 대기 중</h2>
-        <p className="text-gray-500 text-sm leading-relaxed mb-6">
+        <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>승인 대기 중</h2>
+        <p className="text-sm leading-relaxed mb-6" style={{ color: 'var(--text-secondary)' }}>
           가입 신청이 완료되었습니다.<br />
           관리자가 계정을 승인하면 서비스를 이용하실 수 있습니다.<br />
           승인 완료 시 이메일로 안내드립니다.
@@ -34,7 +37,7 @@ export default function PendingApprovalPage() {
         <Button
           variant="outline"
           onClick={handleLogout}
-          className="gap-2"
+          className="gap-2 border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]"
         >
           <LogOut className="w-4 h-4" />
           로그아웃

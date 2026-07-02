@@ -28,10 +28,10 @@ interface ScheduleDetailProps {
 }
 
 const statusConfig = {
-  conflict:  { label: '충돌',    color: 'text-amber-700 bg-amber-50 border-amber-300',   icon: AlertTriangle },
-  pending:   { label: '승인 대기', color: 'text-slate-600 bg-slate-100 border-slate-300',  icon: Clock },
-  confirmed: { label: '확정',    color: 'text-emerald-700 bg-emerald-50 border-emerald-300', icon: CheckCircle2 },
-  rejected:  { label: '반려',    color: 'text-red-700 bg-red-50 border-red-300',         icon: XCircle },
+  conflict:  { label: '충돌',     color: 'text-amber-300 bg-amber-950/40 border-amber-800',   icon: AlertTriangle },
+  pending:   { label: '승인 대기', color: 'text-slate-300 bg-white/5 border-white/10',        icon: Clock },
+  confirmed: { label: '확정',     color: 'text-emerald-300 bg-emerald-950/35 border-emerald-800', icon: CheckCircle2 },
+  rejected:  { label: '반려',     color: 'text-rose-300 bg-rose-950/35 border-rose-800',      icon: XCircle },
 }
 
 const partLabels: Record<string, string> = {
@@ -102,8 +102,15 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
   }
 
   /* ─── 스타일 상수 (폼과 동일 계열) ─── */
-  const labelCls = 'bg-[#EEF3FB] font-bold text-[#1a3a6b] text-sm text-center tracking-wider border border-slate-200 px-3 py-2 flex items-center justify-center select-none'
-  const valueCls = 'border border-slate-200 px-3 py-2 text-sm text-slate-800 bg-white'
+  const border = 'border border-[var(--border-default)]'
+  const labelCls = cn(
+    border,
+    'bg-[var(--bg-elevated)] font-bold text-[var(--text-secondary)] text-sm text-center tracking-wider px-3 py-2 flex items-center justify-center select-none'
+  )
+  const valueCls = cn(
+    border,
+    'px-3 py-2 text-sm bg-[var(--bg-surface)] text-[var(--text-primary)]'
+  )
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
@@ -116,7 +123,7 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
             {statusInfo.label}
           </Badge>
           {schedule.status === 'pending' && (
-            <span className="text-xs text-slate-400">승인 {approvedCount}/{totalApprovals}</span>
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>승인 {approvedCount}/{totalApprovals}</span>
           )}
         </div>
 
@@ -125,7 +132,7 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
             variant="outline"
             size="sm"
             onClick={() => handlePrint()}
-            className="gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50"
+            className="gap-1.5 border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]"
           >
             <Printer className="w-4 h-4" />
             <span className="hidden sm:inline">PDF 출력</span>
@@ -135,7 +142,8 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
             <Link href={`/schedules/${schedule.id}/edit`}>
               <Button
                 size="sm"
-                className="gap-1.5 bg-[#004F9A] hover:bg-[#003A73] text-white shadow-sm"
+                className="gap-1.5 text-white shadow-sm"
+                style={{ backgroundColor: 'var(--accent)' }}
               >
                 <Edit className="w-4 h-4" />
                 <span className="hidden sm:inline">수정</span>
@@ -148,7 +156,7 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
               size="sm"
               variant="outline"
               onClick={() => setShowDeleteDialog(true)}
-              className="gap-1.5 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-400"
+              className="gap-1.5 border-rose-900/40 text-rose-300 hover:bg-rose-950/20 hover:border-rose-800"
             >
               <Trash2 className="w-4 h-4" />
               <span className="hidden sm:inline">삭제</span>
@@ -159,14 +167,14 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
 
       {/* 삭제 확인 다이얼로그 */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-primary)]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-700">
+            <DialogTitle className="flex items-center gap-2 text-rose-300">
               <Trash2 className="w-5 h-5" />
               일정 삭제
             </DialogTitle>
-            <DialogDescription className="text-slate-500 pt-1">
-              <span className="font-semibold text-slate-700">"{schedule.program_name}"</span> 일정을
+            <DialogDescription className="pt-1" style={{ color: 'var(--text-muted)' }}>
+              <span className="font-semibold text-[var(--text-primary)]">"{schedule.program_name}"</span> 일정을
               삭제하면 복구할 수 없습니다. 계속하시겠습니까?
             </DialogDescription>
           </DialogHeader>
@@ -175,14 +183,14 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
               variant="outline"
               onClick={() => setShowDeleteDialog(false)}
               disabled={deleting}
-              className="border-slate-200"
+              className="border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]"
             >
               취소
             </Button>
             <Button
               onClick={handleDelete}
               disabled={deleting}
-              className="bg-red-600 hover:bg-red-700 text-white gap-2"
+              className="bg-rose-600 hover:bg-rose-700 text-white gap-2"
             >
               {deleting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -197,45 +205,45 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
 
       {/* ── 인쇄 영역 ── */}
       <div ref={printRef}>
-        <div className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-[0_4px_24px_rgba(0,79,154,0.08)] print:shadow-none print:rounded-none">
+        <div className="rounded-2xl overflow-hidden border border-[var(--border-default)] bg-[var(--bg-surface)] shadow-[0_10px_40px_rgba(0,0,0,0.35)] print:shadow-none print:rounded-none">
 
           {/* 제목 헤더 */}
-          <div className="relative bg-[#004F9A] py-5 text-center overflow-hidden">
-            <div className="absolute inset-0 opacity-[0.06] bg-[repeating-linear-gradient(45deg,#fff_0px,#fff_1px,transparent_1px,transparent_8px)]" />
-            <h1 className="relative text-2xl font-bold tracking-[0.5em] text-white drop-shadow-sm">
+          <div className="relative py-5 text-center overflow-hidden" style={{ backgroundColor: 'var(--bg-elevated)' }}>
+            <div className="absolute inset-0 opacity-[0.08] bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.22)_0px,rgba(255,255,255,0.22)_1px,transparent_1px,transparent_8px)]" />
+            <h1 className="relative text-2xl font-bold tracking-[0.5em]" style={{ color: 'var(--text-primary)' }}>
               녹 화 의 뢰 서
             </h1>
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 h-px" style={{ backgroundColor: 'var(--border-default)' }} />
           </div>
 
           {/* 장비 체크박스(세로) + 오류 신고 */}
-          <div className="grid grid-cols-[70%_30%] border-b border-slate-200">
-            <div className="border-r border-slate-200">
+          <div className="grid grid-cols-[70%_30%] border-b border-[var(--border-default)]">
+            <div className="border-r border-[var(--border-default)]">
               {checkboxItems.map(({ label, key }, i) => (
                 <div
                   key={key}
-                  className={cn('grid grid-cols-[112px_1fr] items-center', i > 0 && 'border-t border-slate-200')}
+                  className={cn('grid grid-cols-[112px_1fr] items-center', i > 0 && 'border-t border-[var(--border-default)]')}
                 >
-                  <div className={cn(labelCls, 'border-0 border-r border-slate-200 h-full text-xs')}>
+                  <div className={cn(labelCls, 'border-0 border-r border-[var(--border-default)] h-full text-xs')}>
                     {label}
                   </div>
                   <div className="px-4 py-2.5 text-lg">
                     {schedule[key] ? (
-                      <span className="text-[#004F9A] font-bold">✓</span>
+                      <span className="font-bold" style={{ color: 'var(--accent)' }}>✓</span>
                     ) : (
-                      <span className="text-slate-200">—</span>
+                      <span style={{ color: 'var(--text-muted)' }}>—</span>
                     )}
                   </div>
                 </div>
               ))}
             </div>
             <div className="flex flex-col">
-              <div className="bg-[#004F9A] px-3 py-2 text-xs font-bold text-center text-white tracking-widest">
+              <div className="px-3 py-2 text-xs font-bold text-center tracking-widest" style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
                 프로그램 오류 신고
               </div>
-              <div className="flex-1 flex flex-col items-center justify-center px-3 py-4 bg-[#EEF3FB] gap-1">
-                <p className="text-sm font-bold text-[#1a3a6b] tracking-wide">박현서</p>
-                <p className="text-sm text-[#004F9A] font-medium tracking-wider">010-4523-0464</p>
+              <div className="flex-1 flex flex-col items-center justify-center px-3 py-4 gap-1" style={{ backgroundColor: 'var(--bg-surface)' }}>
+                <p className="text-sm font-bold tracking-wide" style={{ color: 'var(--text-primary)' }}>박현서</p>
+                <p className="text-sm font-medium tracking-wider" style={{ color: 'var(--accent)' }}>010-4523-0464</p>
               </div>
             </div>
           </div>
@@ -244,12 +252,12 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
           <div>
 
             {/* 프로그램명 + 담당PD */}
-            <div className="grid grid-cols-[112px_1fr_72px_152px] border-b border-slate-200">
+            <div className="grid grid-cols-[112px_1fr_72px_152px] border-b border-[var(--border-default)]">
               <div className={labelCls}>프 로 그 램 명</div>
               <div className={cn(valueCls, 'font-semibold flex items-center gap-2')}>
                 {schedule.program_name}
                 {schedule.is_live && (
-                  <span className="flex items-center gap-1 bg-red-500 text-white px-1.5 py-0.5 rounded-md text-[10px] font-bold shrink-0">
+                  <span className="flex items-center gap-1 bg-rose-600 text-white px-1.5 py-0.5 rounded-md text-[10px] font-bold shrink-0">
                     <span className="w-1 h-1 bg-white rounded-full animate-pulse" />
                     LIVE
                   </span>
@@ -260,39 +268,39 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
             </div>
 
             {/* 제작일시 */}
-            <div className="grid grid-cols-[112px_1fr] border-b border-slate-200">
+            <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
               <div className={labelCls}>제 작 일 시</div>
               <div className={valueCls}>{fmtRange(schedule.broadcast_start, schedule.broadcast_end)}</div>
             </div>
 
             {/* 방송일시 — 생방송이면 숨김 */}
             {!schedule.is_live && (
-              <div className="grid grid-cols-[112px_1fr] border-b border-slate-200">
+              <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
                 <div className={labelCls}>방 송 일 시</div>
                 <div className={valueCls}>
                   {schedule.broadcast_at
                     ? fmt(schedule.broadcast_at)
-                    : <span className="text-slate-300">—</span>
+                    : <span style={{ color: 'var(--text-muted)' }}>—</span>
                   }
                 </div>
               </div>
             )}
 
             {/* 녹화내용 */}
-            <div className="grid grid-cols-[112px_1fr] border-b border-slate-200">
+            <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
               <div className={labelCls}>녹 화 내 용</div>
               <div className={cn(valueCls, 'min-h-[80px] whitespace-pre-wrap')}>
-                {schedule.record_content || <span className="text-slate-300">—</span>}
+                {schedule.record_content || <span style={{ color: 'var(--text-muted)' }}>—</span>}
               </div>
             </div>
 
             {/* 녹화장소 */}
-            <div className="grid grid-cols-[112px_1fr] border-b border-slate-200">
+            <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
               <div className={labelCls}>녹 화 장 소</div>
               <div className={valueCls}>
                 {schedule.venue}
                 {schedule.location && (
-                  <span className="ml-3 text-xs text-slate-400">자원ID: {schedule.location}</span>
+                  <span className="ml-3 text-xs" style={{ color: 'var(--text-muted)' }}>자원ID: {schedule.location}</span>
                 )}
               </div>
             </div>
@@ -301,15 +309,15 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
             <div className="grid grid-cols-[112px_1fr]">
               <div className={cn(labelCls, 'items-start pt-3')}>특 기 사 항</div>
               <div className={cn(valueCls, 'min-h-[100px] whitespace-pre-wrap border-b-0 border-r-0')}>
-                {schedule.notes || <span className="text-slate-300">—</span>}
+                {schedule.notes || <span style={{ color: 'var(--text-muted)' }}>—</span>}
               </div>
             </div>
           </div>
         </div>
 
         {/* 승인 현황 */}
-        <div className="mt-4 bg-white border border-slate-100 rounded-xl p-4 shadow-sm print:mt-3 print:border">
-          <h3 className="font-bold text-sm text-slate-600 mb-3 tracking-wide">스태프 승인 현황</h3>
+        <div className="mt-4 border rounded-xl p-4 shadow-sm print:mt-3 print:border" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}>
+          <h3 className="font-bold text-sm mb-3 tracking-wide" style={{ color: 'var(--text-secondary)' }}>스태프 승인 현황</h3>
           <div className="grid grid-cols-2 gap-3">
             {[officeApproval, subControlApproval].map((approval, i) => {
               if (!approval) return null
@@ -318,26 +326,26 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
               return (
                 <div key={i} className={cn(
                   'border rounded-xl p-3 text-sm transition-colors',
-                  isApproved && 'border-emerald-200 bg-emerald-50',
-                  isRejected && 'border-red-200 bg-red-50',
-                  !isApproved && !isRejected && 'border-slate-100 bg-slate-50'
+                  isApproved && 'border-emerald-800 bg-emerald-950/25',
+                  isRejected && 'border-rose-800 bg-rose-950/25',
+                  !isApproved && !isRejected && 'border-[var(--border-default)] bg-white/5'
                 )}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-slate-700">{partLabels[approval.part] ?? approval.part}</span>
+                    <span className="font-semibold text-[var(--text-primary)]">{partLabels[approval.part] ?? approval.part}</span>
                     <span className={cn(
                       'text-xs font-bold',
-                      isApproved && 'text-emerald-700',
-                      isRejected && 'text-red-600',
-                      !isApproved && !isRejected && 'text-slate-400'
+                      isApproved && 'text-emerald-300',
+                      isRejected && 'text-rose-300',
+                      !isApproved && !isRejected && 'text-[var(--text-muted)]'
                     )}>
                       {isApproved ? '✓ 승인' : isRejected ? '✕ 반려' : '대기 중'}
                     </span>
                   </div>
                   {isRejected && approval.reject_reason && (
-                    <p className="text-xs text-red-600 mt-1">반려 사유: {approval.reject_reason}</p>
+                    <p className="text-xs text-rose-300 mt-1">반려 사유: {approval.reject_reason}</p>
                   )}
                   {approval.decided_at && (
-                    <p className="text-xs text-slate-400 mt-1">
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                       {format(parseISO(approval.decided_at), 'M/d HH:mm', { locale: ko })}
                     </p>
                   )}
