@@ -246,7 +246,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
             </div>
             <div className="flex-1 flex flex-col items-center justify-center px-3 py-4 gap-1" style={{ backgroundColor: 'var(--bg-surface)' }}>
               <p className="text-sm font-bold tracking-wide" style={{ color: 'var(--text-primary)' }}>박현서</p>
-              <p className="text-sm font-medium tracking-wider" style={{ color: 'var(--accent)' }}>010-4523-0464</p>
+              <p className="text-sm font-medium tracking-wider" style={{ color: 'var(--text-primary)' }}>010-4523-0464</p>
             </div>
           </div>
         </div>
