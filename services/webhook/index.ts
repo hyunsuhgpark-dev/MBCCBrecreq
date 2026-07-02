@@ -12,21 +12,123 @@
 
 export type WebhookEvent = 'schedule.created' | 'schedule.confirmed'
 
-export interface WebhookPayload {
-  event: WebhookEvent
-  occurred_at: string   // ISO 8601
-  data: {
-    id: string
-    program_name: string
-    responsible_pd: string
-    status: string
-    venue: string
-    broadcast_start: string
-    broadcast_end: string
-    rehearsal_staff_at: string | null
-    is_live: boolean
-    notes: string
-    created_by: string
+export interface WebhookScheduleInput {
+  id: string
+  program_name: string
+  responsible_pd?: string | null
+  status: string
+  venue?: string | null
+  location?: string | null
+  broadcast_start?: string | null
+  broadcast_end?: string | null
+  broadcast_at?: string | null
+  rehearsal_staff_at?: string | null
+  rehearsal_cast_at?: string | null
+  use_relay_car?: boolean | null
+  use_studio?: boolean | null
+  use_eng?: boolean | null
+  use_audio?: boolean | null
+  is_live?: boolean | null
+  record_content?: string | null
+  notes?: string | null
+  created_by: string
+}
+
+/**
+ * 후배 플래너 수신 API 명세
+ * POST https://planner-ecru-beta.vercel.app/api/webhook/records
+ */
+export type PlannerRecordType =
+  | 'office-schedule'
+  | 'production-schedule'
+  | 'vacation'
+  | 'work-schedule'
+  | 'casting-schedule'
+
+export interface PlannerRecordPayload {
+  type: PlannerRecordType
+  summary: string
+  memo?: string
+  details: {
+    entries: Array<{
+      date: string // YYYY-MM-DD
+      time: string // HH:mm
+      place?: string
+      note?: string
+    }>
+  }
+}
+
+function formatKstDateTime(iso: string): { date: string; time: string; dateTime: string } {
+  const d = new Date(iso)
+  // sv-SE 포맷은 "YYYY-MM-DD HH:mm" 형태라 후가공이 쉽습니다.
+  const dateTime = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(d)
+
+  const [date, time] = dateTime.split(' ')
+  return { date: date ?? '', time: time ?? '', dateTime }
+}
+
+function buildEntryNote(schedule: WebhookScheduleInput): string | undefined {
+  const tags: string[] = []
+  if (schedule.use_relay_car) tags.push('중계차')
+  if (schedule.use_studio) tags.push('스튜디오')
+  if (schedule.use_eng) tags.push('ENG')
+  if (schedule.use_audio) tags.push('AUDIO')
+  if (schedule.is_live) tags.push('생방송')
+
+  const lines: string[] = []
+  if (tags.length > 0) lines.push(tags.join(', '))
+
+  if (schedule.broadcast_at) {
+    const { dateTime } = formatKstDateTime(schedule.broadcast_at)
+    lines.push(`방송: ${dateTime}`)
+  }
+
+  const note = lines.join(' / ').trim()
+  return note.length > 0 ? note : undefined
+}
+
+export function toPlannerRecordPayload(
+  schedule: WebhookScheduleInput,
+  options?: { type?: PlannerRecordType }
+): PlannerRecordPayload {
+  const type: PlannerRecordType = options?.type ?? 'production-schedule'
+
+  const startIso = schedule.broadcast_start ?? ''
+  const { date, time, dateTime } = startIso ? formatKstDateTime(startIso) : { date: '', time: '', dateTime: '' }
+
+  const summary = `${schedule.program_name} · ${dateTime}`.trim()
+
+  const memo = [schedule.notes, schedule.record_content]
+    .map((v) => (v ?? '').trim())
+    .filter(Boolean)
+    .join('\n\n')
+
+  const place = (schedule.venue ?? '').trim() || undefined
+  const note = buildEntryNote(schedule)
+
+  return {
+    type,
+    summary,
+    ...(memo ? { memo } : {}),
+    details: {
+      entries: [
+        {
+          date,
+          time,
+          ...(place ? { place } : {}),
+          ...(note ? { note } : {}),
+        },
+      ],
+    },
   }
 }
 
@@ -53,32 +155,30 @@ function getWebhookUrls(): string[] {
  * 단일 URL로 웹훅을 발송합니다.
  * 10초 타임아웃을 설정하여 느린 엔드포인트가 응답을 막지 않도록 합니다.
  */
-async function dispatchToUrl(url: string, payload: WebhookPayload): Promise<void> {
+async function dispatchToUrl(url: string, payload: PlannerRecordPayload, event: WebhookEvent): Promise<void> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 10_000)
 
   try {
+    const secret = process.env.WEBHOOK_SECRET
     const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'MBC-Schedule-Webhook/1.0',
-        // 간단한 공유 시크릿 서명 헤더 (선택적 검증용)
-        ...(process.env.WEBHOOK_SECRET
-          ? { 'X-Webhook-Secret': process.env.WEBHOOK_SECRET }
-          : {}),
+        ...(secret ? { Authorization: `Bearer ${secret}` } : {}),
       },
       body: JSON.stringify(payload),
       signal: controller.signal,
     })
 
     if (!res.ok) {
-      console.warn(`[Webhook] ${url} responded with ${res.status} for event "${payload.event}"`)
+      console.warn(`[Webhook] ${url} responded with ${res.status} for event "${event}"`)
     }
   } catch (err) {
     const isTimeout = err instanceof Error && err.name === 'AbortError'
     console.warn(
-      `[Webhook] Failed to deliver "${payload.event}" to ${url}:`,
+      `[Webhook] Failed to deliver "${event}" to ${url}:`,
       isTimeout ? 'timeout (10s)' : err
     )
   } finally {
@@ -99,16 +199,12 @@ async function dispatchToUrl(url: string, payload: WebhookPayload): Promise<void
  */
 export async function dispatchWebhook(
   event: WebhookEvent,
-  scheduleData: WebhookPayload['data']
+  scheduleData: WebhookScheduleInput
 ): Promise<void> {
   const urls = getWebhookUrls()
   if (urls.length === 0) return  // 설정 없으면 즉시 반환
 
-  const payload: WebhookPayload = {
-    event,
-    occurred_at: new Date().toISOString(),
-    data: scheduleData,
-  }
+  const payload = toPlannerRecordPayload(scheduleData)
 
-  await Promise.allSettled(urls.map((url) => dispatchToUrl(url, payload)))
+  await Promise.allSettled(urls.map((url) => dispatchToUrl(url, payload, event)))
 }

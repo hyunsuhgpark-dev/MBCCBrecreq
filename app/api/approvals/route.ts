@@ -4,6 +4,8 @@ import { sendPushNotification, saveNotification, notificationMessages } from '@/
 import { dispatchWebhook } from '@/services/webhook'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+const WEBHOOK_SCHEDULE_SELECT = 'id, created_by, program_name, responsible_pd, venue, location, broadcast_start, broadcast_end, broadcast_at, rehearsal_staff_at, rehearsal_cast_at, use_relay_car, use_studio, use_eng, use_audio, is_live, record_content, notes'
+
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -37,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     const { data: schedule } = await supabase
       .from('schedules')
-      .select('created_by, program_name, profiles!schedules_created_by_fkey(fcm_token)')
+      .select(`${WEBHOOK_SCHEDULE_SELECT}, profiles!schedules_created_by_fkey(fcm_token)`)
       .eq('id', scheduleId)
       .single()
 
@@ -62,19 +64,7 @@ export async function POST(request: NextRequest) {
       }
 
       // ?? ?? (?? ??)
-      void dispatchWebhook('schedule.confirmed', {
-        id: scheduleId,
-        program_name: schedule.program_name,
-        responsible_pd: (schedule as { responsible_pd?: string }).responsible_pd ?? '',
-        status: 'confirmed',
-        venue: (schedule as { venue?: string }).venue ?? '',
-        broadcast_start: (schedule as { broadcast_start?: string }).broadcast_start ?? '',
-        broadcast_end: (schedule as { broadcast_end?: string }).broadcast_end ?? '',
-        rehearsal_staff_at: (schedule as { rehearsal_staff_at?: string }).rehearsal_staff_at ?? null,
-        is_live: (schedule as { is_live?: boolean }).is_live ?? false,
-        notes: (schedule as { notes?: string }).notes ?? '',
-        created_by: schedule.created_by,
-      })
+      void dispatchWebhook('schedule.confirmed', { ...schedule, status: 'confirmed' })
     }
 
     return NextResponse.json({ message: '?? ?? ??' })
@@ -99,7 +89,7 @@ export async function POST(request: NextRequest) {
 
   const { data: schedule } = await supabase
     .from('schedules')
-    .select('created_by, program_name, responsible_pd, venue, broadcast_start, broadcast_end, rehearsal_staff_at, is_live, notes, profiles!schedules_created_by_fkey(fcm_token)')
+    .select(`${WEBHOOK_SCHEDULE_SELECT}, profiles!schedules_created_by_fkey(fcm_token)`)
     .eq('id', scheduleId)
     .single()
 
@@ -161,19 +151,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ?? ?? (?? ??)
-    void dispatchWebhook('schedule.confirmed', {
-      id: scheduleId,
-      program_name: schedule.program_name,
-      responsible_pd: (schedule as { responsible_pd?: string }).responsible_pd ?? '',
-      status: 'confirmed',
-      venue: (schedule as { venue?: string }).venue ?? '',
-      broadcast_start: (schedule as { broadcast_start?: string }).broadcast_start ?? '',
-      broadcast_end: (schedule as { broadcast_end?: string }).broadcast_end ?? '',
-      rehearsal_staff_at: (schedule as { rehearsal_staff_at?: string }).rehearsal_staff_at ?? null,
-      is_live: (schedule as { is_live?: boolean }).is_live ?? false,
-      notes: (schedule as { notes?: string }).notes ?? '',
-      created_by: schedule.created_by,
-    })
+    void dispatchWebhook('schedule.confirmed', { ...schedule, status: 'confirmed' })
   } else {
     await saveNotification({
       supabase: supabase as unknown as SupabaseClient,

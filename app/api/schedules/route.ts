@@ -139,19 +139,7 @@ export async function POST(request: NextRequest) {
   }
 
   // 웹훅 발송 (fire-and-forget — 실패해도 응답 지연 없음)
-  void dispatchWebhook('schedule.created', {
-    id: schedule.id,
-    program_name: schedule.program_name,
-    responsible_pd: schedule.responsible_pd,
-    status: schedule.status,
-    venue: schedule.venue,
-    broadcast_start: schedule.broadcast_start,
-    broadcast_end: schedule.broadcast_end,
-    rehearsal_staff_at: schedule.rehearsal_staff_at ?? null,
-    is_live: schedule.is_live,
-    notes: schedule.notes,
-    created_by: schedule.created_by,
-  })
+  void dispatchWebhook('schedule.created', schedule)
 
   return NextResponse.json(schedule, { status: 201 })
 }

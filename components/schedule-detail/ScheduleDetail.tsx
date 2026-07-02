@@ -47,11 +47,11 @@ function fmt(dt: string | null | undefined, withDay = true) {
 function fmtRange(start: string, end: string) {
   const s = parseISO(start)
   const e = parseISO(end)
-  const mins = Math.round((e.getTime() - s.getTime()) / 60000)
-  const hours = Math.floor(mins / 60)
-  const rem   = mins % 60
-  const durStr = rem === 0 ? `${hours}시간` : `${hours}시간 ${rem}분`
-  return `${fmt(start)}  ·  ${durStr}`
+  const sameDay = format(s, 'yyyy-MM-dd') === format(e, 'yyyy-MM-dd')
+  if (sameDay) {
+    return `${fmt(start)} ~ ${fmt(end, false)}`
+  }
+  return `${fmt(start)} ~ ${fmt(end)}`
 }
 
 const checkboxItems = [

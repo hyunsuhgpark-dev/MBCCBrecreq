@@ -18,7 +18,7 @@ const schema = z.object({
   program_name: z.string().min(1, '프로그램명을 입력하세요'),
   responsible_pd: z.string().min(1, '담당 PD를 입력하세요'),
   broadcast_start: z.string().min(1, '제작 시작 시간을 입력하세요'),
-  duration_hours: z.number().min(1).max(24).default(2),
+  broadcast_end: z.string().min(1, '제작 종료 시간을 입력하세요'),
   broadcast_at: z.string().optional().default(''),
   venue: z.string().min(1, '녹화 장소를 입력하세요'),
   location: z.string().optional().default(''),
@@ -29,7 +29,10 @@ const schema = z.object({
   is_live: z.boolean().default(false),
   record_content: z.string().optional().default(''),
   notes: z.string().optional().default(''),
-})
+}).refine(
+  (data) => new Date(data.broadcast_end) > new Date(data.broadcast_start),
+  { message: '종료 시간은 시작 시간보다 늦어야 합니다', path: ['broadcast_end'] }
+)
 
 type FormValues = z.infer<typeof schema>
 
@@ -46,10 +49,15 @@ function toLocalIso(dt: string | null | undefined): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-function computeDuration(start?: string | null, end?: string | null): number {
-  if (!start || !end) return 2
-  const diff = new Date(end).getTime() - new Date(start).getTime()
-  return Math.max(1, Math.min(24, Math.round(diff / (1000 * 60 * 60))))
+function defaultEndTime(start?: string, end?: string | null, prefillDate?: string): string {
+  if (end) return toLocalIso(end)
+  if (start) {
+    const d = new Date(start)
+    d.setHours(d.getHours() + 2)
+    return toLocalIso(d.toISOString())
+  }
+  if (prefillDate) return `${prefillDate}T11:00`
+  return ''
 }
 
 export default function ScheduleForm({ initialData, scheduleId, prefillDate }: ScheduleFormProps) {
@@ -75,7 +83,11 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
         : prefillDate
           ? `${prefillDate}T09:00`
           : '',
-      duration_hours: computeDuration(initialData?.broadcast_start, initialData?.broadcast_end),
+      broadcast_end: defaultEndTime(
+        initialData?.broadcast_start ?? (prefillDate ? `${prefillDate}T09:00` : undefined),
+        initialData?.broadcast_end,
+        prefillDate
+      ),
       broadcast_at: toLocalIso(initialData?.broadcast_at),
       venue: initialData?.venue ?? '',
       location: initialData?.location ?? '',
@@ -94,13 +106,22 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
   const watchEng = watch('use_eng')
   const watchAudio = watch('use_audio')
   const watchLive = watch('is_live')
-  const watchDuration = watch('duration_hours')
+
+  function syncEndDate(startValue: string) {
+    const endValue = watch('broadcast_end')
+    if (!startValue || !endValue) return
+    const startDate = startValue.split('T')[0]
+    const endTime = endValue.split('T')[1]
+    if (!startDate || !endTime) return
+    const synced = `${startDate}T${endTime}`
+    if (synced !== endValue) setValue('broadcast_end', synced)
+  }
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
     setLoading(true)
     try {
       const broadcastStart = new Date(values.broadcast_start)
-      const broadcastEnd = new Date(broadcastStart.getTime() + values.duration_hours * 60 * 60 * 1000)
+      const broadcastEnd = new Date(values.broadcast_end)
 
       const payload = {
         program_name: values.program_name,
@@ -249,26 +270,34 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
           {/* 제작일시 */}
           <div className="grid grid-cols-[112px_1fr] border-b border-slate-200">
             <div className={labelCls}>제 작 일 시</div>
-            <div className={cn(valueCls, 'flex items-center gap-3 flex-wrap py-2.5 border-l-0')}>
+            <div className={cn(valueCls, 'flex items-center gap-2 flex-wrap py-2.5 border-l-0')}>
               <Controller
                 control={control}
                 name="broadcast_start"
                 render={({ field }) => (
-                  <DateTimePicker value={field.value} onChange={field.onChange} error={!!errors.broadcast_start} />
+                  <DateTimePicker
+                    value={field.value}
+                    onChange={(v) => {
+                      field.onChange(v)
+                      syncEndDate(v)
+                    }}
+                    error={!!errors.broadcast_start}
+                  />
                 )}
               />
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-slate-400 whitespace-nowrap">제작시간</span>
-                <select
-                  value={watchDuration}
-                  onChange={(e) => setValue('duration_hours', Number(e.target.value))}
-                  className="border border-slate-200 rounded-md text-sm h-8 px-2 bg-white text-slate-700 focus:outline-none focus:border-[#004F9A] focus:ring-1 focus:ring-[#004F9A]/20 cursor-pointer transition-colors"
-                >
-                  {Array.from({ length: 24 }, (_, i) => i + 1).map((h) => (
-                    <option key={h} value={h}>{h}시간</option>
-                  ))}
-                </select>
-              </div>
+              <span className="text-sm font-medium text-slate-500 shrink-0">~</span>
+              <Controller
+                control={control}
+                name="broadcast_end"
+                render={({ field }) => (
+                  <DateTimePicker
+                    value={field.value}
+                    onChange={field.onChange}
+                    hideDate
+                    error={!!errors.broadcast_end}
+                  />
+                )}
+              />
               <label className="flex items-center gap-1.5 cursor-pointer group">
                 <Checkbox
                   checked={watchLive}
@@ -279,6 +308,9 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
               </label>
               {errors.broadcast_start && (
                 <p className="text-red-500 text-[11px] w-full">{errors.broadcast_start.message}</p>
+              )}
+              {errors.broadcast_end && (
+                <p className="text-red-500 text-[11px] w-full">{errors.broadcast_end.message}</p>
               )}
             </div>
           </div>
