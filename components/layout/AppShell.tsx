@@ -6,8 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import { Calendar, Plus, Settings, Bell, LogOut, Tv, User } from 'lucide-react'
 import type { Profile } from '@/lib/types'
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { requestNotificationPermission } from '@/lib/firebase/client'
+import { requestNotificationPermission, onForegroundMessage } from '@/lib/firebase/client'
 
 interface AppShellProps {
   children: React.ReactNode
@@ -51,6 +52,21 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
       }
     }
     registerFcm()
+
+    const unsubscribe = onForegroundMessage((payload: unknown) => {
+      const p = payload as { notification?: { title?: string; body?: string } }
+      const title = p?.notification?.title ?? 'MBC 일정'
+      const body = p?.notification?.body
+      toast(title, {
+        description: body,
+        duration: 6000,
+      })
+      setLocalUnread((n) => n + 1)
+    })
+
+    return () => {
+      unsubscribe?.then?.((fn: (() => void) | undefined) => fn?.())
+    }
   }, [])
 
   async function handleLogout() {
