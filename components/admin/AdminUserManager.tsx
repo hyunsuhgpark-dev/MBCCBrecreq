@@ -119,7 +119,7 @@ export default function AdminUserManager({ users: initialUsers, currentUserId }:
                       <SelectTrigger className="w-36 h-9 text-sm border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-primary)]">
                         <SelectValue placeholder="역할 선택" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent position="popper" className="z-50">
                         {roleOptions.map((opt) => (
                           <SelectItem key={opt.value} value={opt.value}>
                             {opt.label}
@@ -206,7 +206,7 @@ export default function AdminUserManager({ users: initialUsers, currentUserId }:
                           <SelectTrigger className="w-32 h-7 text-xs border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-primary)]">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent position="popper" className="z-50">
                             {roleOptions.map((opt) => (
                               <SelectItem key={opt.value} value={opt.value} className="text-xs">
                                 {opt.label}
