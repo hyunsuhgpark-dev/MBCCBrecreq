@@ -110,6 +110,63 @@ export async function PATCH(
     )
   }
 
+  // 수정 후: 이 일정과 충돌 중이던 타 의뢰서 자동 해소 체크
+  const { data: affectedConflicts } = await supabase
+    .from('conflicts')
+    .select('schedule_id, schedules!conflicts_schedule_id_fkey(created_by, program_name, broadcast_start, broadcast_end, venue, use_relay_car, use_studio, use_eng, use_audio, status)')
+    .eq('conflicting_schedule_id', id)
+
+  for (const conflict of affectedConflicts ?? []) {
+    const affected = conflict.schedules as unknown as {
+      created_by: string
+      program_name: string
+      broadcast_start: string
+      broadcast_end: string
+      venue: string
+      use_relay_car: boolean
+      use_studio: boolean
+      use_eng: boolean
+      use_audio: boolean
+      status: string
+    } | null
+    if (!affected || affected.status !== 'conflict') continue
+
+    const affectedId = conflict.schedule_id
+    const recheck = await detectConflicts({
+      broadcastStart: affected.broadcast_start,
+      broadcastEnd: affected.broadcast_end,
+      venue: affected.venue,
+      useRelayCar: affected.use_relay_car,
+      useStudio: affected.use_studio,
+      useEng: affected.use_eng,
+      useAudio: affected.use_audio,
+      excludeScheduleId: affectedId,
+    })
+
+    if (!recheck.hasConflict) {
+      await supabase.from('schedules').update({ status: 'pending' }).eq('id', affectedId)
+      await supabase.from('conflicts').delete().eq('schedule_id', affectedId)
+      await supabase
+        .from('approvals')
+        .update({ status: 'pending', reject_reason: null, decided_at: null, approver_id: null })
+        .eq('schedule_id', affectedId)
+
+      await notifyProducer({
+        supabase: supabase as unknown as SupabaseClient,
+        userId: affected.created_by,
+        scheduleId: affectedId,
+        type: 'negotiation_complete',
+        programName: affected.program_name,
+      })
+
+      await notifyStaffApprovalRequested({
+        supabase: supabase as unknown as SupabaseClient,
+        scheduleId: affectedId,
+        programName: affected.program_name,
+      })
+    }
+  }
+
   return NextResponse.json({ message: '수정 완료', status: newStatus })
 }
 
