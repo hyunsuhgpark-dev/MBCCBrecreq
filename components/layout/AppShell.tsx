@@ -19,6 +19,8 @@ const roleLabels: Record<string, string> = {
   Admin: '관리자',
   ENG: '기술국',
   CAM: '영상국',
+  Staff_Office: '기술국',
+  Staff_SubControl: '영상국',
   Producer: 'PD',
 }
 
@@ -26,6 +28,8 @@ const roleColors: Record<string, string> = {
   Admin:    'bg-red-500/20 text-red-300 border border-red-500/30',
   ENG:      'bg-blue-500/20 text-blue-300 border border-blue-500/30',
   CAM:      'bg-purple-500/20 text-purple-300 border border-purple-500/30',
+  Staff_Office: 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
+  Staff_SubControl: 'bg-purple-500/20 text-purple-300 border border-purple-500/30',
   Producer: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
 }
 

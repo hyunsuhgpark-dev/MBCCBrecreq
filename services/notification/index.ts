@@ -1,3 +1,4 @@
+import { ALL_STAFF_ROLE_VALUES } from '@/lib/roles'
 import type { NotificationType } from '@/lib/types'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -45,12 +46,64 @@ export async function saveNotification(params: {
   message: string
 }) {
   const { supabase, userId, scheduleId, type, message } = params
-  await supabase.from('notifications').insert({
+  const { error } = await supabase.from('notifications').insert({
     user_id: userId,
     schedule_id: scheduleId,
     type,
     message,
   })
+  if (error) {
+    console.error('알림 저장 실패:', { userId, scheduleId, type, error })
+  }
+}
+
+export async function notifyStaffApprovalRequested(params: {
+  supabase: SupabaseClient
+  scheduleId: string
+  programName: string
+}) {
+  const { supabase, scheduleId, programName } = params
+  const message = notificationMessages.approval_requested(programName)
+
+  const { data: staffProfiles, error } = await supabase
+    .from('profiles')
+    .select('id, fcm_token')
+    .in('role', [...ALL_STAFF_ROLE_VALUES])
+    .eq('is_approved', true)
+
+  if (error) {
+    console.error('스태프 프로필 조회 실패:', error)
+    return
+  }
+
+  if (!staffProfiles?.length) {
+    console.warn('승인 요청 알림 대상 스태프 없음 (ENG/CAM 역할·승인 계정 확인)')
+    return
+  }
+
+  for (const sp of staffProfiles) {
+    await saveNotification({
+      supabase,
+      userId: sp.id,
+      scheduleId,
+      type: 'approval_requested',
+      message,
+    })
+  }
+
+  const staffTokens = staffProfiles
+    .filter((p) => p.fcm_token)
+    .map((p) => p.fcm_token as string)
+
+  if (staffTokens.length > 0) {
+    await sendPushNotification({
+      tokens: staffTokens,
+      type: 'approval_requested',
+      title: '승인 요청',
+      body: message,
+      scheduleId,
+    })
+  }
 }
 
 export const notificationMessages: Record<NotificationType, (name: string) => string> = {

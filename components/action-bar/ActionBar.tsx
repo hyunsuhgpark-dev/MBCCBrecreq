@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { isStaffOfficeRole, isStaffSubControlRole } from '@/lib/roles'
 import type { Schedule, Profile } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -39,8 +40,8 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
 
   const isProducer = profile.role === 'Producer'
   const isOwner = schedule.created_by === profile.id
-  const isStaffOffice = profile.role === 'ENG'
-  const isStaffSubControl = profile.role === 'CAM'
+  const isStaffOffice = isStaffOfficeRole(profile.role)
+  const isStaffSubControl = isStaffSubControlRole(profile.role)
   const isAdmin = profile.role === 'Admin'
   const isStaff = isStaffOffice || isStaffSubControl
 

@@ -67,7 +67,7 @@ vercel deploy
 
 | 역할 | 설명 |
 |------|------|
-| Producer | 녹화의뢰서 작성/수정, 충돌 협의 |
-| Staff_Office | 사무실 파트 승인/반려 |
-| Staff_SubControl | 부조정실 파트 승인/반려 |
+| Producer | PD — 녹화의뢰서 작성/수정, 충돌 협의 |
+| ENG | 기술국 — 승인/반려 |
+| CAM | 영상국 — 승인/반려 |
 | Admin | 전체 관리, 강제 승인, 사용자 관리 |

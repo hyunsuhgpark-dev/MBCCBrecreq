@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { detectConflicts } from '@/lib/conflict-engine'
-import { sendPushNotification, saveNotification, notificationMessages } from '@/services/notification'
+import { sendPushNotification, saveNotification, notificationMessages, notifyStaffApprovalRequested } from '@/services/notification'
 import { dispatchWebhook } from '@/services/webhook'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -106,36 +106,11 @@ export async function POST(request: NextRequest) {
       })
     }
   } else {
-    // 스태프 대표에게 승인 요청 알림
-    const { data: staffProfiles } = await supabase
-      .from('profiles')
-      .select('id, fcm_token')
-      .in('role', ['ENG', 'CAM'])
-      .eq('is_approved', true)
-
-    const staffTokens = (staffProfiles ?? [])
-      .filter((p) => p.fcm_token)
-      .map((p) => p.fcm_token as string)
-
-    for (const sp of staffProfiles ?? []) {
-      await saveNotification({
-        supabase: supabase as unknown as SupabaseClient,
-        userId: sp.id,
-        scheduleId: schedule.id,
-        type: 'approval_requested',
-        message: notificationMessages.approval_requested(schedule.program_name),
-      })
-    }
-
-    if (staffTokens.length > 0) {
-      await sendPushNotification({
-        tokens: staffTokens,
-        type: 'approval_requested',
-        title: '승인 요청',
-        body: notificationMessages.approval_requested(schedule.program_name),
-        scheduleId: schedule.id,
-      })
-    }
+    await notifyStaffApprovalRequested({
+      supabase: supabase as unknown as SupabaseClient,
+      scheduleId: schedule.id,
+      programName: schedule.program_name,
+    })
   }
 
   // 웹훅 발송 (fire-and-forget — 실패해도 응답 지연 없음)

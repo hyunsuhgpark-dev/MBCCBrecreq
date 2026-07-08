@@ -42,6 +42,10 @@ export async function PATCH(request: NextRequest) {
   if (role !== undefined) updateData.role = role
   if (isApproved !== undefined) updateData.is_approved = isApproved
 
-  await adminClient.from('profiles').update(updateData).eq('id', userId)
+  const { error } = await adminClient.from('profiles').update(updateData).eq('id', userId)
+  if (error) {
+    console.error('프로필 업데이트 실패:', error)
+    return NextResponse.json({ error: error.message }, { status: 400 })
+  }
   return NextResponse.json({ message: '업데이트 완료' })
 }

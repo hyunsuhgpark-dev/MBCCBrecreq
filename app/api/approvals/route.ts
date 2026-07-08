@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { isStaffRole, roleToApprovalPart } from '@/lib/roles'
 import { sendPushNotification, saveNotification, notificationMessages } from '@/services/notification'
 import { dispatchWebhook } from '@/services/webhook'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -20,9 +21,8 @@ export async function POST(request: NextRequest) {
 
   if (!profile?.is_approved) return NextResponse.json({ error: '???' }, { status: 403 })
 
-  const allowedRoles = ['ENG', 'CAM', 'Admin']
-  if (!allowedRoles.includes(profile.role ?? '')) {
-    return NextResponse.json({ error: '?? ??' }, { status: 403 })
+  if (!isStaffRole(profile.role) && profile.role !== 'Admin') {
+    return NextResponse.json({ error: '권한 없음' }, { status: 403 })
   }
 
   const { scheduleId, action, rejectReason } = await request.json()
@@ -71,7 +71,10 @@ export async function POST(request: NextRequest) {
   }
 
   // ??? ?? ??
-  const part = profile.role === 'ENG' ? 'office' : 'sub_control'
+  const part = roleToApprovalPart(profile.role)
+  if (!part) {
+    return NextResponse.json({ error: '승인 파트를 확인할 수 없습니다' }, { status: 403 })
+  }
 
   // ??/?? ??
   const updateData: Record<string, unknown> = {

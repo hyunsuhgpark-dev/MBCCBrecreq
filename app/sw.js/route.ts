@@ -1,25 +1,27 @@
-// MBC 방송 일정 관리 Service Worker
-// Firebase Messaging 서비스 워커
+import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
+export async function GET() {
+  const config = {
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? '',
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? '',
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? '',
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? '',
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? '',
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? '',
+  }
+
+  const body = `
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
-// Firebase 설정은 빌드 시 환경변수로 주입되지 않으므로
-// 서비스 워커에서는 self.FIREBASE_CONFIG 사용
-const firebaseConfig = self.FIREBASE_CONFIG || {
-  apiKey: '',
-  authDomain: '',
-  projectId: '',
-  storageBucket: '',
-  messagingSenderId: '',
-  appId: '',
-};
+const firebaseConfig = ${JSON.stringify(config)};
 
 if (firebaseConfig.apiKey) {
   firebase.initializeApp(firebaseConfig);
   const messaging = firebase.messaging();
 
-  // 백그라운드 메시지 핸들러
   messaging.onBackgroundMessage((payload) => {
     const notificationTitle = payload.notification?.title || 'MBC 방송 일정';
     const notificationOptions = {
@@ -30,16 +32,14 @@ if (firebaseConfig.apiKey) {
       data: payload.data,
       vibrate: [200, 100, 200],
     };
-
     self.registration.showNotification(notificationTitle, notificationOptions);
   });
 }
 
-// 알림 클릭 핸들러
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const scheduleId = event.notification.data?.scheduleId;
-  const url = scheduleId ? `/schedules/${scheduleId}` : '/calendar';
+  const url = scheduleId ? '/schedules/' + scheduleId : '/calendar';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
@@ -56,8 +56,7 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// 캐시 전략 (오프라인 지원)
-const CACHE_NAME = 'mbc-schedule-v1';
+const CACHE_NAME = 'mbc-schedule-v2';
 const STATIC_ASSETS = ['/calendar', '/login'];
 
 self.addEventListener('install', (event) => {
@@ -79,3 +78,13 @@ self.addEventListener('activate', (event) => {
   );
   self.clients.claim();
 });
+`
+
+  return new NextResponse(body, {
+    headers: {
+      'Content-Type': 'application/javascript; charset=utf-8',
+      'Service-Worker-Allowed': '/',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+    },
+  })
+}

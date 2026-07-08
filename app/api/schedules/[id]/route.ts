@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { detectConflicts } from '@/lib/conflict-engine'
-import { sendPushNotification, saveNotification, notificationMessages } from '@/services/notification'
+import { notifyStaffApprovalRequested } from '@/services/notification'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export async function PATCH(
@@ -59,36 +59,11 @@ export async function PATCH(
       .update({ status: 'pending' })
       .eq('schedule_id', id)
 
-    // 스태프 대표에게 승인 요청 알림
-    const { data: staffProfiles } = await supabase
-      .from('profiles')
-      .select('id, fcm_token')
-      .in('role', ['ENG', 'CAM'])
-      .eq('is_approved', true)
-
-    for (const sp of staffProfiles ?? []) {
-      await saveNotification({
-        supabase: supabase as unknown as SupabaseClient,
-        userId: sp.id,
-        scheduleId: id,
-        type: 'approval_requested',
-        message: notificationMessages.approval_requested(existing.program_name),
-      })
-    }
-
-    const staffTokens = (staffProfiles ?? [])
-      .filter((p) => p.fcm_token)
-      .map((p) => p.fcm_token as string)
-
-    if (staffTokens.length > 0) {
-      await sendPushNotification({
-        tokens: staffTokens,
-        type: 'approval_requested',
-        title: '승인 요청',
-        body: notificationMessages.approval_requested(existing.program_name),
-        scheduleId: id,
-      })
-    }
+    await notifyStaffApprovalRequested({
+      supabase: supabase as unknown as SupabaseClient,
+      scheduleId: id,
+      programName: existing.program_name,
+    })
 
     return NextResponse.json({ message: '협의 완료 처리됨' })
   }
