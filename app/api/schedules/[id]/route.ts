@@ -151,7 +151,7 @@ export async function DELETE(
 
   // 삭제 후: 충돌이 해소된 의뢰서들을 pending으로 전환
   for (const conflict of affectedConflicts ?? []) {
-    const affected = conflict.schedules as {
+    const affected = conflict.schedules as unknown as {
       created_by: string
       program_name: string
       broadcast_start: string
