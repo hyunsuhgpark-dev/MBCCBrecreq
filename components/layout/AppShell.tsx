@@ -93,7 +93,7 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
           borderColor: 'var(--border-default)',
         }}
       >
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 pr-6 h-14 flex items-center justify-between gap-4">
 
           {/* 로고 */}
           <Link href="/calendar" className="flex items-center gap-2.5 shrink-0">
@@ -144,16 +144,16 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
             })}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {/* 알림 벨 */}
             <Link
               href="/notifications"
-              className="relative p-2 rounded-lg transition-all"
+              className="relative p-3 rounded-lg transition-all"
               style={{ color: 'var(--text-secondary)' }}
             >
-              <Bell className="w-4.5 h-4.5" />
+              <Bell className="w-6 h-6" />
               {localUnread > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 rounded-full text-[9px] font-bold flex items-center justify-center text-white">
+                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] font-bold flex items-center justify-center text-white">
                   {localUnread > 9 ? '9+' : localUnread}
                 </span>
               )}
@@ -186,11 +186,11 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
             {/* 로그아웃 */}
             <button
               onClick={handleLogout}
-              className="p-2 rounded-lg transition-all"
+              className="p-3 rounded-lg transition-all"
               style={{ color: 'var(--text-muted)' }}
               title="로그아웃"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-6 h-6" />
             </button>
           </div>
         </div>
@@ -216,11 +216,11 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-colors min-h-[60px]"
+                className="flex-1 flex flex-col items-center justify-center py-3 gap-1.5 transition-colors min-h-[72px]"
                 style={{ color: isActive ? 'var(--accent)' : 'var(--text-muted)' }}
               >
-                <item.icon className={cn('w-5 h-5', isActive && 'stroke-2')} />
-                <span className="text-[10px] font-semibold">{item.label}</span>
+                <item.icon className={cn('w-7 h-7', isActive && 'stroke-2')} />
+                <span className="text-[11px] font-semibold">{item.label}</span>
               </Link>
             )
           })}
