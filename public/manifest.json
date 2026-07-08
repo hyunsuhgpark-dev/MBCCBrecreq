@@ -1,6 +1,6 @@
 {
   "name": "MBC 방송 일정 관리",
-  "short_name": "MBC 일정",
+  "short_name": "녹화의뢰",
   "description": "녹화의뢰서 기반 방송 일정 관리 및 스태프 승인 워크플로우",
   "start_url": "/calendar",
   "display": "standalone",
