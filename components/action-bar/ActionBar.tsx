@@ -23,6 +23,8 @@ import {
   Loader2,
   ThumbsUp,
   ThumbsDown,
+  Pencil,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -37,6 +39,7 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
   const [loading, setLoading] = useState(false)
   const [showRejectDialog, setShowRejectDialog] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
+  const [showWithdrawDialog, setShowWithdrawDialog] = useState(false)
 
   const isProducer = profile.role === 'Producer'
   const isOwner = schedule.created_by === profile.id
@@ -123,6 +126,21 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
     }
   }
 
+  async function handleWithdraw() {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/schedules/${schedule.id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error((await res.json()).error)
+      toast.success('의뢰서가 철회되었습니다.')
+      router.push('/calendar')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : '오류 발생')
+    } finally {
+      setLoading(false)
+      setShowWithdrawDialog(false)
+    }
+  }
+
   async function handleForceApprove() {
     setLoading(true)
     try {
@@ -170,15 +188,64 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
                 </p>
               </div>
             </div>
-            <Button
-              onClick={handleResolveConflict}
-              disabled={loading}
-              className="w-full min-h-14 text-white font-bold text-base gap-2 rounded-xl"
-              style={{ backgroundColor: 'var(--color-conflict)', opacity: loading ? 0.9 : 1 }}
-            >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <MessageSquare className="w-5 h-5" />}
-              협의 완료
-            </Button>
+            <div className="space-y-2">
+              <Button
+                onClick={handleResolveConflict}
+                disabled={loading}
+                className="w-full min-h-14 text-white font-bold text-base gap-2 rounded-xl"
+                style={{ backgroundColor: 'var(--color-conflict)', opacity: loading ? 0.9 : 1 }}
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <MessageSquare className="w-5 h-5" />}
+                협의 완료
+              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  onClick={() => router.push(`/schedules/${schedule.id}/edit`)}
+                  variant="outline"
+                  disabled={loading}
+                  className="min-h-10 text-sm font-semibold gap-1.5 rounded-xl border-[var(--border-default)] text-[var(--text-secondary)]"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  일정 수정
+                </Button>
+                <Button
+                  onClick={() => setShowWithdrawDialog(true)}
+                  variant="outline"
+                  disabled={loading}
+                  className="min-h-10 text-sm font-semibold gap-1.5 rounded-xl border-rose-800 text-rose-300 hover:bg-rose-950/20"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  의뢰 철회
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 의뢰자 수정/철회 (pending 상태) */}
+        {(isOwner || isAdmin) && schedule.status === 'pending' && (
+          <div className="border rounded-xl p-4" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}>
+            <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
+              수정 시 승인 절차가 초기화됩니다. 철회 시 다른 의뢰서의 충돌이 자동으로 해소됩니다.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                onClick={() => router.push(`/schedules/${schedule.id}/edit`)}
+                variant="outline"
+                className="min-h-12 font-semibold gap-2 rounded-xl border-[var(--border-default)] text-[var(--text-secondary)]"
+              >
+                <Pencil className="w-4 h-4" />
+                수정하기
+              </Button>
+              <Button
+                onClick={() => setShowWithdrawDialog(true)}
+                variant="outline"
+                className="min-h-12 font-semibold gap-2 rounded-xl border-rose-800 text-rose-300 hover:bg-rose-950/20"
+              >
+                <Trash2 className="w-4 h-4" />
+                의뢰 철회
+              </Button>
+            </div>
           </div>
         )}
 
@@ -288,6 +355,43 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
           </div>
         )}
       </div>
+
+      {/* 의뢰 철회 확인 다이얼로그 */}
+      <Dialog open={showWithdrawDialog} onOpenChange={setShowWithdrawDialog}>
+        <DialogContent className="max-w-md border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-primary)]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-rose-300">
+              <Trash2 className="w-5 h-5" />
+              의뢰 철회
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              <span className="font-semibold text-[var(--text-primary)]">&apos;{schedule.program_name}&apos;</span> 의뢰서를 철회합니다.
+            </p>
+            <p className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
+              철회 시 이 의뢰서와 충돌 중인 다른 의뢰서는 자동으로 충돌이 해소되어 승인 단계로 이동합니다.
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowWithdrawDialog(false)}
+              className="border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]"
+            >
+              취소
+            </Button>
+            <Button
+              onClick={handleWithdraw}
+              disabled={loading}
+              className="bg-rose-600 hover:bg-rose-700 text-white gap-2 min-h-12"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              철회 확인
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 반려 사유 다이얼로그 */}
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>

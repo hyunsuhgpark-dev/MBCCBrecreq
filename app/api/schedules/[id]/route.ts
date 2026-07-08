@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { detectConflicts } from '@/lib/conflict-engine'
-import { notifyStaffApprovalRequested } from '@/services/notification'
+import { notifyStaffApprovalRequested, notifyProducer } from '@/services/notification'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export async function PATCH(
@@ -141,6 +141,68 @@ export async function DELETE(
     return NextResponse.json({ error: '권한 없음' }, { status: 403 })
   }
 
+  // 삭제 전: 이 일정과 충돌 중인 타 의뢰서 조회
+  const { data: affectedConflicts } = await supabase
+    .from('conflicts')
+    .select('schedule_id, schedules!conflicts_schedule_id_fkey(created_by, program_name, broadcast_start, broadcast_end, venue, use_relay_car, use_studio, use_eng, use_audio, status)')
+    .eq('conflicting_schedule_id', id)
+
   await supabase.from('schedules').delete().eq('id', id)
+
+  // 삭제 후: 충돌이 해소된 의뢰서들을 pending으로 전환
+  for (const conflict of affectedConflicts ?? []) {
+    const affected = conflict.schedules as {
+      created_by: string
+      program_name: string
+      broadcast_start: string
+      broadcast_end: string
+      venue: string
+      use_relay_car: boolean
+      use_studio: boolean
+      use_eng: boolean
+      use_audio: boolean
+      status: string
+    } | null
+    if (!affected || affected.status !== 'conflict') continue
+
+    const scheduleId = conflict.schedule_id
+
+    // 삭제된 일정 제외 후 재충돌 검사
+    const recheck = await detectConflicts({
+      broadcastStart: affected.broadcast_start,
+      broadcastEnd: affected.broadcast_end,
+      venue: affected.venue,
+      useRelayCar: affected.use_relay_car,
+      useStudio: affected.use_studio,
+      useEng: affected.use_eng,
+      useAudio: affected.use_audio,
+      excludeScheduleId: scheduleId,
+    })
+
+    if (!recheck.hasConflict) {
+      // 충돌 해소 → pending 전환
+      await supabase.from('schedules').update({ status: 'pending' }).eq('id', scheduleId)
+      await supabase.from('conflicts').delete().eq('schedule_id', scheduleId)
+      await supabase
+        .from('approvals')
+        .update({ status: 'pending', reject_reason: null, decided_at: null, approver_id: null })
+        .eq('schedule_id', scheduleId)
+
+      await notifyProducer({
+        supabase: supabase as unknown as SupabaseClient,
+        userId: affected.created_by,
+        scheduleId,
+        type: 'negotiation_complete',
+        programName: affected.program_name,
+      })
+
+      await notifyStaffApprovalRequested({
+        supabase: supabase as unknown as SupabaseClient,
+        scheduleId,
+        programName: affected.program_name,
+      })
+    }
+  }
+
   return NextResponse.json({ message: '삭제 완료' })
 }

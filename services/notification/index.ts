@@ -106,6 +106,35 @@ export async function notifyStaffApprovalRequested(params: {
   }
 }
 
+export async function notifyProducer(params: {
+  supabase: SupabaseClient
+  userId: string
+  scheduleId: string
+  type: NotificationType
+  programName: string
+}) {
+  const { supabase, userId, scheduleId, type, programName } = params
+  const message = notificationMessages[type](programName)
+
+  await saveNotification({ supabase, userId, scheduleId, type, message })
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('fcm_token')
+    .eq('id', userId)
+    .single()
+
+  if (profile?.fcm_token) {
+    await sendPushNotification({
+      tokens: [profile.fcm_token],
+      type,
+      title: '일정 알림',
+      body: message,
+      scheduleId,
+    })
+  }
+}
+
 export const notificationMessages: Record<NotificationType, (name: string) => string> = {
   conflict_detected: (name) => `'${name}' 일정이 기존 일정과 충돌합니다. 협의가 필요합니다.`,
   negotiation_complete: (name) => `'${name}' 협의가 완료되어 스태프 승인 단계로 이동했습니다.`,
