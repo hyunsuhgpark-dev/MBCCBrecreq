@@ -1,4 +1,4 @@
-export type UserRole = 'Admin' | 'ENG' | 'CAM' | 'Producer' | 'Director'
+export type UserRole = 'Admin' | 'ENG' | 'ENG-M' | 'CAM' | 'CAM-M' | 'Producer' | 'Director'
 
 export type ScheduleStatus = 'conflict' | 'pending' | 'confirmed' | 'rejected'
 

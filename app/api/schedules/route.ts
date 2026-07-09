@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { detectConflicts } from '@/lib/conflict-engine'
 import { sendPushNotification, saveNotification, notificationMessages, notifyStaffApprovalRequested, notifyAllUsersScheduleSubmitted } from '@/services/notification'
+import { getScheduleResourceType } from '@/lib/roles'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
@@ -51,11 +52,27 @@ export async function POST(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
-  // 승인 레코드 초기화 (2파트: office, sub_control)
-  await supabase.from('approvals').insert([
-    { schedule_id: schedule.id, part: 'office', status: 'pending' },
-    { schedule_id: schedule.id, part: 'sub_control', status: 'pending' },
-  ])
+  // 승인 레코드 초기화 — 자원 타입에 따라 필요한 파트만 생성
+  const { isEngOnly, isAudioOnly } = getScheduleResourceType({
+    use_relay_car: body.use_relay_car ?? false,
+    use_studio: body.use_studio ?? false,
+    use_eng: body.use_eng ?? false,
+    use_audio: body.use_audio ?? false,
+  })
+  const approvalParts: { schedule_id: string; part: string; status: string }[] = []
+  if (!isEngOnly) {
+    // ENG-only가 아니면 office(ENG) 승인 필요
+    approvalParts.push({ schedule_id: schedule.id, part: 'office', status: 'pending' })
+  }
+  if (!isAudioOnly) {
+    // AUDIO-only가 아니면 sub_control(CAM) 승인 필요
+    approvalParts.push({ schedule_id: schedule.id, part: 'sub_control', status: 'pending' })
+  }
+  if (approvalParts.length === 0) {
+    // 모든 파트가 제외되는 경우는 없지만 안전장치
+    approvalParts.push({ schedule_id: schedule.id, part: 'office', status: 'pending' })
+  }
+  await supabase.from('approvals').insert(approvalParts)
 
   // 충돌 처리
   if (conflictResult.hasConflict) {
@@ -109,6 +126,12 @@ export async function POST(request: NextRequest) {
       supabase: supabase as unknown as SupabaseClient,
       scheduleId: schedule.id,
       programName: schedule.program_name,
+      scheduleResources: {
+        use_relay_car: body.use_relay_car ?? false,
+        use_studio: body.use_studio ?? false,
+        use_eng: body.use_eng ?? false,
+        use_audio: body.use_audio ?? false,
+      },
     })
   }
 

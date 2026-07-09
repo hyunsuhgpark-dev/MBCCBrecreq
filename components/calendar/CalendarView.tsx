@@ -31,6 +31,7 @@ import {
 } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
+import { canViewSchedule } from '@/lib/roles'
 import Link from 'next/link'
 
 interface CalendarViewProps {
@@ -113,7 +114,15 @@ export default function CalendarView({ profile }: CalendarViewProps) {
       .gte('broadcast_start', rangeStart.toISOString())
       .lte('broadcast_start', rangeEnd.toISOString())
       .order('broadcast_start', { ascending: true })
-    setSchedules((data as Schedule[]) ?? [])
+    const all = (data as Schedule[]) ?? []
+    // 역할별 가시성 필터 적용
+    const filtered = all.filter((s) => canViewSchedule(profile.role, {
+      use_relay_car: s.use_relay_car,
+      use_studio: s.use_studio,
+      use_eng: s.use_eng,
+      use_audio: s.use_audio,
+    }))
+    setSchedules(filtered)
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDate, viewMode])

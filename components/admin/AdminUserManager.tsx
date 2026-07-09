@@ -25,8 +25,10 @@ interface AdminUserManagerProps {
 
 const roleOptions: { value: UserRole; label: string }[] = [
   { value: 'Producer', label: 'PD / 제작진' },
-  { value: 'ENG', label: '스태프 (기술국)' },
-  { value: 'CAM', label: '스태프 (영상국)' },
+  { value: 'ENG', label: '기술국 (승인)' },
+  { value: 'ENG-M', label: '기술국 (모니터)' },
+  { value: 'CAM', label: '영상국 (승인)' },
+  { value: 'CAM-M', label: '영상국 (모니터)' },
   { value: 'Director', label: '편성 / 일정 조율자' },
   { value: 'Admin', label: '관리자' },
 ]
@@ -34,7 +36,9 @@ const roleOptions: { value: UserRole; label: string }[] = [
 const roleColors: Record<string, string> = {
   Admin: 'bg-rose-950/35 text-rose-200 border-rose-800',
   ENG: 'bg-sky-950/35 text-sky-200 border-sky-800',
+  'ENG-M': 'bg-sky-950/20 text-sky-300 border-sky-900',
   CAM: 'bg-purple-950/35 text-purple-200 border-purple-800',
+  'CAM-M': 'bg-purple-950/20 text-purple-300 border-purple-900',
   Producer: 'bg-emerald-950/35 text-emerald-200 border-emerald-800',
   Director: 'bg-amber-950/35 text-amber-200 border-amber-800',
 }
@@ -42,7 +46,9 @@ const roleColors: Record<string, string> = {
 const roleLabels: Record<string, string> = {
   Admin: '관리자',
   ENG: '기술국',
+  'ENG-M': '기술(모니터)',
   CAM: '영상국',
+  'CAM-M': '영상(모니터)',
   Producer: 'PD',
   Director: '편성',
 }

@@ -1,4 +1,4 @@
-import { ALL_STAFF_ROLE_VALUES } from '@/lib/roles'
+import { ALL_STAFF_ROLE_VALUES, getScheduleResourceType } from '@/lib/roles'
 import type { NotificationType } from '@/lib/types'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -61,13 +61,19 @@ export async function notifyStaffApprovalRequested(params: {
   supabase: SupabaseClient
   scheduleId: string
   programName: string
+  scheduleResources?: {
+    use_relay_car: boolean
+    use_studio: boolean
+    use_eng: boolean
+    use_audio: boolean
+  }
 }) {
-  const { supabase, scheduleId, programName } = params
+  const { supabase, scheduleId, programName, scheduleResources } = params
   const message = notificationMessages.approval_requested(programName)
 
   const { data: staffProfiles, error } = await supabase
     .from('profiles')
-    .select('id, fcm_token')
+    .select('id, fcm_token, role')
     .in('role', [...ALL_STAFF_ROLE_VALUES])
     .eq('is_approved', true)
 
@@ -81,7 +87,20 @@ export async function notifyStaffApprovalRequested(params: {
     return
   }
 
-  for (const sp of staffProfiles) {
+  // 자원 타입에 따라 알림 대상 필터링
+  let targetProfiles = staffProfiles
+  if (scheduleResources) {
+    const { isEngOnly, isAudioOnly } = getScheduleResourceType(scheduleResources)
+    if (isEngOnly) {
+      // ENG-only: CAM(sub_control)만 승인 → ENG에게는 알림 불필요
+      targetProfiles = staffProfiles.filter((p) => p.role === 'CAM' || p.role === 'Staff_SubControl')
+    } else if (isAudioOnly) {
+      // AUDIO-only: ENG(office)만 승인 → CAM에게는 알림 불필요
+      targetProfiles = staffProfiles.filter((p) => p.role === 'ENG' || p.role === 'Staff_Office')
+    }
+  }
+
+  for (const sp of targetProfiles) {
     await saveNotification({
       supabase,
       userId: sp.id,
@@ -91,7 +110,7 @@ export async function notifyStaffApprovalRequested(params: {
     })
   }
 
-  const staffTokens = staffProfiles
+  const staffTokens = targetProfiles
     .filter((p) => p.fcm_token)
     .map((p) => p.fcm_token as string)
 

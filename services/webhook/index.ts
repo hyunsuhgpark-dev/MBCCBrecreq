@@ -48,14 +48,16 @@ export type PlannerRecordType =
 
 export interface PlannerRecordPayload {
   type: PlannerRecordType
-  external_id: string
   summary: string
-  memo?: string
+  external_id: string
   details: {
+    title: string
+    program: string
     entries: Array<{
       date: string // YYYY-MM-DD
       time: string // HH:mm
       place?: string
+      person?: string
       note?: string
     }>
   }
@@ -109,25 +111,25 @@ export function toPlannerRecordPayload(
 
   const summary = `${schedule.program_name} · ${dateTime}`.trim()
 
-  const memo = [schedule.notes, schedule.record_content]
-    .map((v) => (v ?? '').trim())
-    .filter(Boolean)
-    .join('\n\n')
-
   const place = (schedule.venue ?? '').trim() || undefined
   const note = buildEntryNote(schedule)
+  const person = (schedule.responsible_pd ?? '').trim()
+    ? `담당PD ${schedule.responsible_pd!.trim()}`
+    : undefined
 
   return {
     type,
-    external_id: schedule.id,
     summary,
-    ...(memo ? { memo } : {}),
+    external_id: schedule.id,
     details: {
+      title: schedule.program_name,
+      program: schedule.program_name,
       entries: [
         {
           date,
           time,
           ...(place ? { place } : {}),
+          ...(person ? { person } : {}),
           ...(note ? { note } : {}),
         },
       ],
@@ -206,6 +208,14 @@ export async function dispatchWebhook(
 ): Promise<void> {
   const urls = getWebhookUrls()
   if (urls.length === 0) return  // 설정 없으면 즉시 반환
+
+  // ENG-only 일정(중계차·스튜디오 없이 ENG만 체크)은 기술국 내부 업무 — 후배 플래너에게 미전송
+  const hasHeavyResource = scheduleData.use_relay_car || scheduleData.use_studio
+  const isEngOnly = scheduleData.use_eng && !hasHeavyResource && !scheduleData.use_audio
+  if (isEngOnly) {
+    console.log('[Webhook] Skipped ENG-only schedule (not sent to planner):', scheduleData.id)
+    return
+  }
 
   const payload = toPlannerRecordPayload(scheduleData)
 
