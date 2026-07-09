@@ -13,6 +13,7 @@ import {
   XCircle,
   LayoutList,
   CalendarDays,
+  LayoutGrid,
   MapPin,
   User,
   Plus,
@@ -25,9 +26,12 @@ import {
   addWeeks,
   subWeeks,
   isSameDay,
+  isSameMonth,
   isToday,
   parseISO,
   isSameWeek,
+  eachDayOfInterval,
+  endOfMonth,
 } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
@@ -98,16 +102,27 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState<'week' | 'list'>('week')
+  const [viewMode, setViewMode] = useState<'week' | 'month' | 'list'>('week')
 
   const weekStart = startOfWeek(currentDate, { locale: ko })
   const weekEnd = endOfWeek(currentDate, { locale: ko })
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
+  const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+  const monthEnd = endOfMonth(currentDate)
+  // 월간 그리드: 첫 주 일요일 ~ 마지막 주 토요일
+  const gridStart = startOfWeek(monthStart, { weekStartsOn: 0 })
+  const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 0 })
+  const allGridDays = viewMode === 'month' ? eachDayOfInterval({ start: gridStart, end: gridEnd }) : []
+
   const fetchSchedules = useCallback(async () => {
     setLoading(true)
-    const rangeStart = viewMode === 'week' ? weekStart : new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
-    const rangeEnd = viewMode === 'week' ? weekEnd : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59)
+    const rangeStart = viewMode === 'week' ? weekStart
+      : viewMode === 'month' ? startOfWeek(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1), { weekStartsOn: 0 })
+      : new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+    const rangeEnd = viewMode === 'week' ? weekEnd
+      : viewMode === 'month' ? endOfWeek(endOfMonth(currentDate), { weekStartsOn: 0 })
+      : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59)
     const { data } = await supabase
       .from('schedules')
       .select(`*, creator:profiles!schedules_created_by_fkey(id, full_name, role), approvals(id, part, status, reject_reason)`)
@@ -195,14 +210,14 @@ export default function CalendarView({ profile }: CalendarViewProps) {
             <ChevronRight className="w-5 h-5" />
           </button>
 
-          {/* 이번주/오늘 버튼 */}
+          {/* 이번주/이번달/오늘 버튼 */}
           {(viewMode === 'week' ? !isCurrentWeek : true) && (
             <button
               onClick={() => setCurrentDate(new Date())}
               className="ml-1 h-7 px-2.5 text-[11px] font-semibold rounded-lg border transition-colors tracking-wide"
               style={{ color: 'var(--accent)', borderColor: 'var(--accent)', opacity: 0.85 }}
             >
-              {viewMode === 'week' ? '이번주' : '오늘'}
+              {viewMode === 'week' ? '이번주' : viewMode === 'month' ? '이번달' : '오늘'}
             </button>
           )}
 
@@ -236,13 +251,14 @@ export default function CalendarView({ profile }: CalendarViewProps) {
             style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--bg-surface)' }}
           >
             {[
-              { mode: 'week' as const, Icon: CalendarDays, label: '주간' },
-              { mode: 'list'  as const, Icon: LayoutList,  label: '목록' },
+              { mode: 'week'  as const, Icon: CalendarDays, label: '주간' },
+              { mode: 'month' as const, Icon: LayoutGrid,   label: '달력' },
+              { mode: 'list'  as const, Icon: LayoutList,   label: '목록' },
             ].map(({ mode, Icon, label }, i) => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                className={cn('px-4 py-2.5 flex items-center gap-2 text-sm font-semibold transition-all', i > 0 && 'border-l')}
+                className={cn('px-3 py-2.5 flex items-center gap-1.5 text-sm font-semibold transition-all', i > 0 && 'border-l')}
                 style={{
                   borderColor: 'var(--border-default)',
                   backgroundColor: viewMode === mode ? 'var(--accent)' : 'transparent',
@@ -250,7 +266,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 }}
               >
                 <Icon className="w-5 h-5" />
-                <span>{label}</span>
+                <span className="hidden sm:inline">{label}</span>
               </button>
             ))}
           </div>
@@ -427,6 +443,97 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 </div>
               )
             })
+          )}
+        </div>
+      )}
+
+      {/* ── 월간 달력 뷰 ── */}
+      {viewMode === 'month' && (
+        <div>
+          {loading ? (
+            <div
+              className="rounded-2xl p-12 text-center border"
+              style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
+            >
+              <div className="w-5 h-5 border-2 border-[#4A9EE8]/30 border-t-[#4A9EE8] rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>불러오는 중...</p>
+            </div>
+          ) : (
+            <>
+              {/* 요일 헤더 */}
+              <div className="grid grid-cols-7 mb-1">
+                {DOW_LABELS.map((label, i) => (
+                  <div
+                    key={i}
+                    className="text-center text-[11px] font-bold py-2 tracking-wide"
+                    style={{ color: DOW_COLORS[i] }}
+                  >
+                    {label}
+                  </div>
+                ))}
+              </div>
+
+              {/* 날짜 그리드 */}
+              <div className="grid grid-cols-7 gap-1">
+                {allGridDays.map((day, idx) => {
+                  const daySchedules = getSchedulesForDay(day)
+                  const isInCurrentMonth = isSameMonth(day, currentDate)
+                  const isTodayDate = isToday(day)
+                  const dow = day.getDay()
+                  const isWeekend = dow === 0 || dow === 6
+
+                  return (
+                    <div
+                      key={idx}
+                      className="rounded-xl border overflow-hidden"
+                      style={{
+                        minHeight: '72px',
+                        backgroundColor: isTodayDate ? 'rgba(240,240,242,0.05)' : 'var(--bg-surface)',
+                        borderColor: isTodayDate ? 'rgba(240,240,242,0.45)' : 'var(--border-subtle)',
+                        boxShadow: isTodayDate ? '0 0 0 1px rgba(240,240,242,0.25)' : 'none',
+                        opacity: isInCurrentMonth ? 1 : 0.28,
+                      }}
+                    >
+                      {/* 날짜 숫자 */}
+                      <div
+                        className="text-right px-2 pt-1.5 pb-0.5 text-[12px] font-bold tabular-nums"
+                        style={{ color: isWeekend ? DOW_COLORS[dow] : 'var(--text-secondary)' }}
+                      >
+                        {format(day, 'd')}
+                      </div>
+
+                      {/* 일정 칩 */}
+                      <div className="px-1 pb-1.5 space-y-0.5">
+                        {daySchedules.slice(0, 3).map((s) => {
+                          const cfg = statusConfig[s.status]
+                          return (
+                            <Link key={s.id} href={`/schedules/${s.id}`}>
+                              <div
+                                className="flex items-center gap-1 px-1.5 py-[3px] rounded text-[10px] leading-tight truncate cursor-pointer transition-all hover:brightness-125"
+                                style={{
+                                  backgroundColor: cfg.cardBg,
+                                  borderLeft: `2px solid ${cfg.cardBorder}`,
+                                }}
+                              >
+                                <span className={cn('w-1 h-1 rounded-full shrink-0', cfg.dot)} />
+                                <span className="truncate font-medium" style={{ color: cfg.cardText }}>
+                                  {s.program_name}
+                                </span>
+                              </div>
+                            </Link>
+                          )
+                        })}
+                        {daySchedules.length > 3 && (
+                          <div className="text-[9px] px-1.5" style={{ color: 'var(--text-muted)' }}>
+                            +{daySchedules.length - 3}건 더
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
           )}
         </div>
       )}
