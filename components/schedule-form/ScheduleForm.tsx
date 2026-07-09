@@ -214,41 +214,43 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
 
         {/* ── 장비 선택 + 오류 신고 결재란 ── */}
         <div className="grid grid-cols-[70%_30%] border-b border-[var(--border-default)]">
-          {/* 왼쪽 70%: 토글 칩 */}
-          <div className="border-r border-[var(--border-default)] px-4 py-5 flex flex-col gap-3">
-            <p className="text-xs font-semibold tracking-widest" style={{ color: 'var(--text-muted)' }}>장 비 선 택</p>
-            <div className="flex flex-wrap gap-3">
-              {resourceItems.map(({ label, key, checked, activeColor, activeBg }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setValue(key, !checked)}
-                  className="px-5 py-3 rounded-xl text-[15px] font-bold tracking-wide transition-all border-2 min-w-[88px] text-center"
-                  style={{
-                    backgroundColor: checked ? activeBg : 'var(--bg-elevated)',
-                    borderColor: checked ? activeColor : 'var(--border-default)',
-                    color: checked ? activeColor : 'var(--text-muted)',
-                    boxShadow: checked ? `0 0 10px ${activeColor}33` : 'none',
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
+          {/* 왼쪽 70%: 토글 칩 (중앙) + 생방송 (우하단) */}
+          <div className="border-r border-[var(--border-default)] relative min-h-[148px] px-5 py-5 flex flex-col">
+            <div className="flex-1 flex items-center justify-center">
+              <div className="flex flex-wrap gap-3 justify-center max-w-full">
+                {resourceItems.map(({ label, key, checked, activeColor, activeBg }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setValue(key, !checked)}
+                    className="px-6 py-3.5 rounded-xl text-[16px] font-bold tracking-wide transition-all border-2 min-w-[96px] text-center"
+                    style={{
+                      backgroundColor: checked ? activeBg : 'var(--bg-elevated)',
+                      borderColor: checked ? activeColor : 'var(--border-default)',
+                      color: checked ? activeColor : 'var(--text-muted)',
+                      boxShadow: checked ? `0 0 12px ${activeColor}40` : 'none',
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-            {/* 생방송 토글 */}
-            <button
-              type="button"
-              onClick={() => setValue('is_live', !watchLive)}
-              className="self-start px-5 py-3 rounded-xl text-[15px] font-bold tracking-wide transition-all border-2"
-              style={{
-                backgroundColor: watchLive ? '#2D0A0A' : 'var(--bg-elevated)',
-                borderColor: watchLive ? '#DC2626' : 'var(--border-default)',
-                color: watchLive ? '#F87171' : 'var(--text-muted)',
-                boxShadow: watchLive ? '0 0 10px #DC262633' : 'none',
-              }}
-            >
-              🔴 생방송
-            </button>
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setValue('is_live', !watchLive)}
+                className="px-5 py-2.5 rounded-xl text-[14px] font-bold tracking-wide transition-all border-2"
+                style={{
+                  backgroundColor: watchLive ? '#2D0A0A' : 'var(--bg-elevated)',
+                  borderColor: watchLive ? '#DC2626' : 'var(--border-default)',
+                  color: watchLive ? '#F87171' : 'var(--text-muted)',
+                  boxShadow: watchLive ? '0 0 10px #DC262633' : 'none',
+                }}
+              >
+                🔴 생방송
+              </button>
+            </div>
           </div>
 
           {/* 오른쪽 30%: 오류 신고 결재란 */}
