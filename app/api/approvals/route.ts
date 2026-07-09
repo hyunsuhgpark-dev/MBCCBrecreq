@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { isStaffRole, roleToApprovalPart } from '@/lib/roles'
+import { isStaffRole, roleToApprovalPart, getScheduleResourceType } from '@/lib/roles'
 import { sendPushNotification, saveNotification, notificationMessages } from '@/services/notification'
 import { dispatchWebhook } from '@/services/webhook'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -123,13 +123,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: '반려 처리 완료' })
   }
 
-  // 전체 파트 승인 여부 확인
+  // 자원 타입에 따라 필요한 파트만 승인됐는지 확인
+  const { isEngOnly, isAudioOnly } = getScheduleResourceType({
+    use_relay_car: schedule.use_relay_car ?? false,
+    use_studio:    schedule.use_studio    ?? false,
+    use_eng:       schedule.use_eng       ?? false,
+    use_audio:     schedule.use_audio     ?? false,
+  })
+
+  // 필요한 파트: audio-only → office(ENG)만, eng-only → sub_control(CAM)만, 그 외 → 둘 다
+  const requiredParts = isAudioOnly ? ['office']
+    : isEngOnly ? ['sub_control']
+    : ['office', 'sub_control']
+
   const { data: allApprovals } = await supabase
     .from('approvals')
-    .select('status')
+    .select('part, status')
     .eq('schedule_id', scheduleId)
 
-  const allApproved = allApprovals?.every((a) => a.status === 'approved')
+  const allApproved = requiredParts.every((rp) => {
+    const rec = allApprovals?.find((a) => a.part === rp)
+    return rec?.status === 'approved'
+  })
 
   if (allApproved) {
     await supabase.from('schedules').update({ status: 'confirmed' }).eq('id', scheduleId)
