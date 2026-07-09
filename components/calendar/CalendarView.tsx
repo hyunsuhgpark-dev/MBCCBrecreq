@@ -340,15 +340,11 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                           const cfg = statusConfig[schedule.status]
                           const startDt = parseISO(schedule.broadcast_start)
 
-                          // 특기사항 조합
-                          const tags: string[] = []
-                          if (schedule.is_live) tags.push('생방송')
-                          if (schedule.use_relay_car) tags.push('중계차')
-                          if (schedule.use_studio) tags.push('스튜디오')
-                          if (schedule.use_eng) tags.push('ENG')
-                          if (schedule.use_audio) tags.push('AUDIO')
-                          if (schedule.venue) tags.push(schedule.venue)
-                          const note = tags.join(' · ')
+                          // 특기사항: 장소 + 비고(notes)만 표시
+                          const noteParts: string[] = []
+                          if (schedule.venue) noteParts.push(schedule.venue)
+                          if (schedule.notes?.trim()) noteParts.push(schedule.notes.trim())
+                          const note = noteParts.join(' · ')
 
                           return (
                             <Link key={schedule.id} href={`/schedules/${schedule.id}`}>
