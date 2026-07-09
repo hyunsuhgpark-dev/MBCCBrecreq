@@ -1,4 +1,4 @@
-export type UserRole = 'Admin' | 'ENG' | 'CAM' | 'Producer'
+export type UserRole = 'Admin' | 'ENG' | 'CAM' | 'Producer' | 'Director'
 
 export type ScheduleStatus = 'conflict' | 'pending' | 'confirmed' | 'rejected'
 
@@ -9,6 +9,7 @@ export type ApprovalPart = 'office' | 'sub_control'
 export type ConflictType = 'venue' | 'resource' | 'both'
 
 export type NotificationType =
+  | 'schedule_submitted'
   | 'conflict_detected'
   | 'negotiation_complete'
   | 'approval_requested'

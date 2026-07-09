@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { detectConflicts } from '@/lib/conflict-engine'
-import { sendPushNotification, saveNotification, notificationMessages, notifyStaffApprovalRequested } from '@/services/notification'
+import { sendPushNotification, saveNotification, notificationMessages, notifyStaffApprovalRequested, notifyAllUsersScheduleSubmitted } from '@/services/notification'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
@@ -111,6 +111,16 @@ export async function POST(request: NextRequest) {
       programName: schedule.program_name,
     })
   }
+
+  // 전체 사용자에게 의뢰 제출 알림 (제출자 본인 제외, fire-and-forget)
+  void notifyAllUsersScheduleSubmitted({
+    supabase: supabase as unknown as SupabaseClient,
+    scheduleId: schedule.id,
+    submitterId: user.id,
+    submitterName: profile.full_name ?? '알 수 없음',
+    programName: schedule.program_name,
+    broadcastStart: schedule.broadcast_start,
+  })
 
   return NextResponse.json(schedule, { status: 201 })
 }

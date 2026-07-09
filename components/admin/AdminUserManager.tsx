@@ -27,6 +27,7 @@ const roleOptions: { value: UserRole; label: string }[] = [
   { value: 'Producer', label: 'PD / 제작진' },
   { value: 'ENG', label: '스태프 (기술국)' },
   { value: 'CAM', label: '스태프 (영상국)' },
+  { value: 'Director', label: '편성 / 일정 조율자' },
   { value: 'Admin', label: '관리자' },
 ]
 
@@ -35,6 +36,7 @@ const roleColors: Record<string, string> = {
   ENG: 'bg-sky-950/35 text-sky-200 border-sky-800',
   CAM: 'bg-purple-950/35 text-purple-200 border-purple-800',
   Producer: 'bg-emerald-950/35 text-emerald-200 border-emerald-800',
+  Director: 'bg-amber-950/35 text-amber-200 border-amber-800',
 }
 
 const roleLabels: Record<string, string> = {
@@ -42,6 +44,7 @@ const roleLabels: Record<string, string> = {
   ENG: '기술국',
   CAM: '영상국',
   Producer: 'PD',
+  Director: '편성',
 }
 
 export default function AdminUserManager({ users: initialUsers, currentUserId }: AdminUserManagerProps) {

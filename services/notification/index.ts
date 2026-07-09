@@ -136,10 +136,66 @@ export async function notifyProducer(params: {
 }
 
 export const notificationMessages: Record<NotificationType, (name: string) => string> = {
+  schedule_submitted: (name) => name, // 호출자가 직접 메시지 구성
   conflict_detected: (name) => `'${name}' 일정이 기존 일정과 충돌합니다. 협의가 필요합니다.`,
   negotiation_complete: (name) => `'${name}' 협의가 완료되어 스태프 승인 단계로 이동했습니다.`,
   approval_requested: (name) => `'${name}' 일정의 승인 요청이 들어왔습니다.`,
   approved: (name) => `'${name}' 일정이 승인되었습니다.`,
   rejected: (name) => `'${name}' 일정이 반려되었습니다. 의뢰서를 확인하세요.`,
   confirmed: (name) => `'${name}' 일정이 최종 확정되었습니다.`,
+}
+
+/**
+ * 의뢰 제출 시 전체 승인 사용자에게 알림 발송 (제출자 본인 제외)
+ * 메시지 형식: "홍길동님이 2026-07-20 14:00에 '프로그램명' 녹화 의뢰 요청했습니다."
+ */
+export async function notifyAllUsersScheduleSubmitted(params: {
+  supabase: SupabaseClient
+  scheduleId: string
+  submitterId: string
+  submitterName: string
+  programName: string
+  broadcastStart: string
+}) {
+  const { supabase, scheduleId, submitterId, submitterName, programName, broadcastStart } = params
+
+  const kstDateTime = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(new Date(broadcastStart)).replace(' ', ' ').replace(/-/g, '/').replace('T', ' ')
+
+  const message = `${submitterName}님이 ${kstDateTime}에 '${programName}' 녹화 의뢰 요청했습니다.`
+
+  const { data: allProfiles } = await supabase
+    .from('profiles')
+    .select('id, fcm_token')
+    .eq('is_approved', true)
+    .neq('id', submitterId)
+
+  if (!allProfiles?.length) return
+
+  for (const p of allProfiles) {
+    await saveNotification({
+      supabase,
+      userId: p.id,
+      scheduleId,
+      type: 'schedule_submitted',
+      message,
+    })
+  }
+
+  const tokens = allProfiles
+    .filter((p) => p.fcm_token)
+    .map((p) => p.fcm_token as string)
+
+  if (tokens.length > 0) {
+    await sendPushNotification({
+      tokens,
+      type: 'schedule_submitted',
+      title: '새 녹화 의뢰',
+      body: message,
+      scheduleId,
+    })
+  }
 }

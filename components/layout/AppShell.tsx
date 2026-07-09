@@ -23,6 +23,7 @@ const roleLabels: Record<string, string> = {
   Staff_Office: '기술국',
   Staff_SubControl: '영상국',
   Producer: 'PD',
+  Director: '편성',
 }
 
 const roleColors: Record<string, string> = {
@@ -32,6 +33,7 @@ const roleColors: Record<string, string> = {
   Staff_Office: 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
   Staff_SubControl: 'bg-purple-500/20 text-purple-300 border border-purple-500/30',
   Producer: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+  Director: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
 }
 
 export default function AppShell({ children, profile, unreadCount = 0 }: AppShellProps) {
