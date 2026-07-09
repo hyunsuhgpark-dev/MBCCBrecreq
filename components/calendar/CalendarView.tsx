@@ -263,155 +263,173 @@ export default function CalendarView({ profile }: CalendarViewProps) {
 
       {/* ── 주간 뷰 ── */}
       {viewMode === 'week' && (
-        <div
-          className="rounded-2xl border overflow-hidden"
-          style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--bg-surface)' }}
-        >
+        <div className="space-y-3">
           {loading ? (
-            <div className="p-12 text-center">
+            <div
+              className="rounded-2xl p-12 text-center border"
+              style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
+            >
               <div className="w-5 h-5 border-2 border-[#4A9EE8]/30 border-t-[#4A9EE8] rounded-full animate-spin mx-auto mb-3" />
               <p className="text-sm" style={{ color: 'var(--text-muted)' }}>불러오는 중...</p>
             </div>
           ) : (
-            <div className="divide-y" style={{ '--tw-divide-color': 'var(--border-subtle)' } as React.CSSProperties}>
-              {weekDays.map((date, idx) => {
-                const daySchedules = getSchedulesForDay(date)
-                const dow = date.getDay()
-                const isTodayDate = isToday(date)
-                const dowLabel = DOW_LABELS[dow]
-                const dowColor = DOW_COLORS[dow]
+            weekDays.map((date, idx) => {
+              const daySchedules = getSchedulesForDay(date)
+              const dow = date.getDay()
+              const isTodayDate = isToday(date)
+              const dowLabel = DOW_LABELS[dow]
+              const dowColor = DOW_COLORS[dow]
+              const hasSchedules = daySchedules.length > 0
 
-                return (
-                  <div key={idx} className="flex min-h-[56px]">
-
-                    {/* 날짜 컬럼 */}
-                    <div
-                      className="shrink-0 w-16 sm:w-20 flex flex-col items-center justify-start pt-3 pb-3 border-r"
-                      style={{
-                        borderColor: 'var(--border-subtle)',
-                        backgroundColor: isTodayDate ? 'rgba(74,158,232,0.07)' : 'transparent',
-                      }}
-                    >
+              return (
+                <div
+                  key={idx}
+                  className="rounded-2xl border overflow-hidden"
+                  style={{
+                    borderColor: isTodayDate ? 'var(--accent)' : 'var(--border-default)',
+                    backgroundColor: 'var(--bg-surface)',
+                    boxShadow: isTodayDate ? '0 0 0 1px var(--accent)' : 'none',
+                  }}
+                >
+                  {/* 날짜 헤더 */}
+                  <div
+                    className="flex items-center justify-between px-5 py-4 border-b"
+                    style={{
+                      borderColor: 'var(--border-subtle)',
+                      backgroundColor: isTodayDate ? 'rgba(74,158,232,0.08)' : 'var(--bg-elevated)',
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      {/* 날짜 + (요일) */}
                       <span
-                        className="text-[11px] font-semibold leading-none mb-1"
+                        className="text-[28px] font-bold tabular-nums leading-none"
                         style={{ color: isTodayDate ? 'var(--accent)' : dowColor }}
-                      >
-                        {dowLabel}
-                      </span>
-                      <span
-                        className={cn(
-                          'text-[22px] font-bold tabular-nums leading-none',
-                          isTodayDate && 'w-9 h-9 flex items-center justify-center rounded-full text-white text-[18px]'
-                        )}
-                        style={{
-                          backgroundColor: isTodayDate ? 'var(--accent)' : 'transparent',
-                          color: isTodayDate ? '#fff' : dowColor,
-                        }}
                       >
                         {format(date, 'd')}
                       </span>
+                      <div className="flex flex-col gap-0.5">
+                        <span
+                          className="text-[13px] font-semibold"
+                          style={{ color: isTodayDate ? 'var(--accent)' : dowColor }}
+                        >
+                          ({dowLabel})
+                        </span>
+                        <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                          {format(date, 'M월 d일', { locale: ko })}
+                        </span>
+                      </div>
+                      {isTodayDate && (
+                        <span
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
+                        >
+                          오늘
+                        </span>
+                      )}
                     </div>
 
-                    {/* 일정 영역 */}
-                    <div className="flex-1 min-w-0 px-3 py-2.5 flex flex-col gap-2">
-                      {daySchedules.length === 0 ? (
-                        /* 일정 없음 */
-                        canCreate ? (
-                          <button
-                            onClick={() => router.push(`/schedules/new?date=${format(date, 'yyyy-MM-dd')}`)}
-                            className="flex items-center gap-1.5 self-start text-[11px] opacity-0 hover:opacity-100 focus:opacity-100 group-hover:opacity-100 transition-opacity rounded-lg px-2 py-1"
-                            style={{ color: 'var(--text-muted)' }}
-                          >
-                            <Plus className="w-3 h-3" />
-                            <span>의뢰 추가</span>
-                          </button>
-                        ) : (
-                          <span className="text-[11px] self-center mt-1" style={{ color: 'var(--border-default)' }}>—</span>
-                        )
-                      ) : (
-                        <>
-                          {daySchedules.map((schedule) => {
-                            const cfg = statusConfig[schedule.status]
-                            const Icon = cfg.icon
-                            const startDt = parseISO(schedule.broadcast_start)
-                            const endDt = parseISO(schedule.broadcast_end)
-                            const durationMin = Math.round((endDt.getTime() - startDt.getTime()) / 60000)
-                            const durationStr = durationMin >= 60
-                              ? `${Math.floor(durationMin / 60)}시간${durationMin % 60 > 0 ? ` ${durationMin % 60}분` : ''}`
-                              : `${durationMin}분`
-
-                            return (
-                              <Link key={schedule.id} href={`/schedules/${schedule.id}`} onClick={(e) => e.stopPropagation()}>
-                                <div
-                                  className="rounded-xl border-l-4 px-3 py-2.5 transition-all hover:brightness-110 cursor-pointer"
-                                  style={{
-                                    backgroundColor: cfg.cardBg,
-                                    borderLeftColor: cfg.cardBorder,
-                                  }}
-                                >
-                                  {/* 상단: 시간 + 상태 */}
-                                  <div className="flex items-center justify-between gap-2 mb-1">
-                                    <div className="flex items-center gap-2">
-                                      <span
-                                        className="text-[13px] tabular-nums font-bold"
-                                        style={{ color: cfg.timeColor }}
-                                      >
-                                        {format(startDt, 'HH:mm')}
-                                      </span>
-                                      <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                                        {durationStr}
-                                      </span>
-                                      {schedule.is_live && (
-                                        <span className="flex items-center gap-0.5 bg-red-500 text-white px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wide">
-                                          <span className="w-1 h-1 bg-white rounded-full animate-pulse" />LIVE
-                                        </span>
-                                      )}
-                                    </div>
-                                    <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0', cfg.badge)}>
-                                      <Icon className={cn('w-2.5 h-2.5', cfg.iconColor)} />
-                                      {cfg.label}
-                                    </span>
-                                  </div>
-
-                                  {/* 프로그램명 */}
-                                  <p className="text-[14px] font-bold mb-1.5" style={{ color: cfg.cardText }}>
-                                    {schedule.program_name}
-                                  </p>
-
-                                  {/* 하단: 장소 + PD */}
-                                  <div className="flex items-center gap-3 text-[11px] flex-wrap" style={{ color: 'var(--text-muted)' }}>
-                                    <span className="flex items-center gap-1">
-                                      <MapPin className="w-2.5 h-2.5 shrink-0" />
-                                      {schedule.venue}
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                      <User className="w-2.5 h-2.5 shrink-0" />
-                                      {schedule.responsible_pd} PD
-                                    </span>
-                                  </div>
-                                </div>
-                              </Link>
-                            )
-                          })}
-
-                          {/* 일정이 있는 날에도 PD는 추가 가능 */}
-                          {canCreate && (
-                            <button
-                              onClick={() => router.push(`/schedules/new?date=${format(date, 'yyyy-MM-dd')}`)}
-                              className="flex items-center gap-1 self-start text-[11px] px-2 py-1 rounded-lg transition-all opacity-40 hover:opacity-100"
-                              style={{ color: 'var(--text-muted)' }}
-                            >
-                              <Plus className="w-3 h-3" />
-                              <span>추가</span>
-                            </button>
-                          )}
-                        </>
+                    {/* 일정 수 + 추가 버튼 */}
+                    <div className="flex items-center gap-3">
+                      {hasSchedules && (
+                        <span className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
+                          {daySchedules.length}건
+                        </span>
+                      )}
+                      {canCreate && (
+                        <button
+                          onClick={() => router.push(`/schedules/new?date=${format(date, 'yyyy-MM-dd')}`)}
+                          className="flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-lg border transition-all"
+                          style={{
+                            color: 'var(--accent)',
+                            borderColor: 'var(--accent)',
+                            opacity: 0.75,
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                          onMouseLeave={e => (e.currentTarget.style.opacity = '0.75')}
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          의뢰
+                        </button>
                       )}
                     </div>
                   </div>
-                )
-              })}
-            </div>
+
+                  {/* 일정 목록 */}
+                  {hasSchedules ? (
+                    <div className="p-4 flex flex-col gap-3">
+                      {daySchedules.map((schedule) => {
+                        const cfg = statusConfig[schedule.status]
+                        const Icon = cfg.icon
+                        const startDt = parseISO(schedule.broadcast_start)
+                        const endDt = parseISO(schedule.broadcast_end)
+                        const durationMin = Math.round((endDt.getTime() - startDt.getTime()) / 60000)
+                        const durationStr = durationMin >= 60
+                          ? `${Math.floor(durationMin / 60)}시간${durationMin % 60 > 0 ? ` ${durationMin % 60}분` : ''}`
+                          : `${durationMin}분`
+
+                        return (
+                          <Link key={schedule.id} href={`/schedules/${schedule.id}`}>
+                            <div
+                              className="rounded-xl border-l-4 px-4 py-4 transition-all hover:brightness-110 cursor-pointer"
+                              style={{
+                                backgroundColor: cfg.cardBg,
+                                borderLeftColor: cfg.cardBorder,
+                              }}
+                            >
+                              {/* 시간 + 상태 배지 */}
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <div className="flex items-center gap-2.5">
+                                  <span
+                                    className="text-[16px] tabular-nums font-bold"
+                                    style={{ color: cfg.timeColor }}
+                                  >
+                                    {format(startDt, 'HH:mm')}
+                                  </span>
+                                  <span className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
+                                    {durationStr}
+                                  </span>
+                                  {schedule.is_live && (
+                                    <span className="flex items-center gap-1 bg-red-500 text-white px-2 py-0.5 rounded text-[10px] font-bold tracking-wide">
+                                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                                      LIVE
+                                    </span>
+                                  )}
+                                </div>
+                                <span className={cn('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0', cfg.badge)}>
+                                  <Icon className={cn('w-3 h-3', cfg.iconColor)} />
+                                  {cfg.label}
+                                </span>
+                              </div>
+
+                              {/* 프로그램명 */}
+                              <p className="text-[16px] font-bold mb-2.5 leading-snug" style={{ color: cfg.cardText }}>
+                                {schedule.program_name}
+                              </p>
+
+                              {/* 장소 + PD */}
+                              <div className="flex items-center gap-4 text-[12px] flex-wrap" style={{ color: 'var(--text-muted)' }}>
+                                <span className="flex items-center gap-1.5">
+                                  <MapPin className="w-3 h-3 shrink-0" />
+                                  {schedule.venue}
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                  <User className="w-3 h-3 shrink-0" />
+                                  {schedule.responsible_pd} PD
+                                </span>
+                              </div>
+                            </div>
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="px-5 py-5 flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+                      <span className="text-[13px]">일정 없음</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })
           )}
         </div>
       )}
