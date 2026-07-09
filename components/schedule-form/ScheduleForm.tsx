@@ -215,7 +215,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
         {/* ── 장비 선택 + 오류 신고 결재란 ── */}
         <div className="grid grid-cols-[70%_30%] border-b border-[var(--border-default)]">
           {/* 왼쪽 70%: 토글 칩 (중앙) + 생방송 (우하단) */}
-          <div className="border-r border-[var(--border-default)] relative min-h-[220px] px-5 py-5 flex flex-col">
+          <div className="border-r border-[var(--border-default)] relative min-h-[300px] px-5 py-6 flex flex-col">
             <div className="flex-1 flex items-center justify-center">
               <div className="flex flex-wrap gap-3 justify-center max-w-full">
                 {resourceItems.map(({ label, key, checked, activeColor, activeBg }) => (
@@ -223,7 +223,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
                     key={key}
                     type="button"
                     onClick={() => setValue(key, !checked)}
-                    className="px-8 py-8 rounded-xl text-[16px] font-bold tracking-wide transition-all border-2 min-w-[125px] text-center"
+                    className="px-8 min-h-[100px] flex items-center justify-center rounded-xl text-[16px] font-bold tracking-wide transition-all border-2 min-w-[125px] text-center"
                     style={{
                       backgroundColor: checked ? activeBg : 'var(--bg-elevated)',
                       borderColor: checked ? activeColor : 'var(--border-default)',
