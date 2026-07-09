@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) return NextResponse.json({ error: '?? ??' }, { status: 401 })
+  if (!user) return NextResponse.json({ error: '인증 필요' }, { status: 401 })
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     .eq('id', user.id)
     .single()
 
-  if (!profile?.is_approved) return NextResponse.json({ error: '???' }, { status: 403 })
+  if (!profile?.is_approved) return NextResponse.json({ error: '미승인 계정' }, { status: 403 })
 
   if (!isStaffRole(profile.role) && profile.role !== 'Admin') {
     return NextResponse.json({ error: '권한 없음' }, { status: 403 })
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   const { scheduleId, action, rejectReason } = await request.json()
   // action: 'approve' | 'reject' | 'force_approve'
 
-  // Admin ?? ??
+  // Admin 강제 승인
   if (action === 'force_approve' && profile.role === 'Admin') {
     await supabase
       .from('approvals')
@@ -57,26 +57,26 @@ export async function POST(request: NextRequest) {
         await sendPushNotification({
           tokens: [token],
           type: 'confirmed',
-          title: '?? ??',
+          title: '일정 확정',
           body: notificationMessages.confirmed(schedule.program_name),
           scheduleId,
         })
       }
 
-      // ?? ?? (?? ??)
+      // 웹훅 발송 (fire-and-forget)
       void dispatchWebhook('schedule.confirmed', { ...schedule, status: 'confirmed' })
     }
 
-    return NextResponse.json({ message: '?? ?? ??' })
+    return NextResponse.json({ message: '강제 승인 완료' })
   }
 
-  // ??? ?? ??
+  // 일반 승인 처리
   const part = roleToApprovalPart(profile.role)
   if (!part) {
     return NextResponse.json({ error: '승인 파트를 확인할 수 없습니다' }, { status: 403 })
   }
 
-  // ??/?? ??
+  // 승인/반려 처리
   const updateData: Record<string, unknown> = {
     approver_id: user.id,
     decided_at: new Date().toISOString(),
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     .eq('id', scheduleId)
     .single()
 
-  if (!schedule) return NextResponse.json({ error: '?? ??' }, { status: 404 })
+  if (!schedule) return NextResponse.json({ error: '일정 없음' }, { status: 404 })
 
   if (action === 'reject') {
     await supabase.from('schedules').update({ status: 'rejected' }).eq('id', scheduleId)
@@ -114,16 +114,16 @@ export async function POST(request: NextRequest) {
       await sendPushNotification({
         tokens: [token],
         type: 'rejected',
-        title: '?? ??',
+        title: '일정 반려',
         body: notificationMessages.rejected(schedule.program_name),
         scheduleId,
       })
     }
 
-    return NextResponse.json({ message: '?? ?? ??' })
+    return NextResponse.json({ message: '반려 처리 완료' })
   }
 
-  // ?? ? ?? ?? ??
+  // 전체 파트 승인 여부 확인
   const { data: allApprovals } = await supabase
     .from('approvals')
     .select('status')
@@ -147,13 +147,13 @@ export async function POST(request: NextRequest) {
       await sendPushNotification({
         tokens: [token],
         type: 'confirmed',
-        title: '?? ?? ??',
+        title: '일정 최종 확정',
         body: notificationMessages.confirmed(schedule.program_name),
         scheduleId,
       })
     }
 
-    // ?? ?? (?? ??)
+    // 웹훅 발송 (fire-and-forget)
     void dispatchWebhook('schedule.confirmed', { ...schedule, status: 'confirmed' })
   } else {
     await saveNotification({
@@ -165,5 +165,5 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  return NextResponse.json({ message: '?? ?? ??', allConfirmed: allApproved })
+  return NextResponse.json({ message: '승인 처리 완료', allConfirmed: allApproved })
 }
