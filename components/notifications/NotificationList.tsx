@@ -4,7 +4,7 @@ import type { Notification } from '@/lib/types'
 import { format, parseISO } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import Link from 'next/link'
-import { Bell, AlertTriangle, CheckCircle2, XCircle, MessageSquare, Zap } from 'lucide-react'
+import { Bell, AlertTriangle, CheckCircle2, XCircle, MessageSquare, Zap, ClipboardList } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface NotificationListProps {
@@ -12,6 +12,7 @@ interface NotificationListProps {
 }
 
 const typeConfig = {
+  schedule_submitted: { icon: ClipboardList, color: 'text-violet-300', bg: 'bg-violet-950/25 border-violet-800' },
   conflict_detected: { icon: AlertTriangle, color: 'text-amber-300', bg: 'bg-amber-950/35 border-amber-800' },
   negotiation_complete: { icon: MessageSquare, color: 'text-sky-300', bg: 'bg-sky-950/25 border-sky-800' },
   approval_requested: { icon: Bell, color: 'text-slate-300', bg: 'bg-white/5 border-white/10' },
