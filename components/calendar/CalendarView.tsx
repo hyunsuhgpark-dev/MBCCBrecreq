@@ -279,16 +279,16 @@ export default function CalendarView({ profile }: CalendarViewProps) {
               const isTodayDate = isToday(date)
               const dowLabel = DOW_LABELS[dow]
               const isWeekend = dow === 0 || dow === 6
-              const dateColor = isTodayDate ? 'var(--accent)' : isWeekend ? DOW_COLORS[dow] : 'var(--text-primary)'
+              const dateColor = isWeekend ? DOW_COLORS[dow] : 'var(--text-primary)'
 
               return (
                 <div
                   key={idx}
                   className="rounded-2xl border overflow-hidden flex"
                   style={{
-                    borderColor: isTodayDate ? 'var(--accent)' : 'var(--border-default)',
+                    borderColor: isTodayDate ? 'rgba(240,240,242,0.55)' : 'var(--border-default)',
                     backgroundColor: 'var(--bg-surface)',
-                    boxShadow: isTodayDate ? '0 0 0 1px var(--accent)' : 'none',
+                    boxShadow: isTodayDate ? '0 0 0 1px rgba(240,240,242,0.55)' : 'none',
                     minHeight: '80px',
                   }}
                 >
@@ -296,8 +296,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   <div
                     className="shrink-0 w-20 flex flex-col items-center justify-center gap-0.5 border-r"
                     style={{
-                      borderColor: isTodayDate ? 'rgba(74,158,232,0.3)' : 'var(--border-subtle)',
-                      backgroundColor: isTodayDate ? 'rgba(74,158,232,0.08)' : 'var(--bg-elevated)',
+                      borderColor: 'var(--border-subtle)',
+                      backgroundColor: 'var(--bg-elevated)',
                     }}
                   >
                     <span
@@ -308,12 +308,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                     </span>
                     <span
                       className="text-[14px] font-semibold"
-                      style={{ color: isTodayDate ? 'var(--accent)' : 'var(--text-muted)' }}
+                      style={{ color: 'var(--text-muted)' }}
                     >
                       ({dowLabel})
                     </span>
                     {isTodayDate && (
-                      <span className="text-[9px] font-bold mt-1 px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>
+                      <span className="text-[9px] font-bold mt-1 px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(240,240,242,0.15)', color: 'var(--text-secondary)', border: '1px solid rgba(240,240,242,0.3)' }}>
                         TODAY
                       </span>
                     )}
