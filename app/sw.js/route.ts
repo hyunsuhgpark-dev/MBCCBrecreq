@@ -56,7 +56,7 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-const CACHE_NAME = 'mbc-schedule-v2';
+const CACHE_NAME = 'mbc-schedule-v3';
 const STATIC_ASSETS = ['/calendar', '/login'];
 
 self.addEventListener('install', (event) => {
