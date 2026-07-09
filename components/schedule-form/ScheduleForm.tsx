@@ -7,7 +7,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
 import DateTimePicker from '@/components/ui/DateTimePicker'
 import { toast } from 'sonner'
 import { Loader2, Send } from 'lucide-react'
@@ -186,11 +185,11 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
     'border-[var(--border-default)] focus:outline-none focus:border-[var(--accent)] transition-colors'
   )
 
-  const checkboxItems = [
-    { label: '중 계 차', key: 'use_relay_car' as const, checked: watchRelaycar },
-    { label: '스튜디오', key: 'use_studio' as const, checked: watchStudio },
-    { label: 'E  N  G', key: 'use_eng' as const, checked: watchEng },
-    { label: 'A U D I O', key: 'use_audio' as const, checked: watchAudio },
+  const resourceItems = [
+    { label: '중계차', key: 'use_relay_car' as const, checked: watchRelaycar, activeColor: '#D97706', activeBg: '#2D1E00' },
+    { label: '스튜디오', key: 'use_studio' as const, checked: watchStudio, activeColor: '#3B82F6', activeBg: '#0D1A35' },
+    { label: 'ENG', key: 'use_eng' as const, checked: watchEng, activeColor: '#10B981', activeBg: '#07291C' },
+    { label: 'AUDIO', key: 'use_audio' as const, checked: watchAudio, activeColor: '#A855F7', activeBg: '#1C0A2D' },
   ]
 
   return (
@@ -213,30 +212,43 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
           <div className="absolute bottom-0 left-0 right-0 h-px" style={{ backgroundColor: 'var(--border-default)' }} />
         </div>
 
-        {/* ── 장비 체크박스(세로) + 오류 신고 결재란 ── */}
+        {/* ── 장비 선택 + 오류 신고 결재란 ── */}
         <div className="grid grid-cols-[70%_30%] border-b border-[var(--border-default)]">
-          {/* 왼쪽 70%: 세로 체크박스 */}
-          <div className="border-r border-[var(--border-default)]">
-            {checkboxItems.map(({ label, key, checked }, i) => (
-              <div
-                key={key}
-                className={cn(
-                  'grid grid-cols-[112px_1fr] items-center',
-                  i > 0 && 'border-t border-[var(--border-default)]'
-                )}
-              >
-                <div className={cn(labelCls, 'border-0 border-r border-[var(--border-default)] h-full text-xs')}>
+          {/* 왼쪽 70%: 토글 칩 */}
+          <div className="border-r border-[var(--border-default)] px-4 py-5 flex flex-col gap-3">
+            <p className="text-xs font-semibold tracking-widest" style={{ color: 'var(--text-muted)' }}>장 비 선 택</p>
+            <div className="flex flex-wrap gap-3">
+              {resourceItems.map(({ label, key, checked, activeColor, activeBg }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setValue(key, !checked)}
+                  className="px-5 py-3 rounded-xl text-[15px] font-bold tracking-wide transition-all border-2 min-w-[88px] text-center"
+                  style={{
+                    backgroundColor: checked ? activeBg : 'var(--bg-elevated)',
+                    borderColor: checked ? activeColor : 'var(--border-default)',
+                    color: checked ? activeColor : 'var(--text-muted)',
+                    boxShadow: checked ? `0 0 10px ${activeColor}33` : 'none',
+                  }}
+                >
                   {label}
-                </div>
-                <div className="px-4 py-2.5">
-                  <Checkbox
-                    checked={checked}
-                    onCheckedChange={(v) => setValue(key, !!v)}
-                    className="border-[var(--border-strong)] data-checked:bg-[var(--accent)] data-checked:border-[var(--accent)] data-checked:text-white"
-                  />
-                </div>
-              </div>
-            ))}
+                </button>
+              ))}
+            </div>
+            {/* 생방송 토글 */}
+            <button
+              type="button"
+              onClick={() => setValue('is_live', !watchLive)}
+              className="self-start px-5 py-3 rounded-xl text-[15px] font-bold tracking-wide transition-all border-2"
+              style={{
+                backgroundColor: watchLive ? '#2D0A0A' : 'var(--bg-elevated)',
+                borderColor: watchLive ? '#DC2626' : 'var(--border-default)',
+                color: watchLive ? '#F87171' : 'var(--text-muted)',
+                boxShadow: watchLive ? '0 0 10px #DC262633' : 'none',
+              }}
+            >
+              🔴 생방송
+            </button>
           </div>
 
           {/* 오른쪽 30%: 오류 신고 결재란 */}
@@ -311,14 +323,6 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
                   />
                 )}
               />
-              <label className="flex items-center gap-1.5 cursor-pointer group">
-                <Checkbox
-                  checked={watchLive}
-                  onCheckedChange={(v) => setValue('is_live', !!v)}
-                  className="border-red-400 data-checked:bg-red-600 data-checked:border-red-600 data-checked:text-white"
-                />
-                <span className="text-sm font-bold text-red-600 group-hover:text-red-700 transition-colors">생방송</span>
-              </label>
               {errors.broadcast_start && (
                 <p className="text-red-500 text-[11px] w-full">{errors.broadcast_start.message}</p>
               )}
@@ -365,13 +369,6 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
                 placeholder="예: 지하 1층 청주 스튜디오"
                 {...register('venue')}
                 className={cn(inputCls, 'flex-1', errors.venue && 'border-red-400 focus:border-red-400')}
-              />
-              <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>자원ID</span>
-              <input
-                type="text"
-                placeholder="내부 코드"
-                {...register('location')}
-                className={cn(inputCls, 'max-w-[120px]')}
               />
             </div>
           </div>

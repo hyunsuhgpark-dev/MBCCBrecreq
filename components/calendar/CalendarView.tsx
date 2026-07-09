@@ -292,9 +292,14 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                     minHeight: '80px',
                   }}
                 >
-                  {/* 왼쪽: 날짜 사이드바 */}
+                  {/* 왼쪽: 날짜 사이드바 (PD/Admin은 클릭 시 의뢰 이동) */}
                   <div
-                    className="shrink-0 w-20 flex flex-col items-center justify-center gap-0.5 border-r"
+                    role={canCreate ? 'button' : undefined}
+                    onClick={canCreate ? () => router.push(`/schedules/new?date=${format(date, 'yyyy-MM-dd')}`) : undefined}
+                    className={cn(
+                      'shrink-0 w-20 flex flex-col items-center justify-center gap-0.5 border-r',
+                      canCreate && 'cursor-pointer transition-colors hover:brightness-125'
+                    )}
                     style={{
                       borderColor: 'var(--border-subtle)',
                       backgroundColor: 'var(--bg-elevated)',
