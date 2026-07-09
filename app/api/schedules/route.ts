@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { detectConflicts } from '@/lib/conflict-engine'
 import { sendPushNotification, saveNotification, notificationMessages, notifyStaffApprovalRequested } from '@/services/notification'
-import { dispatchWebhook } from '@/services/webhook'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
@@ -112,9 +111,6 @@ export async function POST(request: NextRequest) {
       programName: schedule.program_name,
     })
   }
-
-  // 웹훅 발송 (fire-and-forget — 실패해도 응답 지연 없음)
-  void dispatchWebhook('schedule.created', schedule)
 
   return NextResponse.json(schedule, { status: 201 })
 }

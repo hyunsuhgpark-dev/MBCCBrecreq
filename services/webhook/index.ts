@@ -2,15 +2,16 @@
  * Webhook Service
  *
  * 환경변수 WEBHOOK_URLS 에 콤마(,) 구분으로 URL을 등록하면
- * schedule.created / schedule.confirmed 이벤트 발생 시 각 URL로 POST 요청을 발송합니다.
+ * schedule.confirmed 이벤트 발생 시(스태프 최종 승인) 각 URL로 POST 요청을 발송합니다.
  *
- * 예) WEBHOOK_URLS=https://hooks.slack.com/...,https://n8n.example.com/webhook/...
+ * 예) WEBHOOK_URLS=https://planner-ecru-beta.vercel.app/api/webhook/records
  *
  * 발송은 fire-and-forget으로 처리되므로 메인 플로우에 영향을 주지 않습니다.
  * 실패한 URL은 콘솔 경고로만 기록됩니다 (재시도 없음 — 무료 티어 최적화).
+ * payload의 external_id(= schedule.id)를 기준으로 후배 플래너가 upsert 처리합니다.
  */
 
-export type WebhookEvent = 'schedule.created' | 'schedule.confirmed'
+export type WebhookEvent = 'schedule.confirmed'
 
 export interface WebhookScheduleInput {
   id: string
@@ -47,6 +48,7 @@ export type PlannerRecordType =
 
 export interface PlannerRecordPayload {
   type: PlannerRecordType
+  external_id: string
   summary: string
   memo?: string
   details: {
@@ -117,6 +119,7 @@ export function toPlannerRecordPayload(
 
   return {
     type,
+    external_id: schedule.id,
     summary,
     ...(memo ? { memo } : {}),
     details: {
