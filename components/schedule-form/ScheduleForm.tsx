@@ -213,10 +213,10 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
         </div>
 
         {/* ── 장비 선택 + 오류 신고 결재란 ── */}
-        <div className="grid grid-cols-[70%_30%] border-b border-[var(--border-default)]">
+        <div className="grid grid-cols-[70%_30%] items-start border-b border-[var(--border-default)]">
           {/* 왼쪽 70%: 토글 칩 (중앙) + 생방송 (우하단) */}
-          <div className="border-r border-[var(--border-default)] px-5 pt-5 pb-4 flex flex-col gap-3">
-            <div className="flex flex-wrap gap-3 justify-center">
+          <div className="border-r border-[var(--border-default)] px-5 pt-8 pb-4 flex flex-col gap-3">
+            <div className="flex flex-wrap gap-3 justify-center mt-1">
               {resourceItems.map(({ label, key, checked, activeColor, activeBg }) => (
                 <button
                   key={key}
