@@ -37,10 +37,13 @@ export function roleToApprovalPart(role: string | null | undefined): ApprovalPar
   return null
 }
 
+/** 캘린더 스케줄 필터 */
+export type ScheduleFilter = 'all' | 'tech' | 'cam'
+
 /**
  * 일정의 자원 타입을 판단합니다.
- * - isEngOnly: ENG만 필요 (중계차·스튜디오 없음) → ENG/ENG-M에게 비노출
- * - isAudioOnly: AUDIO만 필요 (중계차·스튜디오·ENG 없음) → CAM/CAM-M에게 비노출
+ * - isEngOnly: ENG만 필요 (중계차·스튜디오 없음)
+ * - isAudioOnly: AUDIO만 필요 (중계차·스튜디오·ENG 없음)
  */
 export function getScheduleResourceType(schedule: {
   use_relay_car: boolean
@@ -54,17 +57,23 @@ export function getScheduleResourceType(schedule: {
   return { isEngOnly, isAudioOnly, hasHeavyResource }
 }
 
-/**
- * 해당 역할의 사용자가 이 일정을 볼 수 있는지 반환합니다.
- */
-export function canViewSchedule(
-  role: string | null | undefined,
-  schedule: { use_relay_car: boolean; use_studio: boolean; use_eng: boolean; use_audio: boolean }
+/** 역할별 기본 스케줄 필터 */
+export function getDefaultScheduleFilter(role: string | null | undefined): ScheduleFilter {
+  if (isStaffOfficeRole(role) || role === 'ENG-M') return 'tech'
+  if (isStaffSubControlRole(role) || role === 'CAM-M') return 'cam'
+  return 'all'
+}
+
+export function matchesScheduleFilter(
+  schedule: { use_relay_car: boolean; use_studio: boolean; use_eng: boolean; use_audio: boolean },
+  filter: ScheduleFilter
 ): boolean {
-  const { isEngOnly, isAudioOnly } = getScheduleResourceType(schedule)
-  // ENG, ENG-M: ENG-only 일정은 비노출
-  if ((role === 'ENG' || role === 'ENG-M') && isEngOnly) return false
-  // CAM, CAM-M: AUDIO-only 일정은 비노출
-  if ((role === 'CAM' || role === 'CAM-M') && isAudioOnly) return false
+  if (filter === 'all') return true
+  if (filter === 'tech') {
+    return schedule.use_relay_car || schedule.use_studio || schedule.use_audio
+  }
+  if (filter === 'cam') {
+    return schedule.use_relay_car || schedule.use_studio || schedule.use_eng
+  }
   return true
 }

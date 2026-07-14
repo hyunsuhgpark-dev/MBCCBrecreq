@@ -37,7 +37,7 @@ import {
 } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
-import { canViewSchedule } from '@/lib/roles'
+import { getDefaultScheduleFilter, matchesScheduleFilter, type ScheduleFilter } from '@/lib/roles'
 import Link from 'next/link'
 
 interface CalendarViewProps {
@@ -107,8 +107,10 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   // PC(≥768px)는 월간 달력, 모바일은 주간 기본
   const [viewMode, setViewMode] = useState<'week' | 'month' | 'list'>('week')
   const [isDesktop, setIsDesktop] = useState(false)
-  // 스케줄 필터: 'all' | 'tech' | 'cam'
-  const [scheduleFilter, setScheduleFilter] = useState<'all' | 'tech' | 'cam'>('all')
+  // 스케줄 필터 — 역할별 기본값 (PD/Admin: 전체, 기술국: 기술, 영상국: 영상)
+  const [scheduleFilter, setScheduleFilter] = useState<ScheduleFilter>(() =>
+    getDefaultScheduleFilter(profile.role)
+  )
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false)
 
   useEffect(() => {
@@ -152,14 +154,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
       .lte('broadcast_start', rangeEnd.toISOString())
       .order('broadcast_start', { ascending: true })
     const all = (data as Schedule[]) ?? []
-    // 역할별 가시성 필터 적용
-    const filtered = all.filter((s) => canViewSchedule(profile.role, {
-      use_relay_car: s.use_relay_car,
-      use_studio: s.use_studio,
-      use_eng: s.use_eng,
-      use_audio: s.use_audio,
-    }))
-    setSchedules(filtered)
+    setSchedules(all)
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDate, viewMode])
@@ -174,15 +169,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   }, [fetchSchedules, supabase])
 
   function applyScheduleFilter(list: typeof schedules) {
-    if (scheduleFilter === 'tech') {
-      // 기술 스케줄: 중계차, 스튜디오, AUDIO (ENG-only 제외)
-      return list.filter((s) => s.use_relay_car || s.use_studio || s.use_audio)
-    }
-    if (scheduleFilter === 'cam') {
-      // 영상 스케줄: 중계차, 스튜디오, ENG (AUDIO-only 제외)
-      return list.filter((s) => s.use_relay_car || s.use_studio || s.use_eng)
-    }
-    return list
+    return list.filter((s) => matchesScheduleFilter(s, scheduleFilter))
   }
 
   function getSchedulesForDay(date: Date) {
@@ -199,8 +186,9 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   const canCreate = profile.role === 'Producer' || profile.role === 'Admin'
   const isCurrentWeek = isSameWeek(currentDate, new Date(), { locale: ko })
 
-  const totalCount = schedules.length
-  const confirmedCount = schedules.filter(s => s.status === 'confirmed').length
+  const displayedSchedules = applyScheduleFilter(schedules)
+  const totalCount = displayedSchedules.length
+  const confirmedCount = displayedSchedules.filter(s => s.status === 'confirmed').length
 
   return (
     <div className={cn('px-4 py-5', !isDesktop && 'max-w-7xl mx-auto')}>
