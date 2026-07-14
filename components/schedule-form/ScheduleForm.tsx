@@ -202,9 +202,8 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
         )}
       >
 
-        {/* ── 제목 헤더 ── */}
-        <div className="relative py-5 text-center overflow-hidden" style={{ backgroundColor: 'var(--bg-elevated)' }}>
-          {/* 배경 워터마크 느낌 */}
+        {/* ── 제목 헤더 — 모바일에서는 숨김 (상단에 이미 "녹화 의뢰서 작성" 표시됨) ── */}
+        <div className="hidden md:block relative py-5 text-center overflow-hidden" style={{ backgroundColor: 'var(--bg-elevated)' }}>
           <div className="absolute inset-0 opacity-[0.08] bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.22)_0px,rgba(255,255,255,0.22)_1px,transparent_1px,transparent_8px)]" />
           <h1 className="relative text-2xl font-bold tracking-[0.5em]" style={{ color: 'var(--text-primary)' }}>
             녹 화 의 뢰 서
@@ -215,7 +214,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
         {/* ── 장비 선택 ── */}
 
         {/* 모바일: 풀너비 2×2 그리드 */}
-        <div className="md:hidden border-b border-[var(--border-default)] p-4">
+        <div className="md:hidden border-b border-[var(--border-default)]" style={{ padding: '20px 16px 16px' }}>
           <div className="grid grid-cols-2 gap-3 mb-3">
             {resourceItems.map(({ label, key, checked, activeColor, activeBg }) => (
               <button
