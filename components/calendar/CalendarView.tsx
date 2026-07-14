@@ -102,7 +102,24 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [loading, setLoading] = useState(true)
+  // PC(≥768px)는 월간 달력, 모바일은 주간 기본
   const [viewMode, setViewMode] = useState<'week' | 'month' | 'list'>('week')
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  useEffect(() => {
+    const check = () => {
+      const desktop = window.innerWidth >= 768
+      setIsDesktop(desktop)
+      setViewMode((prev) => {
+        // 초기 한 번만 스크린 크기에 따라 기본값 결정
+        if (prev === 'week' && desktop) return 'month'
+        return prev
+      })
+    }
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   const weekStart = startOfWeek(currentDate, { locale: ko })
   const weekEnd = endOfWeek(currentDate, { locale: ko })
@@ -168,7 +185,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   const confirmedCount = schedules.filter(s => s.status === 'confirmed').length
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-5">
+    <div className={cn('px-4 py-5', !isDesktop && 'max-w-7xl mx-auto')}>
 
       {/* ── 컨트롤 바 ── */}
       <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
@@ -465,8 +482,13 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 {DOW_LABELS.map((label, i) => (
                   <div
                     key={i}
-                    className="text-center text-[11px] font-bold py-2 tracking-wide"
-                    style={{ color: DOW_COLORS[i] }}
+                    className="text-center font-bold tracking-wide"
+                    style={{
+                      color: DOW_COLORS[i],
+                      fontSize: isDesktop ? '14px' : '11px',
+                      paddingTop: isDesktop ? '10px' : '8px',
+                      paddingBottom: isDesktop ? '10px' : '8px',
+                    }}
                   >
                     {label}
                   </div>
@@ -474,7 +496,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
               </div>
 
               {/* 날짜 그리드 */}
-              <div className="grid grid-cols-7 gap-1">
+              <div className="grid grid-cols-7" style={{ gap: isDesktop ? '4px' : '4px' }}>
                 {allGridDays.map((day, idx) => {
                   const daySchedules = getSchedulesForDay(day)
                   const isInCurrentMonth = isSameMonth(day, currentDate)
@@ -487,7 +509,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                       key={idx}
                       className="rounded-xl border overflow-hidden"
                       style={{
-                        minHeight: '72px',
+                        minHeight: isDesktop ? '120px' : '72px',
                         backgroundColor: isTodayDate ? 'rgba(240,240,242,0.05)' : 'var(--bg-surface)',
                         borderColor: isTodayDate ? 'rgba(240,240,242,0.45)' : 'var(--border-subtle)',
                         boxShadow: isTodayDate ? '0 0 0 1px rgba(240,240,242,0.25)' : 'none',
@@ -496,36 +518,54 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                     >
                       {/* 날짜 숫자 */}
                       <div
-                        className="text-right px-2 pt-1.5 pb-0.5 text-[12px] font-bold tabular-nums"
-                        style={{ color: isWeekend ? DOW_COLORS[dow] : 'var(--text-secondary)' }}
+                        className="text-right font-bold tabular-nums"
+                        style={{
+                          color: isWeekend ? DOW_COLORS[dow] : 'var(--text-secondary)',
+                          fontSize: isDesktop ? '15px' : '12px',
+                          padding: isDesktop ? '8px 10px 4px' : '6px 8px 2px',
+                        }}
                       >
                         {format(day, 'd')}
                       </div>
 
                       {/* 일정 칩 */}
-                      <div className="px-1 pb-1.5 space-y-0.5">
-                        {daySchedules.slice(0, 3).map((s) => {
+                      <div style={{ padding: isDesktop ? '0 6px 8px' : '0 4px 6px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        {daySchedules.slice(0, isDesktop ? 5 : 3).map((s) => {
                           const cfg = statusConfig[s.status]
                           return (
                             <Link key={s.id} href={`/schedules/${s.id}`}>
                               <div
-                                className="flex items-center gap-1 px-1.5 py-[3px] rounded text-[10px] leading-tight truncate cursor-pointer transition-all hover:brightness-125"
+                                className="flex items-center gap-1 rounded cursor-pointer transition-all hover:brightness-125"
                                 style={{
                                   backgroundColor: cfg.cardBg,
-                                  borderLeft: `2px solid ${cfg.cardBorder}`,
+                                  borderLeft: `3px solid ${cfg.cardBorder}`,
+                                  padding: isDesktop ? '4px 8px' : '2px 6px',
                                 }}
                               >
-                                <span className={cn('w-1 h-1 rounded-full shrink-0', cfg.dot)} />
-                                <span className="truncate font-medium" style={{ color: cfg.cardText }}>
+                                <span className={cn('rounded-full shrink-0', cfg.dot)} style={{ width: isDesktop ? '6px' : '4px', height: isDesktop ? '6px' : '4px' }} />
+                                <span
+                                  className="truncate font-medium"
+                                  style={{
+                                    color: cfg.cardText,
+                                    fontSize: isDesktop ? '13px' : '10px',
+                                    lineHeight: isDesktop ? '1.4' : '1.2',
+                                  }}
+                                >
                                   {s.program_name}
                                 </span>
                               </div>
                             </Link>
                           )
                         })}
-                        {daySchedules.length > 3 && (
-                          <div className="text-[9px] px-1.5" style={{ color: 'var(--text-muted)' }}>
-                            +{daySchedules.length - 3}건 더
+                        {daySchedules.length > (isDesktop ? 5 : 3) && (
+                          <div
+                            style={{
+                              color: 'var(--text-muted)',
+                              fontSize: isDesktop ? '12px' : '9px',
+                              padding: isDesktop ? '2px 8px' : '0 4px',
+                            }}
+                          >
+                            +{daySchedules.length - (isDesktop ? 5 : 3)}건 더
                           </div>
                         )}
                       </div>
