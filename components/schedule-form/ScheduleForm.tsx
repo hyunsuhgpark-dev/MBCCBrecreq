@@ -212,9 +212,49 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
           <div className="absolute bottom-0 left-0 right-0 h-px" style={{ backgroundColor: 'var(--border-default)' }} />
         </div>
 
-        {/* ── 장비 선택 + 오류 신고 결재란 ── */}
-        <div className="grid grid-cols-[70%_30%] border-b border-[var(--border-default)]">
-          {/* 왼쪽 70%: 토글 칩 (세로 가운데) + 생방송 (우하단) */}
+        {/* ── 장비 선택 ── */}
+
+        {/* 모바일: 풀너비 2×2 그리드 */}
+        <div className="md:hidden border-b border-[var(--border-default)] p-4">
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            {resourceItems.map(({ label, key, checked, activeColor, activeBg }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setValue(key, !checked)}
+                className="flex items-center justify-center rounded-xl font-bold tracking-wide transition-all border-2"
+                style={{
+                  minHeight: '64px',
+                  fontSize: '17px',
+                  backgroundColor: checked ? activeBg : 'var(--bg-elevated)',
+                  borderColor: checked ? activeColor : 'var(--border-default)',
+                  color: checked ? activeColor : 'var(--text-muted)',
+                  boxShadow: checked ? `0 0 14px ${activeColor}40` : 'none',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setValue('is_live', !watchLive)}
+              className="px-5 py-2.5 rounded-xl text-[15px] font-bold tracking-wide transition-all border-2"
+              style={{
+                backgroundColor: watchLive ? '#2D0A0A' : 'var(--bg-elevated)',
+                borderColor: watchLive ? '#DC2626' : 'var(--border-default)',
+                color: watchLive ? '#F87171' : 'var(--text-muted)',
+                boxShadow: watchLive ? '0 0 10px #DC262633' : 'none',
+              }}
+            >
+              🔴 생방송
+            </button>
+          </div>
+        </div>
+
+        {/* PC: 기존 70%/30% 레이아웃 + 오류 신고 */}
+        <div className="hidden md:grid grid-cols-[70%_30%] border-b border-[var(--border-default)]">
           <div
             className="border-r border-[var(--border-default)] flex flex-col justify-between"
             style={{ padding: '40px 20px 24px 20px', gap: '16px' }}
@@ -253,8 +293,6 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
               </button>
             </div>
           </div>
-
-          {/* 오른쪽 30%: 오류 신고 결재란 */}
           <div className="flex flex-col">
             <div className="px-3 py-2 text-xs font-bold text-center tracking-widest" style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
               프로그램 오류 신고
@@ -297,40 +335,46 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
           {/* 제작일시 */}
           <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
             <div className={labelCls}>제 작 일 시</div>
-            <div className={cn(valueCls, 'flex items-center gap-2 flex-wrap py-2.5 border-l-0')}>
-              <Controller
-                control={control}
-                name="broadcast_start"
-                render={({ field }) => (
-                  <DateTimePicker
-                    value={field.value}
-                    onChange={(v) => {
-                      field.onChange(v)
-                      syncEndDate(v)
-                    }}
-                    error={!!errors.broadcast_start}
-                  />
-                )}
-              />
-              <span className="text-sm font-medium text-slate-500 shrink-0">~</span>
-              <Controller
-                control={control}
-                name="broadcast_end"
-                render={({ field }) => (
-                  <DateTimePicker
-                    value={field.value}
-                    onChange={field.onChange}
-                    hideDate
-                    anchorDate={(watch('broadcast_start') ?? '').split('T')[0]}
-                    error={!!errors.broadcast_end}
-                  />
-                )}
-              />
+            <div className={cn(valueCls, 'py-2.5 border-l-0')}>
+              {/* 시작 시각 */}
+              <div className="flex items-center gap-2">
+                <Controller
+                  control={control}
+                  name="broadcast_start"
+                  render={({ field }) => (
+                    <DateTimePicker
+                      value={field.value}
+                      onChange={(v) => {
+                        field.onChange(v)
+                        syncEndDate(v)
+                      }}
+                      error={!!errors.broadcast_start}
+                    />
+                  )}
+                />
+              </div>
+              {/* 종료 시각 — 항상 아래 줄, ~ 포함하여 시작 시각과 시각적으로 정렬 */}
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-sm font-medium text-slate-500 shrink-0 w-4 text-center">~</span>
+                <Controller
+                  control={control}
+                  name="broadcast_end"
+                  render={({ field }) => (
+                    <DateTimePicker
+                      value={field.value}
+                      onChange={field.onChange}
+                      hideDate
+                      anchorDate={(watch('broadcast_start') ?? '').split('T')[0]}
+                      error={!!errors.broadcast_end}
+                    />
+                  )}
+                />
+              </div>
               {errors.broadcast_start && (
-                <p className="text-red-500 text-[11px] w-full">{errors.broadcast_start.message}</p>
+                <p className="text-red-500 text-[11px] mt-1">{errors.broadcast_start.message}</p>
               )}
               {errors.broadcast_end && (
-                <p className="text-red-500 text-[11px] w-full">{errors.broadcast_end.message}</p>
+                <p className="text-red-500 text-[11px] mt-1">{errors.broadcast_end.message}</p>
               )}
             </div>
           </div>
@@ -391,31 +435,44 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
       </div>
 
       {/* ── 하단 액션 버튼 ── */}
-      <div className="flex gap-3 mt-5 justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => router.back()}
-          className="min-h-11 px-6 border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] transition-all"
-        >
-          취소
-        </Button>
-        <Button
-          type="submit"
-          disabled={loading}
-          className="min-h-11 px-8 text-white gap-2 font-semibold shadow-md hover:shadow-lg transition-all"
-          style={{ backgroundColor: 'var(--accent)' }}
-        >
-          {loading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <>
-              <Send className="w-4 h-4" />
-              {isEdit ? '수정 제출' : '의뢰 등록'}
-            </>
-          )}
-        </Button>
+      {/* 모바일: 화면 하단 고정 (하단 탭바 위에 위치) */}
+      <div
+        className="md:relative md:mt-5 md:pb-0 md:bg-transparent md:border-0 md:shadow-none md:px-0
+                   fixed bottom-0 left-0 right-0 z-30 px-4 pb-safe border-t md:static"
+        style={{
+          backgroundColor: 'var(--bg-surface)',
+          borderColor: 'var(--border-default)',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 72px)',
+        } as React.CSSProperties}
+      >
+        <div className="flex gap-3 py-3 justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.back()}
+            className="min-h-11 px-6 border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] transition-all"
+          >
+            취소
+          </Button>
+          <Button
+            type="submit"
+            disabled={loading}
+            className="min-h-11 px-8 text-white gap-2 font-semibold shadow-md hover:shadow-lg transition-all"
+            style={{ backgroundColor: 'var(--accent)' }}
+          >
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                <Send className="w-4 h-4" />
+                {isEdit ? '수정 제출' : '의뢰 등록'}
+              </>
+            )}
+          </Button>
+        </div>
       </div>
+      {/* 모바일에서 sticky 버튼 높이만큼 폼 하단 여백 확보 */}
+      <div className="md:hidden" style={{ height: 'calc(env(safe-area-inset-bottom, 0px) + 120px)' }} />
     </form>
   )
 }
