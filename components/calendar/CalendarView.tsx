@@ -17,6 +17,8 @@ import {
   MapPin,
   User,
   Plus,
+  ChevronDown,
+  SlidersHorizontal,
 } from 'lucide-react'
 import {
   format,
@@ -105,6 +107,9 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   // PC(≥768px)는 월간 달력, 모바일은 주간 기본
   const [viewMode, setViewMode] = useState<'week' | 'month' | 'list'>('week')
   const [isDesktop, setIsDesktop] = useState(false)
+  // 스케줄 필터: 'all' | 'tech' | 'cam'
+  const [scheduleFilter, setScheduleFilter] = useState<'all' | 'tech' | 'cam'>('all')
+  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false)
 
   useEffect(() => {
     const check = () => {
@@ -168,8 +173,21 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     return () => { supabase.removeChannel(channel) }
   }, [fetchSchedules, supabase])
 
+  function applyScheduleFilter(list: typeof schedules) {
+    if (scheduleFilter === 'tech') {
+      // 기술 스케줄: 중계차, 스튜디오, AUDIO (ENG-only 제외)
+      return list.filter((s) => s.use_relay_car || s.use_studio || s.use_audio)
+    }
+    if (scheduleFilter === 'cam') {
+      // 영상 스케줄: 중계차, 스튜디오, ENG (AUDIO-only 제외)
+      return list.filter((s) => s.use_relay_car || s.use_studio || s.use_eng)
+    }
+    return list
+  }
+
   function getSchedulesForDay(date: Date) {
-    return schedules.filter((s) => isSameDay(parseISO(s.broadcast_start), date))
+    const daySchedules = schedules.filter((s) => isSameDay(parseISO(s.broadcast_start), date))
+    return applyScheduleFilter(daySchedules)
   }
 
   function getApprovalRatio(schedule: Schedule) {
@@ -262,30 +280,83 @@ export default function CalendarView({ profile }: CalendarViewProps) {
             ))}
           </div>
 
-          {/* 뷰 전환 */}
-          <div
-            className="flex rounded-xl overflow-hidden border"
-            style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--bg-surface)' }}
-          >
+          {/* 뷰 전환 — 버튼 간격을 두어 구분 */}
+          <div className="flex items-center gap-1.5">
             {[
               { mode: 'week'  as const, Icon: CalendarDays, label: '주간' },
               { mode: 'month' as const, Icon: LayoutGrid,   label: '달력' },
               { mode: 'list'  as const, Icon: LayoutList,   label: '목록' },
-            ].map(({ mode, Icon, label }, i) => (
+            ].map(({ mode, Icon, label }) => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                className={cn('px-3 py-2.5 flex items-center gap-1.5 text-sm font-semibold transition-all', i > 0 && 'border-l')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all border"
                 style={{
-                  borderColor: 'var(--border-default)',
-                  backgroundColor: viewMode === mode ? 'var(--accent)' : 'transparent',
+                  borderColor: viewMode === mode ? 'var(--accent)' : 'var(--border-default)',
+                  backgroundColor: viewMode === mode ? 'var(--accent)' : 'var(--bg-surface)',
                   color: viewMode === mode ? '#fff' : 'var(--text-secondary)',
                 }}
               >
-                <Icon className="w-5 h-5" />
+                <Icon className="w-4 h-4" />
                 <span className="hidden sm:inline">{label}</span>
               </button>
             ))}
+          </div>
+
+          {/* 스케줄 필터 드롭다운 */}
+          <div className="relative">
+            <button
+              onClick={() => setFilterDropdownOpen((o) => !o)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border transition-all"
+              style={{
+                borderColor: scheduleFilter !== 'all' ? 'var(--accent)' : 'var(--border-default)',
+                backgroundColor: scheduleFilter !== 'all' ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : 'var(--bg-surface)',
+                color: scheduleFilter !== 'all' ? 'var(--accent)' : 'var(--text-secondary)',
+              }}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              <span className="hidden sm:inline">
+                {scheduleFilter === 'all' ? '전체' : scheduleFilter === 'tech' ? '기술' : '영상'}
+              </span>
+              <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+            </button>
+
+            {filterDropdownOpen && (
+              <>
+                {/* 배경 닫기 레이어 */}
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setFilterDropdownOpen(false)}
+                />
+                <div
+                  className="absolute right-0 top-full mt-2 z-20 rounded-xl border overflow-hidden shadow-xl min-w-[160px]"
+                  style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
+                >
+                  {([
+                    { key: 'all',  label: '전체 스케줄',  sub: '모든 일정 표시' },
+                    { key: 'tech', label: '기술 스케줄',  sub: '중계차 · 스튜디오 · AUDIO' },
+                    { key: 'cam',  label: '영상 스케줄',  sub: '중계차 · 스튜디오 · ENG' },
+                  ] as const).map(({ key, label, sub }) => (
+                    <button
+                      key={key}
+                      onClick={() => { setScheduleFilter(key); setFilterDropdownOpen(false) }}
+                      className="w-full text-left px-4 py-3 transition-all flex flex-col gap-0.5"
+                      style={{
+                        backgroundColor: scheduleFilter === key ? 'color-mix(in srgb, var(--accent) 12%, transparent)' : 'transparent',
+                        borderLeft: scheduleFilter === key ? '3px solid var(--accent)' : '3px solid transparent',
+                      }}
+                      onMouseEnter={e => { if (scheduleFilter !== key) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-elevated)' }}
+                      onMouseLeave={e => { if (scheduleFilter !== key) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}
+                    >
+                      <span className="text-sm font-semibold" style={{ color: scheduleFilter === key ? 'var(--accent)' : 'var(--text-primary)' }}>
+                        {label}
+                      </span>
+                      <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{sub}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* 의뢰하기 */}
@@ -514,6 +585,19 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                         borderColor: isTodayDate ? 'rgba(240,240,242,0.45)' : 'var(--border-subtle)',
                         boxShadow: isTodayDate ? '0 0 0 1px rgba(240,240,242,0.25)' : 'none',
                         opacity: isInCurrentMonth ? 1 : 0.28,
+                        cursor: canCreate && isInCurrentMonth ? 'pointer' : 'default',
+                      }}
+                      onDoubleClick={() => {
+                        if (canCreate && isInCurrentMonth) {
+                          router.push(`/schedules/new?date=${format(day, 'yyyy-MM-dd')}`)
+                        }
+                      }}
+                      onClick={(e) => {
+                        // 일정 칩을 클릭한 경우에는 제외 (Link로 처리)
+                        if ((e.target as HTMLElement).closest('a')) return
+                        if (canCreate && isInCurrentMonth && isDesktop) {
+                          router.push(`/schedules/new?date=${format(day, 'yyyy-MM-dd')}`)
+                        }
                       }}
                     >
                       {/* 날짜 숫자 */}
@@ -586,7 +670,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
               <div className="w-5 h-5 border-2 border-[#4A9EE8]/30 border-t-[#4A9EE8] rounded-full animate-spin mx-auto mb-3" />
               <p className="text-sm" style={{ color: 'var(--text-muted)' }}>불러오는 중...</p>
             </div>
-          ) : schedules.length === 0 ? (
+          ) : applyScheduleFilter(schedules).length === 0 ? (
             <div className="rounded-2xl p-16 text-center border" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}>
               <CalendarDays className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />
               <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>이번 달 등록된 일정이 없습니다.</p>
@@ -603,7 +687,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
             </div>
           ) : (
             <div className="space-y-1.5">
-              {schedules.map((schedule) => {
+              {applyScheduleFilter(schedules).map((schedule) => {
                 const cfg = statusConfig[schedule.status]
                 const Icon = cfg.icon
                 const ratio = schedule.status === 'pending' ? getApprovalRatio(schedule) : null
