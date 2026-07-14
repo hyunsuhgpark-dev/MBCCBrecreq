@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { detectConflicts } from '@/lib/conflict-engine'
 import { sendPushNotification, saveNotification, notificationMessages, notifyStaffApprovalRequested, notifyAllUsersScheduleSubmitted } from '@/services/notification'
-import { getScheduleResourceType } from '@/lib/roles'
+import { getRequiredApprovalParts } from '@/lib/roles'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
@@ -22,20 +22,23 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json()
+  const isDispatch = body.request_type === 'dispatch'
 
   const broadcastStart = body.broadcast_start
   const broadcastEnd = body.broadcast_end
 
-  // 충돌 감지
-  const conflictResult = await detectConflicts({
-    broadcastStart,
-    broadcastEnd,
-    venue: body.venue,
-    useRelayCar: body.use_relay_car ?? false,
-    useStudio: body.use_studio ?? false,
-    useEng: body.use_eng ?? false,
-    useAudio: body.use_audio ?? false,
-  })
+  // 배차 의뢰는 자원 충돌 검사 생략 (중계차·스튜디오 미사용)
+  const conflictResult = isDispatch
+    ? { hasConflict: false, conflictingScheduleIds: [], conflictType: null }
+    : await detectConflicts({
+        broadcastStart,
+        broadcastEnd,
+        venue: body.venue,
+        useRelayCar: body.use_relay_car ?? false,
+        useStudio: body.use_studio ?? false,
+        useEng: body.use_eng ?? false,
+        useAudio: body.use_audio ?? false,
+      })
 
   const initialStatus = conflictResult.hasConflict ? 'conflict' : 'pending'
 
@@ -44,6 +47,7 @@ export async function POST(request: NextRequest) {
     .from('schedules')
     .insert({
       ...body,
+      request_type: isDispatch ? 'dispatch' : (body.request_type ?? 'recording'),
       created_by: user.id,
       status: initialStatus,
     })
@@ -52,26 +56,18 @@ export async function POST(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
-  // 승인 레코드 초기화 — 자원 타입에 따라 필요한 파트만 생성
-  const { isEngOnly, isAudioOnly } = getScheduleResourceType({
+  const requiredParts = getRequiredApprovalParts({
+    request_type: isDispatch ? 'dispatch' : 'recording',
     use_relay_car: body.use_relay_car ?? false,
     use_studio: body.use_studio ?? false,
     use_eng: body.use_eng ?? false,
     use_audio: body.use_audio ?? false,
   })
-  const approvalParts: { schedule_id: string; part: string; status: string }[] = []
-  if (!isEngOnly) {
-    // ENG-only가 아니면 office(ENG) 승인 필요
-    approvalParts.push({ schedule_id: schedule.id, part: 'office', status: 'pending' })
-  }
-  if (!isAudioOnly) {
-    // AUDIO-only가 아니면 sub_control(CAM) 승인 필요
-    approvalParts.push({ schedule_id: schedule.id, part: 'sub_control', status: 'pending' })
-  }
-  if (approvalParts.length === 0) {
-    // 모든 파트가 제외되는 경우는 없지만 안전장치
-    approvalParts.push({ schedule_id: schedule.id, part: 'office', status: 'pending' })
-  }
+  const approvalParts = requiredParts.map((part) => ({
+    schedule_id: schedule.id,
+    part,
+    status: 'pending',
+  }))
   await supabase.from('approvals').insert(approvalParts)
 
   // 충돌 처리
@@ -127,6 +123,7 @@ export async function POST(request: NextRequest) {
       scheduleId: schedule.id,
       programName: schedule.program_name,
       scheduleResources: {
+        request_type: isDispatch ? 'dispatch' : 'recording',
         use_relay_car: body.use_relay_car ?? false,
         use_studio: body.use_studio ?? false,
         use_eng: body.use_eng ?? false,
@@ -135,7 +132,6 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  // 전체 사용자에게 의뢰 제출 알림 (제출자 본인 제외, fire-and-forget)
   void notifyAllUsersScheduleSubmitted({
     supabase: supabase as unknown as SupabaseClient,
     scheduleId: schedule.id,
@@ -143,6 +139,7 @@ export async function POST(request: NextRequest) {
     submitterName: profile.full_name ?? '알 수 없음',
     programName: schedule.program_name,
     broadcastStart: schedule.broadcast_start,
+    requestType: isDispatch ? 'dispatch' : 'recording',
   })
 
   return NextResponse.json(schedule, { status: 201 })

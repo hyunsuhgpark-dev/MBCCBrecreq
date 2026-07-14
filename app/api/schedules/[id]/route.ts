@@ -70,19 +70,22 @@ export async function PATCH(
 
   // 일반 수정 — 상태 초기화
   const mergedBody = { ...body }
+  const isDispatch = (mergedBody.request_type ?? existing.request_type) === 'dispatch'
   const broadcastStart = mergedBody.broadcast_start ?? existing.broadcast_start
   const broadcastEnd = mergedBody.broadcast_end ?? existing.broadcast_end
 
-  const conflictResult = await detectConflicts({
-    broadcastStart,
-    broadcastEnd,
-    venue: mergedBody.venue ?? existing.venue,
-    useRelayCar: mergedBody.use_relay_car ?? existing.use_relay_car,
-    useStudio: mergedBody.use_studio ?? existing.use_studio,
-    useEng: mergedBody.use_eng ?? existing.use_eng,
-    useAudio: mergedBody.use_audio ?? existing.use_audio,
-    excludeScheduleId: id,
-  })
+  const conflictResult = isDispatch
+    ? { hasConflict: false, conflictingScheduleIds: [], conflictType: null }
+    : await detectConflicts({
+        broadcastStart,
+        broadcastEnd,
+        venue: mergedBody.venue ?? existing.venue,
+        useRelayCar: mergedBody.use_relay_car ?? existing.use_relay_car,
+        useStudio: mergedBody.use_studio ?? existing.use_studio,
+        useEng: mergedBody.use_eng ?? existing.use_eng,
+        useAudio: mergedBody.use_audio ?? existing.use_audio,
+        excludeScheduleId: id,
+      })
 
   const newStatus = conflictResult.hasConflict ? 'conflict' : 'pending'
 
@@ -181,6 +184,7 @@ export async function PATCH(
       scheduleId: id,
       programName,
       scheduleResources: {
+        request_type: isDispatch ? 'dispatch' : (existing.request_type ?? 'recording'),
         use_relay_car: mergedBody.use_relay_car ?? existing.use_relay_car,
         use_studio: mergedBody.use_studio ?? existing.use_studio,
         use_eng: mergedBody.use_eng ?? existing.use_eng,

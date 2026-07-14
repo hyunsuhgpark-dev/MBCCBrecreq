@@ -62,6 +62,7 @@ export async function notifyStaffApprovalRequested(params: {
   scheduleId: string
   programName: string
   scheduleResources?: {
+    request_type?: string
     use_relay_car: boolean
     use_studio: boolean
     use_eng: boolean
@@ -69,7 +70,10 @@ export async function notifyStaffApprovalRequested(params: {
   }
 }) {
   const { supabase, scheduleId, programName, scheduleResources } = params
-  const message = notificationMessages.approval_requested(programName)
+  const isDispatch = scheduleResources?.request_type === 'dispatch'
+  const message = isDispatch
+    ? `'${programName}' 배차 의뢰의 승인 요청이 들어왔습니다.`
+    : notificationMessages.approval_requested(programName)
 
   const { data: staffProfiles, error } = await supabase
     .from('profiles')
@@ -87,15 +91,14 @@ export async function notifyStaffApprovalRequested(params: {
     return
   }
 
-  // 자원 타입에 따라 알림 대상 필터링
   let targetProfiles = staffProfiles
-  if (scheduleResources) {
+  if (isDispatch) {
+    targetProfiles = staffProfiles.filter((p) => p.role === 'CAM' || p.role === 'Staff_SubControl')
+  } else if (scheduleResources) {
     const { isEngOnly, isAudioOnly } = getScheduleResourceType(scheduleResources)
     if (isEngOnly) {
-      // ENG-only: CAM(sub_control)만 승인 → ENG에게는 알림 불필요
       targetProfiles = staffProfiles.filter((p) => p.role === 'CAM' || p.role === 'Staff_SubControl')
     } else if (isAudioOnly) {
-      // AUDIO-only: ENG(office)만 승인 → CAM에게는 알림 불필요
       targetProfiles = staffProfiles.filter((p) => p.role === 'ENG' || p.role === 'Staff_Office')
     }
   }
@@ -118,7 +121,7 @@ export async function notifyStaffApprovalRequested(params: {
     await sendPushNotification({
       tokens: staffTokens,
       type: 'approval_requested',
-      title: '승인 요청',
+      title: isDispatch ? '배차 승인 요청' : '승인 요청',
       body: message,
       scheduleId,
     })
@@ -162,6 +165,8 @@ export const notificationMessages: Record<NotificationType, (name: string) => st
   approved: (name) => `'${name}' 일정이 승인되었습니다.`,
   rejected: (name) => `'${name}' 일정이 반려되었습니다. 의뢰서를 확인하세요.`,
   confirmed: (name) => `'${name}' 일정이 최종 확정되었습니다.`,
+  assignment_requested: (name) => `'${name}' 배차가 승인되었습니다. 차량 배정 후 알려드리겠습니다.`,
+  assignment_completed: (name) => `'${name}' 배차 배정이 완료되었습니다. 의뢰서에서 기사·차량 정보를 확인하세요.`,
 }
 
 /**
@@ -175,8 +180,9 @@ export async function notifyAllUsersScheduleSubmitted(params: {
   submitterName: string
   programName: string
   broadcastStart: string
+  requestType?: 'recording' | 'dispatch'
 }) {
-  const { supabase, scheduleId, submitterId, submitterName, programName, broadcastStart } = params
+  const { supabase, scheduleId, submitterId, submitterName, programName, broadcastStart, requestType = 'recording' } = params
 
   const kstDateTime = new Intl.DateTimeFormat('sv-SE', {
     timeZone: 'Asia/Seoul',
@@ -184,7 +190,8 @@ export async function notifyAllUsersScheduleSubmitted(params: {
     hour: '2-digit', minute: '2-digit', hour12: false,
   }).format(new Date(broadcastStart)).replace(' ', ' ').replace(/-/g, '/').replace('T', ' ')
 
-  const message = `${submitterName}님이 ${kstDateTime}에 '${programName}' 녹화 의뢰 요청했습니다.`
+  const label = requestType === 'dispatch' ? '배차' : '녹화'
+  const message = `${submitterName}님이 ${kstDateTime}에 '${programName}' ${label} 의뢰 요청했습니다.`
 
   const { data: allProfiles } = await supabase
     .from('profiles')
@@ -212,7 +219,7 @@ export async function notifyAllUsersScheduleSubmitted(params: {
     await sendPushNotification({
       tokens,
       type: 'schedule_submitted',
-      title: '새 녹화 의뢰',
+      title: requestType === 'dispatch' ? '새 배차 의뢰' : '새 녹화 의뢰',
       body: message,
       scheduleId,
     })

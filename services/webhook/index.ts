@@ -210,6 +210,12 @@ export async function dispatchWebhook(
   if (urls.length === 0) return  // 설정 없으면 즉시 반환
 
   // ENG-only 일정(중계차·스튜디오 없이 ENG만 체크)은 기술국 내부 업무 — 후배 플래너에게 미전송
+  const scheduleWithType = scheduleData as WebhookScheduleInput & { request_type?: string }
+  if (scheduleWithType.request_type === 'dispatch') {
+    console.log('[Webhook] Skipped dispatch schedule:', scheduleData.id)
+    return
+  }
+
   const hasHeavyResource = scheduleData.use_relay_car || scheduleData.use_studio
   const isEngOnly = scheduleData.use_eng && !hasHeavyResource && !scheduleData.use_audio
   if (isEngOnly) {

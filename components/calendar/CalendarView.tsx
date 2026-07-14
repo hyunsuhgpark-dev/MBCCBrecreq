@@ -19,6 +19,7 @@ import {
   Plus,
   ChevronDown,
   SlidersHorizontal,
+  Car,
 } from 'lucide-react'
 import {
   format,
@@ -68,6 +69,18 @@ const statusConfig = {
     listBorder: '#4A4A4C',
     icon: Clock,
     iconColor: 'text-slate-500',
+  },
+  assigned: {
+    label: '배정',
+    dot: 'bg-purple-400',
+    cardBg: '#1C0A2D',
+    cardBorder: '#7C3AED',
+    cardText: '#C084FC',
+    timeColor: '#A855F7',
+    badge: 'bg-purple-950 text-purple-300 border border-purple-800',
+    listBorder: '#7C3AED',
+    icon: Car,
+    iconColor: 'text-purple-400',
   },
   confirmed: {
     label: '확정',

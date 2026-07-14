@@ -1,6 +1,8 @@
 export type UserRole = 'Admin' | 'ENG' | 'ENG-M' | 'CAM' | 'CAM-M' | 'Producer' | 'Director'
 
-export type ScheduleStatus = 'conflict' | 'pending' | 'confirmed' | 'rejected'
+export type RequestType = 'recording' | 'dispatch'
+
+export type ScheduleStatus = 'conflict' | 'pending' | 'assigned' | 'confirmed' | 'rejected'
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected'
 
@@ -16,6 +18,15 @@ export type NotificationType =
   | 'approved'
   | 'rejected'
   | 'confirmed'
+  | 'assignment_requested'
+  | 'assignment_completed'
+
+/** 영상국 배정 회신 — 차량 1대 단위 */
+export interface AssignmentVehicle {
+  driver_name: string
+  vehicle_info?: string
+  contact?: string
+}
 
 export interface Profile {
   id: string
@@ -30,6 +41,7 @@ export interface Profile {
 export interface Schedule {
   id: string
   created_by: string
+  request_type: RequestType
   status: ScheduleStatus
   program_name: string
   responsible_pd: string
@@ -47,6 +59,13 @@ export interface Schedule {
   is_live: boolean
   record_content: string
   notes: string
+  passenger_count: number | null
+  has_luggage: boolean
+  assignment_vehicles: AssignmentVehicle[] | null
+  assignment_director_accompany: boolean | null
+  assignment_notes: string | null
+  assigned_at: string | null
+  assigned_by: string | null
   created_at: string
   updated_at: string
   // joined

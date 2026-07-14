@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import type { Notification } from '@/lib/types'
 import { format, parseISO } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { Bell, AlertTriangle, CheckCircle2, XCircle, MessageSquare, Zap, ClipboardList } from 'lucide-react'
+import { Bell, AlertTriangle, CheckCircle2, XCircle, MessageSquare, Zap, ClipboardList, Car } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface NotificationListProps {
@@ -19,6 +19,8 @@ const typeConfig = {
   approved: { icon: CheckCircle2, color: 'text-emerald-300', bg: 'bg-emerald-950/25 border-emerald-800' },
   rejected: { icon: XCircle, color: 'text-rose-300', bg: 'bg-rose-950/25 border-rose-800' },
   confirmed: { icon: Zap, color: 'text-[var(--accent)]', bg: 'bg-white/5 border-white/10' },
+  assignment_requested: { icon: Car, color: 'text-purple-300', bg: 'bg-purple-950/25 border-purple-800' },
+  assignment_completed: { icon: CheckCircle2, color: 'text-emerald-300', bg: 'bg-emerald-950/25 border-emerald-800' },
 }
 
 function getScheduleId(notif: Notification): string | null {

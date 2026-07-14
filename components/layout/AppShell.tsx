@@ -131,7 +131,7 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
 
   const navItems = [
     { href: '/calendar', icon: Calendar, label: '캘린더' },
-    { href: '/schedules/new', icon: Plus, label: '의뢰하기' },
+    { href: '/schedules/new', icon: Plus, label: '제작 의뢰' },
     ...(profile.role === 'Admin'
       ? [{ href: '/admin', icon: Settings, label: '관리' }]
       : []),

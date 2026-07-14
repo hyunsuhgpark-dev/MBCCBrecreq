@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { isStaffRole, roleToApprovalPart, getScheduleResourceType } from '@/lib/roles'
+import { isStaffRole, roleToApprovalPart, getRequiredApprovalParts } from '@/lib/roles'
 import { sendPushNotification, saveNotification, notificationMessages } from '@/services/notification'
 import { dispatchWebhook } from '@/services/webhook'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-const WEBHOOK_SCHEDULE_SELECT = 'id, created_by, program_name, responsible_pd, venue, location, broadcast_start, broadcast_end, broadcast_at, rehearsal_staff_at, rehearsal_cast_at, use_relay_car, use_studio, use_eng, use_audio, is_live, record_content, notes'
+const WEBHOOK_SCHEDULE_SELECT = 'id, created_by, request_type, program_name, responsible_pd, venue, location, broadcast_start, broadcast_end, broadcast_at, rehearsal_staff_at, rehearsal_cast_at, use_relay_car, use_studio, use_eng, use_audio, is_live, record_content, notes'
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -35,36 +35,41 @@ export async function POST(request: NextRequest) {
       .update({ status: 'approved', approver_id: user.id, decided_at: new Date().toISOString() })
       .eq('schedule_id', scheduleId)
 
-    await supabase.from('schedules').update({ status: 'confirmed' }).eq('id', scheduleId)
-
     const { data: schedule } = await supabase
       .from('schedules')
       .select(`${WEBHOOK_SCHEDULE_SELECT}, profiles!schedules_created_by_fkey(fcm_token)`)
       .eq('id', scheduleId)
       .single()
 
+    const isDispatch = schedule?.request_type === 'dispatch'
+    const finalStatus = isDispatch ? 'assigned' : 'confirmed'
+
+    await supabase.from('schedules').update({ status: finalStatus }).eq('id', scheduleId)
+
     if (schedule) {
+      const notifType = isDispatch ? 'assignment_requested' : 'confirmed'
       await saveNotification({
         supabase: supabase as unknown as SupabaseClient,
         userId: schedule.created_by,
         scheduleId,
-        type: 'confirmed',
-        message: notificationMessages.confirmed(schedule.program_name),
+        type: notifType,
+        message: notificationMessages[notifType](schedule.program_name),
       })
 
       const token = (schedule as { profiles?: { fcm_token?: string } }).profiles?.fcm_token
       if (token) {
         await sendPushNotification({
           tokens: [token],
-          type: 'confirmed',
-          title: '일정 확정',
-          body: notificationMessages.confirmed(schedule.program_name),
+          type: notifType,
+          title: isDispatch ? '배차 승인' : '일정 확정',
+          body: notificationMessages[notifType](schedule.program_name),
           scheduleId,
         })
       }
 
-      // 웹훅 발송 (fire-and-forget)
-      void dispatchWebhook('schedule.confirmed', { ...schedule, status: 'confirmed' })
+      if (!isDispatch) {
+        void dispatchWebhook('schedule.confirmed', { ...schedule, status: 'confirmed' })
+      }
     }
 
     return NextResponse.json({ message: '강제 승인 완료' })
@@ -84,11 +89,18 @@ export async function POST(request: NextRequest) {
   }
   if (action === 'reject') updateData.reject_reason = rejectReason
 
-  await supabase
+  const { data: updatedApprovals } = await supabase
     .from('approvals')
     .update(updateData)
     .eq('schedule_id', scheduleId)
     .eq('part', part)
+    .select('id')
+
+  // 해당 파트의 승인 레코드가 없으면 권한 없음
+  // (예: ENG가 배차 의뢰[sub_control 전용]를 approve/reject 시도하는 경우)
+  if (!updatedApprovals || updatedApprovals.length === 0) {
+    return NextResponse.json({ error: '해당 의뢰에 대한 승인 권한이 없습니다' }, { status: 403 })
+  }
 
   const { data: schedule } = await supabase
     .from('schedules')
@@ -123,18 +135,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: '반려 처리 완료' })
   }
 
-  // 자원 타입에 따라 필요한 파트만 승인됐는지 확인
-  const { isEngOnly, isAudioOnly } = getScheduleResourceType({
+  const isDispatch = schedule.request_type === 'dispatch'
+  const requiredParts = getRequiredApprovalParts({
+    request_type: schedule.request_type,
     use_relay_car: schedule.use_relay_car ?? false,
-    use_studio:    schedule.use_studio    ?? false,
-    use_eng:       schedule.use_eng       ?? false,
-    use_audio:     schedule.use_audio     ?? false,
+    use_studio: schedule.use_studio ?? false,
+    use_eng: schedule.use_eng ?? false,
+    use_audio: schedule.use_audio ?? false,
   })
-
-  // 필요한 파트: audio-only → office(ENG)만, eng-only → sub_control(CAM)만, 그 외 → 둘 다
-  const requiredParts = isAudioOnly ? ['office']
-    : isEngOnly ? ['sub_control']
-    : ['office', 'sub_control']
 
   const { data: allApprovals } = await supabase
     .from('approvals')
@@ -147,29 +155,33 @@ export async function POST(request: NextRequest) {
   })
 
   if (allApproved) {
-    await supabase.from('schedules').update({ status: 'confirmed' }).eq('id', scheduleId)
+    const finalStatus = isDispatch ? 'assigned' : 'confirmed'
+    const notifType = isDispatch ? 'assignment_requested' : 'confirmed'
+
+    await supabase.from('schedules').update({ status: finalStatus }).eq('id', scheduleId)
 
     await saveNotification({
       supabase: supabase as unknown as SupabaseClient,
       userId: schedule.created_by,
       scheduleId,
-      type: 'confirmed',
-      message: notificationMessages.confirmed(schedule.program_name),
+      type: notifType,
+      message: notificationMessages[notifType](schedule.program_name),
     })
 
     const token = (schedule as { profiles?: { fcm_token?: string } }).profiles?.fcm_token
     if (token) {
       await sendPushNotification({
         tokens: [token],
-        type: 'confirmed',
-        title: '일정 최종 확정',
-        body: notificationMessages.confirmed(schedule.program_name),
+        type: notifType,
+        title: isDispatch ? '배차 승인' : '일정 최종 확정',
+        body: notificationMessages[notifType](schedule.program_name),
         scheduleId,
       })
     }
 
-    // 웹훅 발송 (fire-and-forget)
-    void dispatchWebhook('schedule.confirmed', { ...schedule, status: 'confirmed' })
+    if (!isDispatch) {
+      void dispatchWebhook('schedule.confirmed', { ...schedule, status: 'confirmed' })
+    }
   } else {
     await saveNotification({
       supabase: supabase as unknown as SupabaseClient,

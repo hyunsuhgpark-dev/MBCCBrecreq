@@ -6,7 +6,7 @@ import { useReactToPrint } from 'react-to-print'
 import type { Schedule, Profile } from '@/lib/types'
 import { format, parseISO } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { Printer, Edit, Trash2, AlertTriangle, Clock, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
+import { Printer, Edit, Trash2, AlertTriangle, Clock, CheckCircle2, XCircle, Loader2, Car } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { isDispatchRequest } from '@/lib/roles'
 import Link from 'next/link'
 import ActionBar from '@/components/action-bar/ActionBar'
 
@@ -30,6 +31,7 @@ interface ScheduleDetailProps {
 const statusConfig = {
   conflict:  { label: '충돌',     color: 'text-amber-300 bg-amber-950/40 border-amber-800',   icon: AlertTriangle },
   pending:   { label: '승인 대기', color: 'text-slate-300 bg-white/5 border-white/10',        icon: Clock },
+  assigned:  { label: '배정 대기', color: 'text-purple-300 bg-purple-950/35 border-purple-800', icon: Car },
   confirmed: { label: '확정',     color: 'text-emerald-300 bg-emerald-950/35 border-emerald-800', icon: CheckCircle2 },
   rejected:  { label: '반려',     color: 'text-rose-300 bg-rose-950/35 border-rose-800',      icon: XCircle },
 }
@@ -68,9 +70,11 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
+  const isDispatch = isDispatchRequest(schedule)
+
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: `녹화의뢰서_${schedule.program_name}`,
+    documentTitle: isDispatch ? `배차의뢰서_${schedule.program_name}` : `녹화의뢰서_${schedule.program_name}`,
   })
 
   const statusInfo = statusConfig[schedule.status]
@@ -81,10 +85,15 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
   const approvedCount      = schedule.approvals?.filter((a) => a.status === 'approved').length ?? 0
   const totalApprovals     = schedule.approvals?.length ?? 2
 
+  // assigned 상태에서는 배정 진행 중이므로 PD의 수정/삭제를 막음 (Admin은 비상 처리 허용)
+  const isAssigned = schedule.status === 'assigned'
   const canEdit =
-    schedule.created_by === profile.id || profile.role === 'Admin'
+    profile.role === 'Admin' ||
+    (schedule.created_by === profile.id && !isAssigned)
 
-  const canDelete = schedule.created_by === profile.id || profile.role === 'Admin'
+  const canDelete =
+    profile.role === 'Admin' ||
+    (schedule.created_by === profile.id && !isAssigned)
 
   async function handleDelete() {
     setDeleting(true)
@@ -209,12 +218,14 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
           {/* 제목 헤더 */}
           <div className="relative py-5 text-center overflow-hidden" style={{ backgroundColor: 'var(--bg-elevated)' }}>
             <div className="absolute inset-0 opacity-[0.08] bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.22)_0px,rgba(255,255,255,0.22)_1px,transparent_1px,transparent_8px)]" />
-            <h1 className="relative text-2xl font-bold tracking-[0.5em]" style={{ color: 'var(--text-primary)' }}>
-              녹 화 의 뢰 서
+            <h1 className={cn('relative text-2xl font-bold tracking-[0.5em]', isDispatch && 'text-purple-200')} style={{ color: isDispatch ? undefined : 'var(--text-primary)' }}>
+              {isDispatch ? '배 차 의 뢰 서' : '녹 화 의 뢰 서'}
             </h1>
             <div className="absolute bottom-0 left-0 right-0 h-px" style={{ backgroundColor: 'var(--border-default)' }} />
           </div>
 
+          {!isDispatch && (
+          <>
           {/* 장비 체크박스(세로) + 오류 신고 */}
           <div className="grid grid-cols-[70%_30%] border-b border-[var(--border-default)]">
             <div className="border-r border-[var(--border-default)]">
@@ -246,6 +257,8 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
               </div>
             </div>
           </div>
+          </>
+          )}
 
           {/* 본문 */}
           <div>
@@ -266,12 +279,14 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
               <div className={cn(valueCls, 'border-r-0')}>{schedule.responsible_pd}</div>
             </div>
 
-            {/* 제작일시 */}
+            {/* 제작/이동 일시 */}
             <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
-              <div className={labelCls}>제 작 일 시</div>
+              <div className={labelCls}>{isDispatch ? '이동 일시' : '제 작 일 시'}</div>
               <div className={valueCls}>{fmtRange(schedule.broadcast_start, schedule.broadcast_end)}</div>
             </div>
 
+            {!isDispatch && (
+            <>
             {/* 방송일시 — 생방송이면 숨김 */}
             {!schedule.is_live && (
               <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
@@ -303,6 +318,25 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
                 )}
               </div>
             </div>
+            </>
+            )}
+
+            {isDispatch && (
+            <>
+            <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
+              <div className={labelCls}>목 적 지</div>
+              <div className={valueCls}>{schedule.venue}</div>
+            </div>
+            <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
+              <div className={labelCls}>탑승 인원</div>
+              <div className={valueCls}>{schedule.passenger_count ?? '-'}명</div>
+            </div>
+            <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
+              <div className={labelCls}>짐/장비</div>
+              <div className={valueCls}>{schedule.has_luggage ? '있음' : '없음'}</div>
+            </div>
+            </>
+            )}
 
             {/* 특기사항 */}
             <div className="grid grid-cols-[112px_1fr]">
@@ -314,11 +348,35 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
           </div>
         </div>
 
+        {/* 배정 정보 (배차 확정 후) */}
+        {isDispatch && schedule.assignment_vehicles && schedule.assignment_vehicles.length > 0 && (
+          <div className="mt-4 border rounded-xl p-4 shadow-sm print:mt-3" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}>
+            <h3 className="font-bold text-sm mb-3 tracking-wide text-purple-200">차량 배정 정보</h3>
+            <div className="space-y-3">
+              {schedule.assignment_vehicles.map((v, i) => (
+                <div key={i} className="rounded-xl border p-3 text-sm" style={{ borderColor: 'var(--border-default)' }}>
+                  <p className="font-semibold text-[var(--text-primary)]">차량 {i + 1}: {v.driver_name}</p>
+                  {v.vehicle_info && <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>차량: {v.vehicle_info}</p>}
+                  {v.contact && <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>연락처: {v.contact}</p>}
+                </div>
+              ))}
+              {schedule.assignment_director_accompany && (
+                <p className="text-xs text-purple-300">영상감독 동행</p>
+              )}
+              {schedule.assignment_notes && (
+                <p className="text-xs whitespace-pre-wrap" style={{ color: 'var(--text-muted)' }}>메모: {schedule.assignment_notes}</p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* 승인 현황 */}
         <div className="mt-4 border rounded-xl p-4 shadow-sm print:mt-3 print:border" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}>
-          <h3 className="font-bold text-sm mb-3 tracking-wide" style={{ color: 'var(--text-secondary)' }}>스태프 승인 현황</h3>
-          <div className="grid grid-cols-2 gap-3">
-            {[officeApproval, subControlApproval].map((approval, i) => {
+          <h3 className="font-bold text-sm mb-3 tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+            {isDispatch ? '영상국 승인 현황' : '스태프 승인 현황'}
+          </h3>
+          <div className={cn('grid gap-3', isDispatch ? 'grid-cols-1' : 'grid-cols-2')}>
+            {(isDispatch ? [subControlApproval] : [officeApproval, subControlApproval]).map((approval, i) => {
               if (!approval) return null
               const isApproved = approval.status === 'approved'
               const isRejected = approval.status === 'rejected'

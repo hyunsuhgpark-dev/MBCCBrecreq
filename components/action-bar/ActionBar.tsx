@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { isStaffOfficeRole, isStaffSubControlRole } from '@/lib/roles'
+import { isStaffOfficeRole, isStaffSubControlRole, isDispatchRequest } from '@/lib/roles'
+import AssignmentForm from '@/components/action-bar/AssignmentForm'
 import type { Schedule, Profile } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -25,6 +26,7 @@ import {
   ThumbsDown,
   Pencil,
   Trash2,
+  Car,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -41,12 +43,13 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
   const [rejectReason, setRejectReason] = useState('')
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false)
 
-  const isProducer = profile.role === 'Producer'
   const isOwner = schedule.created_by === profile.id
   const isStaffOffice = isStaffOfficeRole(profile.role)
   const isStaffSubControl = isStaffSubControlRole(profile.role)
   const isAdmin = profile.role === 'Admin'
   const isStaff = isStaffOffice || isStaffSubControl
+
+  const isDispatch = isDispatchRequest(schedule)
 
   const myPart = isStaffOffice ? 'office' : isStaffSubControl ? 'sub_control' : null
   const myApproval = myPart
@@ -87,7 +90,11 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
       })
       if (!res.ok) throw new Error((await res.json()).error)
       const data = await res.json()
-      toast.success(data.allConfirmed ? '모든 파트 승인 완료! 일정이 확정되었습니다.' : '승인 완료!')
+      toast.success(
+        data.allConfirmed
+          ? (isDispatch ? '승인 완료! 배정 대기 상태입니다.' : '모든 파트 승인 완료! 일정이 확정되었습니다.')
+          : '승인 완료!'
+      )
       router.refresh()
       onUpdate()
     } catch (err: unknown) {
@@ -160,6 +167,32 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
     }
   }
 
+  // 배정 대기 (배차 의뢰 승인 후)
+  if (schedule.status === 'assigned') {
+    return (
+      <div className="space-y-3">
+        {(isOwner || isAdmin) && (
+          <div
+            className="flex items-center gap-2 p-4 border rounded-xl"
+            style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
+          >
+            <Car className="w-5 h-5 text-purple-300 shrink-0" />
+            <div>
+              <p className="font-medium text-purple-200 text-sm">배정 대기 중</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                영상국에서 차량·기사 배정 후 알림을 보내드립니다.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {(isStaffSubControl || isAdmin) && (
+          <AssignmentForm scheduleId={schedule.id} onComplete={onUpdate} />
+        )}
+      </div>
+    )
+  }
+
   // 확정 상태: 의뢰자/관리자는 수정 가능 (재승인 필요)
   if (schedule.status === 'confirmed') {
     if (isOwner || isAdmin) {
@@ -170,10 +203,14 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
         >
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-emerald-300 shrink-0" />
-            <span className="text-emerald-200 font-medium text-sm">이 일정은 최종 확정되었습니다.</span>
+            <span className="text-emerald-200 font-medium text-sm">
+              {isDispatch ? '배차가 최종 확정되었습니다.' : '이 일정은 최종 확정되었습니다.'}
+            </span>
           </div>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            일정 변경이 필요하면 수정 후 다시 기술국·영상국 승인을 받아야 합니다.
+            {isDispatch
+              ? '일정 변경이 필요하면 수정 후 다시 영상국 승인·배정을 받아야 합니다.'
+              : '일정 변경이 필요하면 수정 후 다시 기술국·영상국 승인을 받아야 합니다.'}
           </p>
           <Button
             onClick={() => router.push(`/schedules/${schedule.id}/edit`)}
@@ -192,7 +229,9 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
         style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
       >
         <CheckCircle2 className="w-5 h-5 text-emerald-300 shrink-0" />
-        <span className="text-emerald-200 font-medium text-sm">이 일정은 최종 확정되었습니다.</span>
+        <span className="text-emerald-200 font-medium text-sm">
+          {isDispatch ? '배차가 최종 확정되었습니다.' : '이 일정은 최종 확정되었습니다.'}
+        </span>
       </div>
     )
   }
@@ -300,7 +339,9 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
           <div className="border rounded-xl p-4" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="font-semibold text-[var(--text-primary)] text-sm">스태프 승인 요청</p>
+                <p className="font-semibold text-[var(--text-primary)] text-sm">
+                  {isDispatch ? '영상국 승인 요청' : '스태프 승인 요청'}
+                </p>
                 <div className="flex items-center gap-2 mt-1">
                   {/* 파트별 승인 현황 체크리스트 */}
                   {schedule.approvals?.map((a) => {
@@ -324,7 +365,7 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
             </div>
 
             {/* 본인 파트 버튼만 (이미 처리됐으면 비활성) */}
-            {(isStaff) && (
+            {(isStaff && (!isDispatch || isStaffSubControl)) && (
               <div className="grid grid-cols-2 gap-3">
                 <Button
                   onClick={handleApprove}

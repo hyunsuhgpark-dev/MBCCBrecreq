@@ -57,6 +57,24 @@ export function getScheduleResourceType(schedule: {
   return { isEngOnly, isAudioOnly, hasHeavyResource }
 }
 
+export function getRequiredApprovalParts(schedule: {
+  request_type?: string
+  use_relay_car: boolean
+  use_studio: boolean
+  use_eng: boolean
+  use_audio: boolean
+}): ApprovalPart[] {
+  if (schedule.request_type === 'dispatch') return ['sub_control']
+  const { isEngOnly, isAudioOnly } = getScheduleResourceType(schedule)
+  if (isAudioOnly) return ['office']
+  if (isEngOnly) return ['sub_control']
+  return ['office', 'sub_control']
+}
+
+export function isDispatchRequest(schedule: { request_type?: string }): boolean {
+  return schedule.request_type === 'dispatch'
+}
+
 /** 역할별 기본 스케줄 필터 */
 export function getDefaultScheduleFilter(role: string | null | undefined): ScheduleFilter {
   if (isStaffOfficeRole(role) || role === 'ENG-M') return 'tech'
@@ -65,10 +83,19 @@ export function getDefaultScheduleFilter(role: string | null | undefined): Sched
 }
 
 export function matchesScheduleFilter(
-  schedule: { use_relay_car: boolean; use_studio: boolean; use_eng: boolean; use_audio: boolean },
+  schedule: {
+    request_type?: string
+    use_relay_car: boolean
+    use_studio: boolean
+    use_eng: boolean
+    use_audio: boolean
+  },
   filter: ScheduleFilter
 ): boolean {
   if (filter === 'all') return true
+  if (schedule.request_type === 'dispatch') {
+    return filter === 'cam'
+  }
   if (filter === 'tech') {
     return schedule.use_relay_car || schedule.use_studio || schedule.use_audio
   }
