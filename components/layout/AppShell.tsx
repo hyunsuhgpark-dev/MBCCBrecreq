@@ -3,12 +3,15 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Calendar, Plus, Settings, Bell, LogOut, Tv, User } from 'lucide-react'
+import { Calendar, Plus, Settings, Bell, LogOut, Tv, User, ChevronLeft } from 'lucide-react'
 import type { Profile } from '@/lib/types'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { requestNotificationPermission, onForegroundMessage } from '@/lib/firebase/client'
+import { useAppBack } from '@/lib/use-app-back'
+
+const MAIN_TAB_PATHS = ['/calendar', '/schedules/new', '/admin']
 
 interface AppShellProps {
   children: React.ReactNode
@@ -43,8 +46,42 @@ const roleColors: Record<string, string> = {
 export default function AppShell({ children, profile, unreadCount = 0 }: AppShellProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const goBack = useAppBack('/calendar')
   const supabase = createClient()
   const [localUnread, setLocalUnread] = useState(unreadCount)
+
+  const showMobileBack = !MAIN_TAB_PATHS.includes(pathname)
+
+  // iOS PWA: 왼쪽 가장자리 스와이프로 이전 화면
+  useEffect(() => {
+    if (!showMobileBack) return
+
+    let startX = 0
+    let startY = 0
+
+    function onTouchStart(e: TouchEvent) {
+      startX = e.touches[0].clientX
+      startY = e.touches[0].clientY
+    }
+
+    function onTouchEnd(e: TouchEvent) {
+      const endX = e.changedTouches[0].clientX
+      const endY = e.changedTouches[0].clientY
+      const dx = endX - startX
+      const dy = Math.abs(endY - startY)
+      // 왼쪽 40px 이내에서 시작, 오른쪽으로 72px 이상 스와이프
+      if (startX <= 40 && dx > 72 && dy < 60) {
+        goBack()
+      }
+    }
+
+    window.addEventListener('touchstart', onTouchStart, { passive: true })
+    window.addEventListener('touchend', onTouchEnd, { passive: true })
+    return () => {
+      window.removeEventListener('touchstart', onTouchStart)
+      window.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [showMobileBack, goBack])
 
   useEffect(() => {
     async function registerFcm() {
@@ -114,7 +151,20 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
         <div className="max-w-7xl mx-auto px-4 pr-6 h-14 flex items-center justify-between gap-4">
 
           {/* 로고 */}
-          <Link href="/calendar" className="flex items-center gap-2.5 shrink-0">
+          {/* 모바일: 뒤로가기 / 데스크탑·루트: 로고 */}
+          {showMobileBack ? (
+            <button
+              type="button"
+              onClick={goBack}
+              className="sm:hidden flex items-center gap-1 shrink-0 p-2 -ml-1 rounded-lg transition-colors"
+              style={{ color: 'var(--text-secondary)' }}
+              aria-label="이전 화면"
+            >
+              <ChevronLeft className="w-7 h-7" />
+            </button>
+          ) : null}
+
+          <Link href="/calendar" className={cn('flex items-center gap-2.5 shrink-0', showMobileBack && 'hidden sm:flex')}>
             <div
               className="rounded-lg p-1.5"
               style={{ backgroundColor: 'var(--accent)', opacity: 0.9 }}

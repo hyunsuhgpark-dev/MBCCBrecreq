@@ -1,9 +1,9 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import type { Notification } from '@/lib/types'
 import { format, parseISO } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import Link from 'next/link'
 import { Bell, AlertTriangle, CheckCircle2, XCircle, MessageSquare, Zap, ClipboardList } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -21,7 +21,15 @@ const typeConfig = {
   confirmed: { icon: Zap, color: 'text-[var(--accent)]', bg: 'bg-white/5 border-white/10' },
 }
 
+function getScheduleId(notif: Notification): string | null {
+  if (notif.schedule_id) return notif.schedule_id
+  const joined = notif.schedule as { id?: string } | undefined
+  return joined?.id ?? null
+}
+
 export default function NotificationList({ notifications }: NotificationListProps) {
+  const router = useRouter()
+
   if (notifications.length === 0) {
     return (
       <div
@@ -39,15 +47,30 @@ export default function NotificationList({ notifications }: NotificationListProp
       {notifications.map((notif) => {
         const config = typeConfig[notif.type] ?? typeConfig.approval_requested
         const Icon = config.icon
-        const scheduleId = notif.schedule_id
+        const scheduleId = getScheduleId(notif)
+        const isClickable = !!scheduleId
 
-        const content = (
-          <div className={cn(
-            'border rounded-xl p-4 flex items-start gap-3 transition-all',
-            notif.is_read && 'bg-[var(--bg-surface)] border-[var(--border-default)]',
-            !notif.is_read && config.bg,
-            scheduleId && 'hover:brightness-110 cursor-pointer'
-          )}>
+        return (
+          <div
+            key={notif.id}
+            role={isClickable ? 'button' : undefined}
+            tabIndex={isClickable ? 0 : undefined}
+            onClick={() => {
+              if (scheduleId) router.push(`/schedules/${scheduleId}`)
+            }}
+            onKeyDown={(e) => {
+              if (isClickable && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault()
+                router.push(`/schedules/${scheduleId}`)
+              }
+            }}
+            className={cn(
+              'border rounded-xl p-4 flex items-start gap-3 transition-all',
+              notif.is_read && 'bg-[var(--bg-surface)] border-[var(--border-default)]',
+              !notif.is_read && config.bg,
+              isClickable && 'hover:brightness-110 cursor-pointer active:scale-[0.99]'
+            )}
+          >
             <div
               className={cn('w-9 h-9 rounded-full border flex items-center justify-center shrink-0')}
               style={{ backgroundColor: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}
@@ -61,19 +84,16 @@ export default function NotificationList({ notifications }: NotificationListProp
               <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                 {format(parseISO(notif.created_at), 'M월 d일(EEE) HH:mm', { locale: ko })}
               </p>
+              {isClickable && (
+                <p className="text-[11px] mt-1.5 font-medium" style={{ color: 'var(--accent)' }}>
+                  의뢰서 보기 →
+                </p>
+              )}
             </div>
             {!notif.is_read && (
               <div className="w-2 h-2 rounded-full bg-rose-500 mt-1.5 shrink-0" />
             )}
           </div>
-        )
-
-        return scheduleId ? (
-          <Link key={notif.id} href={`/schedules/${scheduleId}`}>
-            {content}
-          </Link>
-        ) : (
-          <div key={notif.id}>{content}</div>
         )
       })}
     </div>

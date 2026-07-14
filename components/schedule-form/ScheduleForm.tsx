@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAppBack } from '@/lib/use-app-back'
 import { useForm, type SubmitHandler, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -61,6 +62,7 @@ function defaultEndTime(start?: string, end?: string | null, prefillDate?: strin
 
 export default function ScheduleForm({ initialData, scheduleId, prefillDate }: ScheduleFormProps) {
   const router = useRouter()
+  const goBack = useAppBack('/calendar')
   const [loading, setLoading] = useState(false)
   const isEdit = !!scheduleId
 
@@ -460,7 +462,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.back()}
+            onClick={goBack}
             className="min-h-11 px-6 border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] transition-all"
           >
             취소
