@@ -307,8 +307,11 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
         <div>
 
           {/* 프로그램명 + 담당PD — 모바일: PD 열 축소로 프로그램명 공간 확보 */}
-          <div className="grid grid-cols-[72px_1fr_44px_72px] md:grid-cols-[112px_1fr_72px_152px] border-b border-[var(--border-default)]">
-            <div className={labelCls}>프 로 그 램 명</div>
+          <div className="grid grid-cols-[78px_1fr_44px_72px] md:grid-cols-[112px_1fr_72px_152px] border-b border-[var(--border-default)]">
+            <div className={cn(labelCls, 'whitespace-nowrap text-[11px] md:text-sm tracking-normal md:tracking-wider px-1')}>
+              <span className="md:hidden">프로그램명</span>
+              <span className="hidden md:inline">프 로 그 램 명</span>
+            </div>
             <div className={cn(valueCls, 'border-t-0 border-b-0')}>
               <input
                 type="text"
