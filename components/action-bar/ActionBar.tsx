@@ -160,8 +160,32 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
     }
   }
 
-  // 확정 상태: 아무 액션 없음
+  // 확정 상태: 의뢰자/관리자는 수정 가능 (재승인 필요)
   if (schedule.status === 'confirmed') {
+    if (isOwner || isAdmin) {
+      return (
+        <div
+          className="border rounded-xl p-4 space-y-3"
+          style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-emerald-300 shrink-0" />
+            <span className="text-emerald-200 font-medium text-sm">이 일정은 최종 확정되었습니다.</span>
+          </div>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            일정 변경이 필요하면 수정 후 다시 기술국·영상국 승인을 받아야 합니다.
+          </p>
+          <Button
+            onClick={() => router.push(`/schedules/${schedule.id}/edit`)}
+            variant="outline"
+            className="w-full min-h-12 font-semibold gap-2 rounded-xl border-[var(--border-default)] text-[var(--text-secondary)]"
+          >
+            <Pencil className="w-4 h-4" />
+            일정 수정하기
+          </Button>
+        </div>
+      )
+    }
     return (
       <div
         className="flex items-center gap-2 p-4 border rounded-xl"

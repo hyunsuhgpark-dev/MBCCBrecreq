@@ -23,13 +23,15 @@ if (firebaseConfig.apiKey) {
   const messaging = firebase.messaging();
 
   messaging.onBackgroundMessage((payload) => {
+    const scheduleId = payload.data?.scheduleId || '';
+    const url = payload.data?.url || (scheduleId ? '/schedules/' + scheduleId : '/calendar');
     const notificationTitle = payload.notification?.title || 'MBC 방송 일정';
     const notificationOptions = {
       body: payload.notification?.body || '',
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
-      tag: payload.data?.scheduleId || 'mbc-schedule',
-      data: payload.data,
+      tag: scheduleId || 'mbc-schedule',
+      data: { ...payload.data, scheduleId, url },
       vibrate: [200, 100, 200],
     };
     self.registration.showNotification(notificationTitle, notificationOptions);
@@ -38,25 +40,31 @@ if (firebaseConfig.apiKey) {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const scheduleId = event.notification.data?.scheduleId;
-  const url = scheduleId ? '/schedules/' + scheduleId : '/calendar';
+  const data = event.notification.data || {};
+  const scheduleId = data.scheduleId;
+  const path = data.url || (scheduleId ? '/schedules/' + scheduleId : '/calendar');
+  const targetUrl = new URL(path, self.location.origin).href;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.navigate(url);
-          return client.focus();
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          return client.focus().then((focusedClient) => {
+            if (focusedClient && 'navigate' in focusedClient) {
+              return focusedClient.navigate(targetUrl);
+            }
+            return clients.openWindow(targetUrl);
+          });
         }
       }
       if (clients.openWindow) {
-        return clients.openWindow(url);
+        return clients.openWindow(targetUrl);
       }
     })
   );
 });
 
-const CACHE_NAME = 'mbc-schedule-v3';
+const CACHE_NAME = 'mbc-schedule-v4';
 const STATIC_ASSETS = ['/calendar', '/login'];
 
 self.addEventListener('install', (event) => {

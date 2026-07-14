@@ -60,12 +60,24 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
     registerFcm()
 
     const unsubscribe = onForegroundMessage((payload: unknown) => {
-      const p = payload as { notification?: { title?: string; body?: string } }
+      const p = payload as {
+        notification?: { title?: string; body?: string }
+        data?: { scheduleId?: string; url?: string }
+      }
       const title = p?.notification?.title ?? 'MBC 일정'
       const body = p?.notification?.body
+      const scheduleId = p?.data?.scheduleId?.trim()
+      const targetUrl = scheduleId
+        ? `/schedules/${scheduleId}`
+        : p?.data?.url?.trim() || '/calendar'
+
       toast(title, {
         description: body,
-        duration: 6000,
+        duration: 8000,
+        action: {
+          label: '일정 보기',
+          onClick: () => router.push(targetUrl),
+        },
       })
       setLocalUnread((n) => n + 1)
     })

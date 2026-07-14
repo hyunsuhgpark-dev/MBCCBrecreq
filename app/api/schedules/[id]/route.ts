@@ -163,8 +163,30 @@ export async function PATCH(
         supabase: supabase as unknown as SupabaseClient,
         scheduleId: affectedId,
         programName: affected.program_name,
+        scheduleResources: {
+          use_relay_car: affected.use_relay_car,
+          use_studio: affected.use_studio,
+          use_eng: affected.use_eng,
+          use_audio: affected.use_audio,
+        },
       })
     }
+  }
+
+  // 수정 후 충돌 없으면 스태프에게 재승인 요청
+  if (newStatus === 'pending') {
+    const programName = mergedBody.program_name ?? existing.program_name
+    await notifyStaffApprovalRequested({
+      supabase: supabase as unknown as SupabaseClient,
+      scheduleId: id,
+      programName,
+      scheduleResources: {
+        use_relay_car: mergedBody.use_relay_car ?? existing.use_relay_car,
+        use_studio: mergedBody.use_studio ?? existing.use_studio,
+        use_eng: mergedBody.use_eng ?? existing.use_eng,
+        use_audio: mergedBody.use_audio ?? existing.use_audio,
+      },
+    })
   }
 
   return NextResponse.json({ message: '수정 완료', status: newStatus })

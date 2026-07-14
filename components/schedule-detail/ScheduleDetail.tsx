@@ -82,8 +82,7 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
   const totalApprovals     = schedule.approvals?.length ?? 2
 
   const canEdit =
-    (schedule.created_by === profile.id || profile.role === 'Admin') &&
-    schedule.status !== 'confirmed'
+    schedule.created_by === profile.id || profile.role === 'Admin'
 
   const canDelete = schedule.created_by === profile.id || profile.role === 'Admin'
 
