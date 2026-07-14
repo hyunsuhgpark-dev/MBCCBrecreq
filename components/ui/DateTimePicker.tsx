@@ -72,19 +72,22 @@ export default function DateTimePicker({ value, onChange, error, className, hide
   )
 
   return (
-    <div className={cn('flex items-center gap-1.5 flex-wrap', className)}>
-      {/* 날짜 */}
-      {!hideDate && (
+    <div className={cn('flex items-center gap-1.5', className)}>
+      {/* 날짜 — 고정 너비로 hideDate 시 spacer와 열 맞춤 */}
+      {!hideDate ? (
         <input
           type="date"
           value={date}
           onChange={(e) => { setDate(e.target.value); emit(e.target.value, ampm, hour, minute) }}
           className={cn(
-            'h-8 rounded border text-sm px-1.5 focus:outline-none focus:border-[var(--accent)] cursor-pointer transition-colors',
+            'h-8 w-[130px] shrink-0 rounded border text-sm px-1.5 focus:outline-none focus:border-[var(--accent)] cursor-pointer transition-colors',
             'bg-[var(--bg-elevated)] text-[var(--text-primary)]',
             error ? 'border-red-400' : 'border-[var(--border-default)]'
           )}
         />
+      ) : (
+        /* hideDate 모드: 날짜 input과 동일한 너비의 투명 spacer → 오전/오후 열 정렬 */
+        <div className="w-[130px] shrink-0" />
       )}
 
       {/* 오전/오후 */}

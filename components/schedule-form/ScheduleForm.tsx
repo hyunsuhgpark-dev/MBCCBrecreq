@@ -173,11 +173,11 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
   const border = 'border border-[var(--border-default)]'
   const labelCls = cn(
     border,
-    'bg-[var(--bg-elevated)] px-3 py-2 font-bold text-[var(--text-secondary)] text-sm text-center flex items-center justify-center tracking-wider select-none'
+    'bg-[var(--bg-elevated)] px-3 py-3 font-bold text-[var(--text-secondary)] text-sm text-center flex items-center justify-center tracking-wider select-none'
   )
   const valueCls = cn(
     border,
-    'px-3 py-2 bg-[var(--bg-surface)] text-[var(--text-primary)]'
+    'px-3 py-3 bg-[var(--bg-surface)] text-[var(--text-primary)]'
   )
   const inputCls = cn(
     'w-full bg-transparent border-0 border-b rounded-none h-8 text-sm px-1',
@@ -352,9 +352,15 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
                   )}
                 />
               </div>
-              {/* 종료 시각 — 항상 아래 줄, ~ 포함하여 시작 시각과 시각적으로 정렬 */}
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-sm font-medium text-slate-500 shrink-0 w-4 text-center">~</span>
+              {/* 종료 시각 — hideDate + spacer 덕분에 오전/오후·시·분이 시작 시각과 열 정렬됨 */}
+              <div className="relative flex items-center gap-2 mt-2">
+                {/* ~ 를 spacer 위에 절대 배치하여 날짜 열에 겹침 */}
+                <span
+                  className="absolute text-sm font-medium text-slate-500 pointer-events-none select-none"
+                  style={{ left: 0, width: '130px', textAlign: 'center' }}
+                >
+                  ~
+                </span>
                 <Controller
                   control={control}
                   name="broadcast_end"
@@ -401,7 +407,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
               <Textarea
                 placeholder="녹화 내용을 입력하세요..."
                 {...register('record_content')}
-                className="border-0 rounded-none focus:ring-0 bg-transparent text-sm resize-none min-h-[80px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                className="border-0 rounded-none focus:ring-0 bg-transparent text-sm resize-none min-h-[88px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
               />
             </div>
           </div>
@@ -426,7 +432,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
               <Textarea
                 placeholder={`특기사항 및 비고를 자유롭게 입력하세요.\n예: 후보자 2명 출연 예정 / 사회자 이황주`}
                 {...register('notes')}
-                className="border-0 rounded-none focus:ring-0 bg-transparent text-sm resize-none min-h-[100px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                className="border-0 rounded-none focus:ring-0 bg-transparent text-sm resize-none min-h-[110px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
               />
             </div>
           </div>
