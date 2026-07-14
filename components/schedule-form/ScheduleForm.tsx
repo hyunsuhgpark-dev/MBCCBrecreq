@@ -173,11 +173,11 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
   const border = 'border border-[var(--border-default)]'
   const labelCls = cn(
     border,
-    'bg-[var(--bg-elevated)] px-3 py-3 font-bold text-[var(--text-secondary)] text-sm text-center flex items-center justify-center tracking-wider select-none'
+    'bg-[var(--bg-elevated)] px-2 md:px-3 py-[2px] md:py-3 font-bold text-[var(--text-secondary)] text-sm text-center flex items-center justify-center tracking-wider select-none'
   )
   const valueCls = cn(
     border,
-    'px-3 py-3 bg-[var(--bg-surface)] text-[var(--text-primary)]'
+    'px-3 py-[2px] md:py-3 bg-[var(--bg-surface)] text-[var(--text-primary)]'
   )
   const inputCls = cn(
     'w-full bg-transparent border-0 border-b rounded-none h-8 text-sm px-1',
@@ -215,7 +215,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
 
         {/* 모바일: 풀너비 2×2 그리드 */}
         <div className="md:hidden border-b border-[var(--border-default)]" style={{ padding: '20px 16px 16px' }}>
-          <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="grid grid-cols-2 gap-3" style={{ marginBottom: '12px' }}>
             {resourceItems.map(({ label, key, checked, activeColor, activeBg }) => (
               <button
                 key={key}
@@ -235,7 +235,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
               </button>
             ))}
           </div>
-          <div className="flex justify-end">
+          <div className="flex justify-end" style={{ marginTop: '10px' }}>
             <button
               type="button"
               onClick={() => setValue('is_live', !watchLive)}
@@ -306,8 +306,8 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
         {/* ── 본문 필드 ── */}
         <div>
 
-          {/* 프로그램명 + 담당PD */}
-          <div className="grid grid-cols-[112px_1fr_72px_152px] border-b border-[var(--border-default)]">
+          {/* 프로그램명 + 담당PD — 모바일: PD 열 축소로 프로그램명 공간 확보 */}
+          <div className="grid grid-cols-[72px_1fr_44px_72px] md:grid-cols-[112px_1fr_72px_152px] border-b border-[var(--border-default)]">
             <div className={labelCls}>프 로 그 램 명</div>
             <div className={cn(valueCls, 'border-t-0 border-b-0')}>
               <input
@@ -320,11 +320,14 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
                 <p className="text-red-500 text-[11px] mt-0.5">{errors.program_name.message}</p>
               )}
             </div>
-            <div className={cn(labelCls, 'text-xs border-t-0 border-b-0')}>담 당 P D</div>
-            <div className={cn(valueCls, 'border-t-0 border-b-0 border-r-0')}>
+            <div className={cn(labelCls, 'text-[10px] md:text-xs border-t-0 border-b-0 px-1')}>
+              <span className="md:hidden">담당PD</span>
+              <span className="hidden md:inline">담 당 P D</span>
+            </div>
+            <div className={cn(valueCls, 'border-t-0 border-b-0 border-r-0 px-2 md:px-3')}>
               <input
                 type="text"
-                placeholder="담당 PD 이름"
+                placeholder="이름"
                 {...register('responsible_pd')}
                 className={cn(inputCls, errors.responsible_pd && 'border-red-400 focus:border-red-400')}
               />
@@ -334,7 +337,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
           {/* 제작일시 */}
           <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
             <div className={labelCls}>제 작 일 시</div>
-            <div className={cn(valueCls, 'py-2.5 border-l-0')}>
+            <div className={cn(valueCls, 'border-l-0')}>
               {/* 시작 시각 */}
               <div className="flex items-center gap-2">
                 <Controller
@@ -388,7 +391,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
           {!watchLive && (
             <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
               <div className={labelCls}>방 송 일 시</div>
-              <div className={cn(valueCls, 'flex items-center gap-2 py-2.5 border-l-0')}>
+              <div className={cn(valueCls, 'flex items-center gap-2 border-l-0')}>
                 <Controller
                   control={control}
                   name="broadcast_at"
