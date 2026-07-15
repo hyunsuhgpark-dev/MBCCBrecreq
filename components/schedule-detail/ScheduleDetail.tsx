@@ -314,7 +314,7 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
               <div className={valueCls}>
                 {schedule.venue}
                 {schedule.location && (
-                  <span className="ml-3 text-xs" style={{ color: 'var(--text-muted)' }}>자원ID: {schedule.location}</span>
+                  <span className="ml-3 text-xs text-[var(--text-secondary)]">자원ID: {schedule.location}</span>
                 )}
               </div>
             </div>
@@ -354,17 +354,17 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
             <h3 className="font-bold text-sm mb-3 tracking-wide text-purple-200">차량 배정 정보</h3>
             <div className="space-y-3">
               {schedule.assignment_vehicles.map((v, i) => (
-                <div key={i} className="rounded-xl border p-3 text-sm" style={{ borderColor: 'var(--border-default)' }}>
-                  <p className="font-semibold text-[var(--text-primary)]">차량 {i + 1}: {v.driver_name}</p>
-                  {v.vehicle_info && <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>차량: {v.vehicle_info}</p>}
-                  {v.contact && <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>연락처: {v.contact}</p>}
+                <div key={i} className="rounded-xl border p-3" style={{ borderColor: 'var(--border-default)' }}>
+                  <p className="font-semibold text-sm text-[var(--text-primary)]">차량 {i + 1}: {v.driver_name}</p>
+                  {v.vehicle_info && <p className="text-sm mt-1 text-[var(--text-primary)]">차량: {v.vehicle_info}</p>}
+                  {v.contact && <p className="text-sm mt-0.5 text-[var(--text-primary)]">연락처: {v.contact}</p>}
                 </div>
               ))}
               {schedule.assignment_director_accompany && (
-                <p className="text-xs text-purple-300">영상감독 동행</p>
+                <p className="text-sm font-medium text-purple-200">영상감독 동행</p>
               )}
               {schedule.assignment_notes && (
-                <p className="text-xs whitespace-pre-wrap" style={{ color: 'var(--text-muted)' }}>메모: {schedule.assignment_notes}</p>
+                <p className="text-sm whitespace-pre-wrap text-[var(--text-primary)]">메모: {schedule.assignment_notes}</p>
               )}
             </div>
           </div>
@@ -402,7 +402,7 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
                     <p className="text-xs text-rose-300 mt-1">반려 사유: {approval.reject_reason}</p>
                   )}
                   {approval.decided_at && (
-                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                    <p className="text-xs mt-1 text-[var(--text-secondary)]">
                       {format(parseISO(approval.decided_at), 'M/d HH:mm', { locale: ko })}
                     </p>
                   )}

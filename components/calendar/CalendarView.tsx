@@ -491,8 +491,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                     {/* 특기사항 */}
                                     {note && (
                                       <span
-                                        className="text-[12px] leading-none"
-                                        style={{ color: 'var(--text-muted)' }}
+                                        className="text-[13px] leading-none"
+                                        style={{ color: cfg.cardText, opacity: 0.8 }}
                                       >
                                         {note}
                                       </span>

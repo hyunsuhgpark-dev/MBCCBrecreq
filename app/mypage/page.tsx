@@ -255,18 +255,18 @@ export default async function MyPage() {
                         </div>
                         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                           <StatusIcon className={cn('w-3 h-3 shrink-0', st.textCls)} />
-                          <span className={cn('text-[11px] font-semibold', st.textCls)}>{st.label}</span>
-                          <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                          <span className={cn('text-xs font-semibold', st.textCls)}>{st.label}</span>
+                          <span className="text-xs text-[var(--text-secondary)]">
                             · {fmtShort(s.broadcast_start)}
                           </span>
                           {isAdmin && s.creator && (
-                            <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                            <span className="text-xs text-[var(--text-secondary)]">
                               · {s.creator.full_name}
                             </span>
                           )}
                         </div>
                         {s.venue && (
-                          <p className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>
+                          <p className="text-xs mt-0.5 truncate text-[var(--text-secondary)]">
                             {s.venue}
                           </p>
                         )}
