@@ -110,6 +110,22 @@ button, a, input, textarea, select, label {
   touch-action: manipulation;
 }
 
+/* 터치 누름 시각 피드백 — 스마트폰 Native 앱 수준 반응 */
+button:not(:disabled),
+a,
+[role="button"] {
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+@media (hover: none) {
+  /* 터치 디바이스 전용: 터치 다운 즉시 눌림 효과 */
+  button:not(:disabled):active,
+  a:active,
+  [role="button"]:active {
+    transform: scale(0.96);
+    opacity: 0.75;
+  }
+}
+
 html, body {
   max-width: 100vw;
   overflow-x: hidden;

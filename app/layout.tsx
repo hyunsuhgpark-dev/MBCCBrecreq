@@ -17,7 +17,8 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  // 캘린더 다크 차콜 테마와 동일 톤
+  userScalable: false,      // 더블탭 줌 원천 차단 → 300ms 딜레이 제거
+  viewportFit: 'cover',     // Safe Area 노치 영역까지 앱 콘텐츠 확장
   themeColor: '#141416',
 }
 

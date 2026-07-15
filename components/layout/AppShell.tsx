@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 import { requestNotificationPermission, onForegroundMessage } from '@/lib/firebase/client'
 import { useAppBack } from '@/lib/use-app-back'
 
-const MAIN_TAB_PATHS = ['/calendar', '/schedules/new', '/admin']
+const MAIN_TAB_PATHS = ['/calendar', '/schedules/new', '/admin', '/mypage']
 
 interface AppShellProps {
   children: React.ReactNode
@@ -132,6 +132,7 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
   const navItems = [
     { href: '/calendar', icon: Calendar, label: '캘린더' },
     { href: '/schedules/new', icon: Plus, label: '제작 의뢰' },
+    { href: '/mypage', icon: User, label: '마이페이지' },
     ...(profile.role === 'Admin'
       ? [{ href: '/admin', icon: Settings, label: '관리' }]
       : []),
