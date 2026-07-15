@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import AppShell from '@/components/layout/AppShell'
-import { Clapperboard, Navigation2 } from 'lucide-react'
+import { Clapperboard, Car } from 'lucide-react'
 
 export default async function NewRequestPage({
   searchParams,
@@ -41,17 +41,15 @@ export default async function NewRequestPage({
         <div className="grid gap-4 sm:grid-cols-2">
           <Link
             href={`/schedules/new/recording${dateQuery}`}
-            className="rounded-2xl border p-6 flex flex-col items-center gap-4 transition-all hover:brightness-110 active:scale-[0.98]"
+            className="rounded-2xl border flex flex-col items-center gap-4 transition-all hover:brightness-110 active:scale-[0.98]"
             style={{
               backgroundColor: 'var(--bg-surface)',
               borderColor: 'var(--border-default)',
+              padding: '32px 24px 24px',
             }}
           >
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{ backgroundColor: 'rgba(74,158,232,0.15)' }}
-            >
-              <Clapperboard className="w-8 h-8" style={{ color: 'var(--accent)' }} />
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-white">
+              <Clapperboard className="w-8 h-8 text-black" />
             </div>
             <div className="text-center">
               <h2 className="text-lg font-bold text-[var(--text-primary)]">녹화 의뢰</h2>
@@ -63,17 +61,15 @@ export default async function NewRequestPage({
 
           <Link
             href={`/schedules/new/dispatch${dateQuery}`}
-            className="rounded-2xl border p-6 flex flex-col items-center gap-4 transition-all hover:brightness-110 active:scale-[0.98]"
+            className="rounded-2xl border flex flex-col items-center gap-4 transition-all hover:brightness-110 active:scale-[0.98]"
             style={{
               backgroundColor: 'var(--bg-surface)',
               borderColor: 'var(--border-default)',
+              padding: '32px 24px 24px',
             }}
           >
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{ backgroundColor: 'rgba(45,212,191,0.13)' }}
-            >
-              <Navigation2 className="w-8 h-8" style={{ color: '#2DD4BF' }} />
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-white">
+              <Car className="w-8 h-8 text-black" />
             </div>
             <div className="text-center">
               <h2 className="text-lg font-bold text-[var(--text-primary)]">배차 의뢰</h2>

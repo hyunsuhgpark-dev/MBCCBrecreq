@@ -281,6 +281,19 @@ export default function CalendarView({ profile }: CalendarViewProps) {
             ))}
           </div>
 
+          {/* 의뢰하기 — 뷰 전환보다 앞에 배치해 모바일 접근성 향상 */}
+          {canCreate && (
+            <Link href="/schedules/new">
+              <button
+                className="flex items-center gap-2 h-11 px-4 text-sm font-bold rounded-xl transition-all text-white touch-manipulation active:scale-95"
+                style={{ backgroundColor: 'var(--accent)' }}
+              >
+                <Plus className="w-5 h-5" />
+                <span>의뢰</span>
+              </button>
+            </Link>
+          )}
+
           {/* 뷰 전환 — 버튼 간격을 두어 구분 */}
           <div className="flex items-center gap-1.5">
             {[
@@ -360,18 +373,6 @@ export default function CalendarView({ profile }: CalendarViewProps) {
             )}
           </div>
 
-          {/* 의뢰하기 */}
-          {canCreate && (
-            <Link href="/schedules/new">
-              <button
-                className="flex items-center gap-1.5 h-9 px-4 text-xs font-bold rounded-xl transition-all tracking-wide text-white"
-                style={{ backgroundColor: 'var(--accent)' }}
-              >
-                <span className="text-sm font-bold leading-none">+</span>
-                <span className="hidden sm:inline">의뢰하기</span>
-              </button>
-            </Link>
-          )}
         </div>
       </div>
 

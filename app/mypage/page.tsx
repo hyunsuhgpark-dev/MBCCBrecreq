@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 import {
   User,
   ChevronRight,
-  Navigation2,
+  Car,
   Clapperboard,
   Clock,
   CheckCircle2,
@@ -49,7 +49,7 @@ type StatusCfg = { label: string; textCls: string; borderCls: string; icon: Reac
 const statusConfig: Record<ScheduleStatus, StatusCfg> = {
   conflict:  { label: '충돌',    textCls: 'text-amber-300',   borderCls: 'border-l-amber-500',   icon: AlertTriangle },
   pending:   { label: '승인 대기', textCls: 'text-slate-400',   borderCls: 'border-l-slate-500',   icon: Clock },
-  assigned:  { label: '배정 대기', textCls: 'text-purple-300',  borderCls: 'border-l-purple-500',  icon: Navigation2 },
+  assigned:  { label: '배정 대기', textCls: 'text-purple-300',  borderCls: 'border-l-purple-500',  icon: Car },
   confirmed: { label: '확정',    textCls: 'text-emerald-300', borderCls: 'border-l-emerald-500', icon: CheckCircle2 },
   rejected:  { label: '반려',    textCls: 'text-rose-300',    borderCls: 'border-l-rose-500',    icon: XCircle },
 }
@@ -241,7 +241,7 @@ export default async function MyPage() {
                         style={{ backgroundColor: typeColor + '22' }}
                       >
                         {isDispatch
-                          ? <Navigation2 className="w-4 h-4" style={{ color: TEAL }} />
+                          ? <Car className="w-4 h-4" style={{ color: TEAL }} />
                           : <Clapperboard className="w-4 h-4" style={{ color: BLUE }} />
                         }
                       </div>
