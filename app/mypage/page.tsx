@@ -8,8 +8,8 @@ import { cn } from '@/lib/utils'
 import {
   User,
   ChevronRight,
-  Car,
-  Video,
+  Navigation2,
+  Clapperboard,
   Clock,
   CheckCircle2,
   XCircle,
@@ -49,7 +49,7 @@ type StatusCfg = { label: string; textCls: string; borderCls: string; icon: Reac
 const statusConfig: Record<ScheduleStatus, StatusCfg> = {
   conflict:  { label: '충돌',    textCls: 'text-amber-300',   borderCls: 'border-l-amber-500',   icon: AlertTriangle },
   pending:   { label: '승인 대기', textCls: 'text-slate-400',   borderCls: 'border-l-slate-500',   icon: Clock },
-  assigned:  { label: '배정 대기', textCls: 'text-purple-300',  borderCls: 'border-l-purple-500',  icon: Car },
+  assigned:  { label: '배정 대기', textCls: 'text-purple-300',  borderCls: 'border-l-purple-500',  icon: Navigation2 },
   confirmed: { label: '확정',    textCls: 'text-emerald-300', borderCls: 'border-l-emerald-500', icon: CheckCircle2 },
   rejected:  { label: '반려',    textCls: 'text-rose-300',    borderCls: 'border-l-rose-500',    icon: XCircle },
 }
@@ -220,6 +220,9 @@ export default async function MyPage() {
                 const st = statusConfig[s.status as ScheduleStatus] ?? statusConfig.pending
                 const StatusIcon = st.icon
                 const isDispatch = s.request_type === 'dispatch'
+                const TEAL = '#2DD4BF'
+                const BLUE = '#4A9EE8'
+                const typeColor = isDispatch ? TEAL : BLUE
 
                 return (
                   <li key={s.id}>
@@ -233,13 +236,13 @@ export default async function MyPage() {
                       style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)', borderLeftColor: '' }}
                     >
                       {/* 타입 아이콘 */}
-                      <div className={cn(
-                        'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
-                        isDispatch ? 'bg-purple-950/50' : 'bg-blue-950/50'
-                      )}>
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: typeColor + '22' }}
+                      >
                         {isDispatch
-                          ? <Car className="w-4 h-4 text-purple-300" />
-                          : <Video className="w-4 h-4 text-blue-300" />
+                          ? <Navigation2 className="w-4 h-4" style={{ color: TEAL }} />
+                          : <Clapperboard className="w-4 h-4" style={{ color: BLUE }} />
                         }
                       </div>
 

@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import AppShell from '@/components/layout/AppShell'
-import { Video, Car } from 'lucide-react'
+import { Clapperboard, Navigation2 } from 'lucide-react'
 
 export default async function NewRequestPage({
   searchParams,
@@ -49,9 +49,9 @@ export default async function NewRequestPage({
           >
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{ backgroundColor: 'color-mix(in srgb, var(--accent) 20%, transparent)' }}
+              style={{ backgroundColor: 'rgba(74,158,232,0.15)' }}
             >
-              <Video className="w-8 h-8" style={{ color: 'var(--accent)' }} />
+              <Clapperboard className="w-8 h-8" style={{ color: 'var(--accent)' }} />
             </div>
             <div className="text-center">
               <h2 className="text-lg font-bold text-[var(--text-primary)]">녹화 의뢰</h2>
@@ -71,9 +71,9 @@ export default async function NewRequestPage({
           >
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)' }}
+              style={{ backgroundColor: 'rgba(45,212,191,0.13)' }}
             >
-              <Car className="w-8 h-8 text-purple-300" />
+              <Navigation2 className="w-8 h-8" style={{ color: '#2DD4BF' }} />
             </div>
             <div className="text-center">
               <h2 className="text-lg font-bold text-[var(--text-primary)]">배차 의뢰</h2>
