@@ -128,7 +128,10 @@ export default function AdminUserManager({ users: initialUsers, currentUserId }:
                       <SelectTrigger className="w-36 h-9 text-sm border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-primary)]">
                         <SelectValue placeholder="역할 선택" />
                       </SelectTrigger>
-                      <SelectContent alignItemWithTrigger={false}>
+                      <SelectContent
+                        alignItemWithTrigger={false}
+                        className="bg-[var(--bg-elevated)] border-[var(--border-default)] text-[var(--text-primary)]"
+                      >
                         {roleOptions.map((opt) => (
                           <SelectItem key={opt.value} value={opt.value}>
                             {opt.label}
@@ -188,24 +191,24 @@ export default function AdminUserManager({ users: initialUsers, currentUserId }:
             <table className="w-full text-sm">
               <thead className="border-b" style={{ backgroundColor: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}>
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium text-[var(--text-secondary)]">이름</th>
-                  <th className="text-left px-4 py-3 font-medium text-[var(--text-secondary)]">이메일</th>
-                  <th className="text-left px-4 py-3 font-medium text-[var(--text-secondary)]">역할</th>
-                  <th className="text-left px-4 py-3 font-medium text-[var(--text-secondary)]">가입일</th>
-                  <th className="px-4 py-3" />
+                  <th className="text-left py-[25px] font-medium text-[var(--text-secondary)]" style={{ paddingLeft: '40px', paddingRight: '16px' }}>이름</th>
+                  <th className="text-left px-4 py-[25px] font-medium text-[var(--text-secondary)]">이메일</th>
+                  <th className="text-left px-4 py-[25px] font-medium text-[var(--text-secondary)]">역할</th>
+                  <th className="text-left px-4 py-[25px] font-medium text-[var(--text-secondary)]">가입일</th>
+                  <th className="px-4 py-[25px]" />
                 </tr>
               </thead>
               <tbody className="divide-y" style={{ '--tw-divide-color': 'var(--border-subtle)' } as React.CSSProperties}>
                 {approvedUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-[var(--bg-elevated)] transition-colors">
-                    <td className="px-4 py-3 font-medium text-[var(--text-primary)]">
+                  <tr key={user.id} className="hover:bg-[var(--bg-elevated)] transition-colors" style={{ height: '40px' }}>
+                    <td className="py-[25px] font-medium text-[var(--text-primary)]" style={{ paddingLeft: '40px', paddingRight: '16px' }}>
                       {user.full_name || '이름 없음'}
                       {user.id === currentUserId && (
                         <span className="ml-1.5 text-[10px] px-1 py-0.5 rounded bg-white/5 border border-white/10 text-[var(--accent)]">나</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-[var(--text-secondary)]">{user.email}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-[25px] text-[var(--text-secondary)]">{user.email}</td>
+                    <td className="px-4 py-[25px]">
                       {user.id !== currentUserId ? (
                         <Select
                           value={user.role ?? ''}
@@ -215,7 +218,10 @@ export default function AdminUserManager({ users: initialUsers, currentUserId }:
                           <SelectTrigger className="w-32 h-7 text-xs border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-primary)]">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent alignItemWithTrigger={false}>
+                          <SelectContent
+                            alignItemWithTrigger={false}
+                            className="bg-[var(--bg-elevated)] border-[var(--border-default)] text-[var(--text-primary)]"
+                          >
                             {roleOptions.map((opt) => (
                               <SelectItem key={opt.value} value={opt.value} className="text-xs">
                                 {opt.label}
@@ -229,10 +235,10 @@ export default function AdminUserManager({ users: initialUsers, currentUserId }:
                         </Badge>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-[var(--text-muted)] text-xs">
+                    <td className="px-4 py-[25px] text-[var(--text-muted)] text-xs">
                       {format(parseISO(user.created_at), 'yy.M.d', { locale: ko })}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="py-[25px] text-right" style={{ paddingLeft: '16px', paddingRight: '32px' }}>
                       {user.id !== currentUserId && (
                         <button
                           onClick={() => updateUser(user.id, { isApproved: false })}
@@ -241,9 +247,9 @@ export default function AdminUserManager({ users: initialUsers, currentUserId }:
                           title="승인 취소"
                         >
                           {loadingId === user.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader2 className="w-5 h-5 animate-spin" />
                           ) : (
-                            <UserX className="w-4 h-4" />
+                            <UserX className="w-5 h-5" />
                           )}
                         </button>
                       )}

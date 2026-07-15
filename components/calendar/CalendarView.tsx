@@ -200,8 +200,6 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   const isCurrentWeek = isSameWeek(currentDate, new Date(), { locale: ko })
 
   const displayedSchedules = applyScheduleFilter(schedules)
-  const totalCount = displayedSchedules.length
-  const confirmedCount = displayedSchedules.filter(s => s.status === 'confirmed').length
 
   return (
     <div className={cn('px-4 py-5', !isDesktop && 'max-w-7xl mx-auto')}>
@@ -246,25 +244,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
             <ChevronRight className="w-5 h-5" />
           </button>
 
-          {/* 이번주/이번달/오늘 버튼 */}
-          {(viewMode === 'week' ? !isCurrentWeek : true) && (
-            <button
-              onClick={() => setCurrentDate(new Date())}
-              className="ml-1 h-7 px-2.5 text-[11px] font-semibold rounded-lg border transition-colors tracking-wide"
-              style={{ color: 'var(--accent)', borderColor: 'var(--accent)', opacity: 0.85 }}
-            >
-              {viewMode === 'week' ? '이번주' : viewMode === 'month' ? '이번달' : '오늘'}
-            </button>
-          )}
 
-          {!loading && (
-            <span className="hidden sm:inline-flex items-center gap-1.5 ml-3 text-xs" style={{ color: 'var(--text-muted)' }}>
-              <span>총 {totalCount}건</span>
-              {confirmedCount > 0 && (
-                <span className="text-emerald-400 font-semibold">/ {confirmedCount}건 확정</span>
-              )}
-            </span>
-          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -325,7 +305,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
               style={{
                 borderColor: scheduleFilter !== 'all' ? 'var(--accent)' : 'var(--border-default)',
                 backgroundColor: scheduleFilter !== 'all' ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : 'var(--bg-surface)',
-                color: scheduleFilter !== 'all' ? 'var(--accent)' : 'var(--text-secondary)',
+                color: '#fff',
               }}
             >
               <SlidersHorizontal className="w-4 h-4" />
@@ -356,16 +336,16 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                       onClick={() => { setScheduleFilter(key); setFilterDropdownOpen(false) }}
                       className="w-full text-left px-4 py-3 transition-all flex flex-col gap-0.5"
                       style={{
-                        backgroundColor: scheduleFilter === key ? 'color-mix(in srgb, var(--accent) 12%, transparent)' : 'transparent',
+                        backgroundColor: scheduleFilter === key ? 'color-mix(in srgb, var(--accent) 28%, var(--bg-surface))' : 'transparent',
                         borderLeft: scheduleFilter === key ? '3px solid var(--accent)' : '3px solid transparent',
                       }}
                       onMouseEnter={e => { if (scheduleFilter !== key) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-elevated)' }}
                       onMouseLeave={e => { if (scheduleFilter !== key) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}
                     >
-                      <span className="text-sm font-semibold" style={{ color: scheduleFilter === key ? 'var(--accent)' : 'var(--text-primary)' }}>
+                      <span className="text-sm font-semibold" style={{ color: scheduleFilter === key ? '#fff' : 'var(--text-muted)' }}>
                         {label}
                       </span>
-                      <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{sub}</span>
+                      <span className="text-[11px]" style={{ color: scheduleFilter === key ? 'rgba(255,255,255,0.65)' : 'var(--text-muted)' }}>{sub}</span>
                     </button>
                   ))}
                 </div>

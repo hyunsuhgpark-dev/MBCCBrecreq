@@ -181,7 +181,7 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
           </Link>
 
           {/* 데스크탑 네비게이션 */}
-          <nav className="hidden sm:flex items-center gap-0.5">
+          <nav className="hidden sm:flex items-center gap-6">
             {navItems.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
               return (
