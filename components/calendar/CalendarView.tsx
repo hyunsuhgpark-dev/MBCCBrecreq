@@ -287,17 +287,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
             ))}
           </div>
 
-          {/* 의뢰하기 — 투명 배경의 심플한 텍스트 버튼, 호버 시에만 옅은 배경. +와 텍스트는 한 단어처럼 붙여줌 */}
-          {canCreate && (
-            <Link href="/schedules/new">
-              <button
-                className="flex items-center gap-1 h-11 px-2.5 text-sm font-bold rounded-lg transition-colors text-white touch-manipulation active:scale-95 hover:bg-white/10"
-              >
-                <Plus className="w-5 h-5" />
-                <span>의뢰</span>
-              </button>
-            </Link>
-          )}
+          {/* '+ 의뢰' 버튼은 상단 GNB(PC) / 하단 탭바(모바일)에 이미 '제작 의뢰' 진입점이 있어 중복이므로 제거함 */}
 
           {/* 뷰 전환 드롭다운 + 스케줄 필터 드롭다운을 한 그룹으로 묶어서, 그룹 내부 간격(gap-1)을
               바깥 gap-x-4와 별개로 훨씬 좁게 직접 제어함. (패딩까지 줄여야 실제로 눈에 보이는 변화가 생김) */}
