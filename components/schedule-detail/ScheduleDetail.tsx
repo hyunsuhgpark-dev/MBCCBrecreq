@@ -56,11 +56,11 @@ function fmtRange(start: string, end: string) {
   return `${fmt(start)} ~ ${fmt(end)}`
 }
 
-const checkboxItems = [
-  { label: '중 계 차', key: 'use_relay_car' as const },
-  { label: '스튜디오',  key: 'use_studio'   as const },
-  { label: 'E  N  G',  key: 'use_eng'       as const },
-  { label: 'A U D I O', key: 'use_audio'    as const },
+const resourceChips = [
+  { label: '중계차', key: 'use_relay_car' as const, color: '#FCD34D', bg: 'rgba(217,119,6,0.18)', border: 'rgba(217,119,6,0.45)' },
+  { label: '스튜디오', key: 'use_studio' as const, color: '#93C5FD', bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.4)' },
+  { label: 'ENG', key: 'use_eng' as const, color: '#6EE7B7', bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.4)' },
+  { label: 'AUDIO', key: 'use_audio' as const, color: '#D8B4FE', bg: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.4)' },
 ]
 
 export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProps) {
@@ -95,6 +95,8 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
     profile.role === 'Admin' ||
     (schedule.created_by === profile.id && !isAssigned)
 
+  const requestedResources = resourceChips.filter((r) => schedule[r.key])
+
   async function handleDelete() {
     setDeleting(true)
     try {
@@ -126,48 +128,48 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
       {/* ── 상단 상태 바 ── */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3 no-print">
         <div className="flex items-center gap-2">
-          <Badge className={cn('border text-xs font-medium', statusInfo.color)}>
-            <StatusIcon className="w-3 h-3 mr-1" />
+          <Badge className={cn('border text-sm font-semibold px-3 py-1.5', statusInfo.color)}>
+            <StatusIcon className="w-6 h-6 mr-1.5" />
             {statusInfo.label}
           </Badge>
           {schedule.status === 'pending' && (
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>승인 {approvedCount}/{totalApprovals}</span>
+            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>승인 {approvedCount}/{totalApprovals}</span>
           )}
         </div>
 
         <div className="flex gap-2">
           <Button
             variant="outline"
-            size="sm"
+            size="icon"
             onClick={() => handlePrint()}
-            className="gap-1.5 border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]"
+            className="h-11 w-11 border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] touch-manipulation"
+            aria-label="PDF 출력"
           >
-            <Printer className="w-4 h-4" />
-            <span className="hidden sm:inline">PDF 출력</span>
+            <Printer className="w-8 h-8" />
           </Button>
 
           {canEdit && (
             <Link href={`/schedules/${schedule.id}/edit`}>
               <Button
-                size="sm"
-                className="gap-1.5 text-white shadow-sm"
+                size="icon"
+                className="h-11 w-11 text-white shadow-sm touch-manipulation"
                 style={{ backgroundColor: 'var(--accent)' }}
+                aria-label="수정"
               >
-                <Edit className="w-4 h-4" />
-                <span className="hidden sm:inline">수정</span>
+                <Edit className="w-8 h-8" />
               </Button>
             </Link>
           )}
 
           {canDelete && (
             <Button
-              size="sm"
+              size="icon"
               variant="outline"
               onClick={() => setShowDeleteDialog(true)}
-              className="gap-1.5 border-rose-900/40 text-rose-300 hover:bg-rose-950/20 hover:border-rose-800"
+              className="h-11 w-11 border-rose-900/40 text-rose-300 hover:bg-rose-950/20 hover:border-rose-800 touch-manipulation"
+              aria-label="삭제"
             >
-              <Trash2 className="w-4 h-4" />
-              <span className="hidden sm:inline">삭제</span>
+              <Trash2 className="w-8 h-8" />
             </Button>
           )}
         </div>
@@ -224,40 +226,20 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
             <div className="absolute bottom-0 left-0 right-0 h-px" style={{ backgroundColor: 'var(--border-default)' }} />
           </div>
 
-          {!isDispatch && (
-          <>
-          {/* 장비 체크박스(세로) + 오류 신고 */}
-          <div className="grid grid-cols-[70%_30%] border-b border-[var(--border-default)]">
-            <div className="border-r border-[var(--border-default)]">
-              {checkboxItems.map(({ label, key }, i) => (
-                <div
+          {!isDispatch && requestedResources.length > 0 && (
+          <div className="px-4 py-3 border-b border-[var(--border-default)]" style={{ backgroundColor: 'var(--bg-surface)' }}>
+            <div className="flex flex-wrap gap-2">
+              {requestedResources.map(({ label, key, color, bg, border: borderColor }) => (
+                <span
                   key={key}
-                  className={cn('grid grid-cols-[112px_1fr] items-center', i > 0 && 'border-t border-[var(--border-default)]')}
+                  className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold tracking-wide border"
+                  style={{ color, backgroundColor: bg, borderColor }}
                 >
-                  <div className={cn(labelCls, 'border-0 border-r border-[var(--border-default)] h-full text-xs')}>
-                    {label}
-                  </div>
-                  <div className="px-4 py-2.5 text-lg">
-                    {schedule[key] ? (
-                      <span className="font-extrabold" style={{ color: 'var(--text-primary)' }}>✓</span>
-                    ) : (
-                      <span style={{ color: 'var(--text-muted)' }}>—</span>
-                    )}
-                  </div>
-                </div>
+                  {label}
+                </span>
               ))}
             </div>
-            <div className="flex flex-col">
-              <div className="px-3 py-2 text-xs font-bold text-center tracking-widest" style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
-                프로그램 오류 신고
-              </div>
-              <div className="flex-1 flex flex-col items-center justify-center px-3 py-4 gap-1" style={{ backgroundColor: 'var(--bg-surface)' }}>
-                <p className="text-sm font-bold tracking-wide" style={{ color: 'var(--text-primary)' }}>박현서</p>
-                <p className="text-sm font-medium tracking-wider" style={{ color: 'var(--text-primary)' }}>010-4523-0464</p>
-              </div>
-            </div>
           </div>
-          </>
           )}
 
           {/* 본문 */}

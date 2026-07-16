@@ -415,7 +415,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
             <div className={labelCls}>녹 화 내 용</div>
             <div className={cn(valueCls, 'border-l-0')}>
               <Textarea
-                placeholder="녹화 내용을 입력하세요..."
+                placeholder="녹화 내용을 입력하세요"
                 {...register('record_content')}
                 className="border-0 rounded-none focus:ring-0 bg-transparent text-sm resize-none min-h-[88px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
               />
@@ -428,9 +428,9 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
             <div className={cn(valueCls, 'flex items-center gap-2 border-l-0')}>
               <input
                 type="text"
-                placeholder="예: 지하 1층 청주 스튜디오"
+                placeholder="예: 뉴스 부조정실"
                 {...register('venue')}
-                className={cn(inputCls, 'flex-1', errors.venue && 'border-red-400 focus:border-red-400')}
+                className={cn(inputCls, 'flex-1 text-sm', errors.venue && 'border-red-400 focus:border-red-400')}
               />
             </div>
           </div>
@@ -440,7 +440,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
             <div className={cn(labelCls, 'border-b-0')}>특 기 사 항</div>
             <div className={cn(valueCls, 'border-l-0 border-b-0 border-r-0')}>
               <Textarea
-                placeholder={`특기사항 및 비고를 자유롭게 입력하세요.\n예: 후보자 2명 출연 예정 / 사회자 이황주`}
+                placeholder="특기사항 및 비고를 자유롭게 입력하세요"
                 {...register('notes')}
                 className="border-0 rounded-none focus:ring-0 bg-transparent text-sm resize-none min-h-[110px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
               />
