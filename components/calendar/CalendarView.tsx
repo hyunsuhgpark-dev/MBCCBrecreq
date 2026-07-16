@@ -613,7 +613,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                       key={idx}
                       className="rounded-xl border overflow-hidden"
                       style={{
-                        minHeight: isDesktop ? '120px' : '72px',
+                        minHeight: isDesktop ? '120px' : '112px',
                         backgroundColor: isTodayDate ? 'rgba(240,240,242,0.05)' : 'var(--bg-surface)',
                         borderColor: isTodayDate ? 'rgba(240,240,242,0.45)' : 'var(--border-subtle)',
                         boxShadow: isTodayDate ? '0 0 0 1px rgba(240,240,242,0.25)' : 'none',
@@ -633,39 +633,51 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                         }
                       }}
                     >
-                      {/* 날짜 숫자 */}
+                      {/* 날짜 숫자 — 모바일은 칩 텍스트 노출 공간 확보를 위해 70% 수준으로 축소 */}
                       <div
                         className="text-right font-bold tabular-nums"
                         style={{
                           color: isWeekend ? DOW_COLORS[dow] : 'var(--text-secondary)',
-                          fontSize: isDesktop ? '15px' : '12px',
-                          padding: isDesktop ? '8px 10px 4px' : '6px 8px 2px',
+                          fontSize: isDesktop ? '15px' : '9px',
+                          padding: isDesktop ? '8px 10px 4px' : '5px 6px 1px',
                         }}
                       >
                         {format(day, 'd')}
                       </div>
 
-                      {/* 일정 칩 */}
-                      <div style={{ padding: isDesktop ? '0 6px 8px' : '0 4px 6px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      {/* 일정 칩 — 모바일은 점/좌측 바/여백을 없애고 글자 색으로만 상태를 구분,
+                          2줄(line-clamp-2)까지 노출해 프로그램명이 잘리지 않고 최대한 읽히게 함 */}
+                      <div style={{ padding: isDesktop ? '0 6px 8px' : '0 3px 4px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
                         {daySchedules.slice(0, isDesktop ? 5 : 3).map((s) => {
                           const cfg = statusConfig[s.status]
                           return (
                             <Link key={s.id} href={`/schedules/${s.id}`}>
                               <div
-                                className="flex items-center gap-1 rounded cursor-pointer transition-all hover:brightness-125"
+                                className={cn('rounded cursor-pointer transition-all hover:brightness-125', isDesktop && 'flex items-center gap-1')}
                                 style={{
                                   backgroundColor: cfg.cardBg,
-                                  borderLeft: `3px solid ${cfg.cardBorder}`,
-                                  padding: isDesktop ? '4px 8px' : '2px 6px',
+                                  borderLeft: isDesktop ? `3px solid ${cfg.cardBorder}` : 'none',
+                                  padding: isDesktop ? '4px 8px' : '2px 4px',
                                 }}
                               >
-                                <span className={cn('rounded-full shrink-0', cfg.dot)} style={{ width: isDesktop ? '6px' : '4px', height: isDesktop ? '6px' : '4px' }} />
+                                {isDesktop && (
+                                  <span className={cn('rounded-full shrink-0', cfg.dot)} style={{ width: '6px', height: '6px' }} />
+                                )}
                                 <span
-                                  className="truncate font-medium"
+                                  className={cn('font-medium', isDesktop ? 'truncate' : 'block')}
                                   style={{
                                     color: cfg.cardText,
-                                    fontSize: isDesktop ? '13px' : '10px',
-                                    lineHeight: isDesktop ? '1.4' : '1.2',
+                                    fontSize: isDesktop ? '13px' : '9px',
+                                    lineHeight: isDesktop ? '1.4' : '1.25',
+                                    ...(isDesktop
+                                      ? {}
+                                      : {
+                                          display: '-webkit-box',
+                                          WebkitLineClamp: 2,
+                                          WebkitBoxOrient: 'vertical' as const,
+                                          overflow: 'hidden',
+                                          wordBreak: 'break-all' as const,
+                                        }),
                                   }}
                                 >
                                   {s.program_name}
