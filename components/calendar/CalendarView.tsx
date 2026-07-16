@@ -18,7 +18,6 @@ import {
   User,
   Plus,
   ChevronDown,
-  SlidersHorizontal,
   Car,
 } from 'lucide-react'
 import {
@@ -135,6 +134,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     getDefaultScheduleFilter(profile.role)
   )
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false)
+  const [viewDropdownOpen, setViewDropdownOpen] = useState(false)
 
   // 화면 크기 변경(창 리사이즈, 태블릿 회전 등)에만 대응 — 초기값은 이미 올바르게 세팅되어 있음
   useEffect(() => {
@@ -236,10 +236,10 @@ export default function CalendarView({ profile }: CalendarViewProps) {
 
       {/* ── 컨트롤 바 ── */}
       <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setCurrentDate(viewMode === 'week' ? subWeeks(currentDate, 1) : new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
-            className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors"
+            className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors shrink-0"
             style={{ color: 'var(--text-muted)' }}
             onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-elevated)')}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
@@ -247,7 +247,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
             <ChevronLeft className="w-5 h-5" />
           </button>
 
-          <div className="flex items-baseline gap-2 px-2 min-w-[160px]">
+          {/* 좌우 화살표 정중앙에 오도록 justify-center + text-center로 정렬 (5px만 왼쪽으로 미세 조정) */}
+          <div className="flex items-center justify-center gap-2 min-w-[150px] text-center -translate-x-[5px]">
             {viewMode === 'week' ? (
               <span className="text-[18px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>
                 {format(weekStart, 'M/d', { locale: ko })} – {format(weekEnd, 'M/d', { locale: ko })}
@@ -266,23 +267,18 @@ export default function CalendarView({ profile }: CalendarViewProps) {
 
           <button
             onClick={() => setCurrentDate(viewMode === 'week' ? addWeeks(currentDate, 1) : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}
-            className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors"
+            className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors shrink-0"
             style={{ color: 'var(--text-muted)' }}
             onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-elevated)')}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
           >
             <ChevronRight className="w-5 h-5" />
           </button>
-
-
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* 범례 */}
-          <div
-            className="hidden md:flex items-center gap-3 rounded-xl px-3 py-1.5 border text-[11px]"
-            style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
-          >
+        <div className="flex items-center gap-x-4">
+          {/* 범례 — 테두리/배경 없이 점 + 텍스트만 가볍게 */}
+          <div className="hidden md:flex items-center gap-x-4 text-[11px]">
             {Object.entries(statusConfig).map(([, cfg]) => (
               <div key={cfg.label} className="flex items-center gap-1.5">
                 <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', cfg.dot)} />
@@ -291,12 +287,11 @@ export default function CalendarView({ profile }: CalendarViewProps) {
             ))}
           </div>
 
-          {/* 의뢰하기 — 뷰 전환보다 앞에 배치해 모바일 접근성 향상 */}
+          {/* 의뢰하기 — 투명 배경의 심플한 텍스트 버튼, 호버 시에만 옅은 배경. +와 텍스트는 한 단어처럼 붙여줌 */}
           {canCreate && (
             <Link href="/schedules/new">
               <button
-                className="flex items-center gap-2 h-11 px-4 text-sm font-bold rounded-xl transition-all text-white touch-manipulation active:scale-95"
-                style={{ backgroundColor: 'var(--accent)' }}
+                className="flex items-center gap-1 h-11 px-2.5 text-sm font-bold rounded-lg transition-colors text-white touch-manipulation active:scale-95 hover:bg-white/10"
               >
                 <Plus className="w-5 h-5" />
                 <span>의뢰</span>
@@ -304,45 +299,69 @@ export default function CalendarView({ profile }: CalendarViewProps) {
             </Link>
           )}
 
-          {/* 뷰 전환 — 버튼 간격을 두어 구분 */}
-          <div className="flex items-center gap-1.5">
-            {[
-              { mode: 'week'  as const, Icon: CalendarDays, label: '주간' },
-              { mode: 'month' as const, Icon: LayoutGrid,   label: '달력' },
-              { mode: 'list'  as const, Icon: LayoutList,   label: '목록' },
-            ].map(({ mode, Icon, label }) => (
-              <button
-                key={mode}
-                onClick={() => setViewMode(mode)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all border"
-                style={{
-                  borderColor: viewMode === mode ? 'var(--accent)' : 'var(--border-default)',
-                  backgroundColor: viewMode === mode ? 'var(--accent)' : 'var(--bg-surface)',
-                  color: viewMode === mode ? '#fff' : 'var(--text-secondary)',
-                }}
-              >
-                <Icon className="w-4 h-4" />
-                <span className="hidden sm:inline">{label}</span>
-              </button>
-            ))}
-          </div>
+          {/* 뷰 전환 드롭다운 + 스케줄 필터 드롭다운을 한 그룹으로 묶어서, 그룹 내부 간격(gap-1)을
+              바깥 gap-x-4와 별개로 훨씬 좁게 직접 제어함. (패딩까지 줄여야 실제로 눈에 보이는 변화가 생김) */}
+          <div className="flex items-center gap-1">
 
-          {/* 스케줄 필터 드롭다운 */}
+          {/* 뷰 전환 — 개별 버튼 대신 단일 드롭다운으로 통합 */}
           <div className="relative">
             <button
-              onClick={() => setFilterDropdownOpen((o) => !o)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border transition-all"
-              style={{
-                borderColor: scheduleFilter !== 'all' ? 'var(--accent)' : 'var(--border-default)',
-                backgroundColor: scheduleFilter !== 'all' ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : 'var(--bg-surface)',
-                color: '#fff',
-              }}
+              onClick={() => { setViewDropdownOpen((o) => !o); setFilterDropdownOpen(false) }}
+              className="flex items-center gap-1.5 h-11 pl-2.5 pr-1.5 rounded-lg text-sm font-semibold transition-colors hover:bg-white/10"
+              style={{ color: 'var(--text-primary)' }}
             >
-              <SlidersHorizontal className="w-4 h-4" />
-              <span className="hidden sm:inline">
-                {scheduleFilter === 'all' ? '전체' : scheduleFilter === 'tech' ? '기술' : '영상'}
-              </span>
-              <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+              <span>{viewMode === 'week' ? '주간' : viewMode === 'month' ? '달력' : '목록'}</span>
+              <ChevronDown
+                className={cn('w-4 h-4 transition-transform', viewDropdownOpen && 'rotate-180')}
+                style={{ color: 'var(--text-muted)' }}
+              />
+            </button>
+
+            {viewDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setViewDropdownOpen(false)} />
+                <div
+                  className="absolute right-0 top-full mt-2 z-20 rounded-xl border overflow-hidden shadow-xl min-w-[140px]"
+                  style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
+                >
+                  {([
+                    { mode: 'week'  as const, Icon: CalendarDays, label: '주간' },
+                    { mode: 'month' as const, Icon: LayoutGrid,   label: '달력' },
+                    { mode: 'list'  as const, Icon: LayoutList,   label: '목록' },
+                  ]).map(({ mode, Icon, label }) => (
+                    <button
+                      key={mode}
+                      onClick={() => { setViewMode(mode); setViewDropdownOpen(false) }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-all"
+                      style={{
+                        backgroundColor: viewMode === mode ? 'color-mix(in srgb, var(--accent) 28%, var(--bg-surface))' : 'transparent',
+                        color: viewMode === mode ? '#fff' : 'var(--text-secondary)',
+                        borderLeft: viewMode === mode ? '3px solid var(--accent)' : '3px solid transparent',
+                      }}
+                      onMouseEnter={e => { if (viewMode !== mode) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-elevated)' }}
+                      onMouseLeave={e => { if (viewMode !== mode) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* 스케줄 필터 — 왼쪽의 뷰 전환 드롭다운과 동일한 패밀리 룩 (아이콘 없이 텍스트 + 화살표만) */}
+          <div className="relative">
+            <button
+              onClick={() => { setFilterDropdownOpen((o) => !o); setViewDropdownOpen(false) }}
+              className="flex items-center gap-1.5 h-11 pl-1.5 pr-2.5 rounded-lg text-sm font-semibold transition-colors hover:bg-white/10"
+              style={{ color: scheduleFilter !== 'all' ? 'var(--accent)' : 'var(--text-primary)' }}
+            >
+              <span>{scheduleFilter === 'all' ? '전체' : scheduleFilter === 'tech' ? '기술' : '영상'}</span>
+              <ChevronDown
+                className={cn('w-4 h-4 transition-transform', filterDropdownOpen && 'rotate-180')}
+                style={{ color: 'var(--text-muted)' }}
+              />
             </button>
 
             {filterDropdownOpen && (
@@ -381,6 +400,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 </div>
               </>
             )}
+          </div>
+
           </div>
 
         </div>
