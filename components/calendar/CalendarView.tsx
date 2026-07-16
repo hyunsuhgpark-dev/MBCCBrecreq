@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Schedule, Profile } from '@/lib/types'
@@ -111,34 +111,40 @@ const statusConfig = {
 const DOW_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 const DOW_COLORS = ['#F87171', 'var(--text-primary)', 'var(--text-primary)', 'var(--text-primary)', 'var(--text-primary)', 'var(--text-primary)', '#60A5FA']
 
+// SSR에서는 window가 없으므로 데스크탑 여부를 알 수 없어 모바일(주간) 기준으로 시작
+function getInitialIsDesktop() {
+  if (typeof window === 'undefined') return false
+  return window.innerWidth >= 768
+}
+
 export default function CalendarView({ profile }: CalendarViewProps) {
   const router = useRouter()
-  const supabase = createClient()
+  // createClient()는 호출마다 새 인스턴스를 반환하므로, 리렌더마다 바뀌지 않도록 한 번만 생성해 고정
+  const [supabase] = useState(() => createClient())
   const [currentDate, setCurrentDate] = useState(new Date())
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [loading, setLoading] = useState(true)
-  // PC(≥768px)는 월간 달력, 모바일은 주간 기본
-  const [viewMode, setViewMode] = useState<'week' | 'month' | 'list'>('week')
-  const [isDesktop, setIsDesktop] = useState(false)
+  // PC(≥768px)는 월간 달력, 모바일은 주간 기본 — 최초 렌더에서 바로 올바른 값으로 시작해
+  // "week → month" 뒤늦은 전환으로 인한 이중 fetch(cascading render)를 방지
+  const [isDesktop, setIsDesktop] = useState(getInitialIsDesktop)
+  const [viewMode, setViewMode] = useState<'week' | 'month' | 'list'>(() =>
+    getInitialIsDesktop() ? 'month' : 'week'
+  )
   // 스케줄 필터 — 역할별 기본값 (PD/Admin: 전체, 기술국: 기술, 영상국: 영상)
   const [scheduleFilter, setScheduleFilter] = useState<ScheduleFilter>(() =>
     getDefaultScheduleFilter(profile.role)
   )
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false)
 
+  // 화면 크기 변경(창 리사이즈, 태블릿 회전 등)에만 대응 — 초기값은 이미 올바르게 세팅되어 있음
   useEffect(() => {
-    const check = () => {
+    function handleResize() {
       const desktop = window.innerWidth >= 768
       setIsDesktop(desktop)
-      setViewMode((prev) => {
-        // 초기 한 번만 스크린 크기에 따라 기본값 결정
-        if (prev === 'week' && desktop) return 'month'
-        return prev
-      })
+      setViewMode((prev) => (prev === 'week' && desktop ? 'month' : prev))
     }
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
   }, [])
 
   const weekStart = startOfWeek(currentDate, { locale: ko })
@@ -152,7 +158,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 0 })
   const allGridDays = viewMode === 'month' ? eachDayOfInterval({ start: gridStart, end: gridEnd }) : []
 
+  // 마운트 시점의 viewMode 전환(월간/주간)이나 여러 트리거(마운트, 실시간 이벤트)가
+  // 겹쳐 발생해도, "가장 나중에 시작된 요청"의 응답만 반영되도록 요청 ID로 경쟁 상태를 차단
+  const latestRequestIdRef = useRef(0)
+
   const fetchSchedules = useCallback(async () => {
+    const requestId = ++latestRequestIdRef.current
     setLoading(true)
     const rangeStart = viewMode === 'week' ? weekStart
       : viewMode === 'month' ? startOfWeek(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1), { weekStartsOn: 0 })
@@ -160,26 +171,45 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     const rangeEnd = viewMode === 'week' ? weekEnd
       : viewMode === 'month' ? endOfWeek(endOfMonth(currentDate), { weekStartsOn: 0 })
       : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('schedules')
       .select(`*, creator:profiles!schedules_created_by_fkey(id, full_name, role), approvals(id, part, status, reject_reason)`)
       .gte('broadcast_start', rangeStart.toISOString())
       .lte('broadcast_start', rangeEnd.toISOString())
       .order('broadcast_start', { ascending: true })
-    const all = (data as Schedule[]) ?? []
-    setSchedules(all)
+
+    // 이 응답을 기다리는 동안 더 최신 요청이 시작됐다면, 오래된(stale) 응답은 버린다
+    if (requestId !== latestRequestIdRef.current) return
+
+    if (error) {
+      console.error('일정 조회 실패:', error)
+      setLoading(false)
+      return
+    }
+
+    setSchedules((data as Schedule[]) ?? [])
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentDate, viewMode])
+  }, [currentDate, viewMode, supabase])
 
   useEffect(() => { fetchSchedules() }, [fetchSchedules])
+
+  // 실시간 구독은 supabase 클라이언트가 고정되어 있는 한 마운트 시 한 번만 연결하고,
+  // 이벤트 발생 시엔 ref를 통해 항상 "최신" fetchSchedules를 호출한다 (매 변경마다 재연결 방지)
+  const fetchSchedulesRef = useRef(fetchSchedules)
+  useEffect(() => {
+    fetchSchedulesRef.current = fetchSchedules
+  }, [fetchSchedules])
+
   useEffect(() => {
     const channel = supabase
       .channel('schedules_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, () => fetchSchedules())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, () => {
+        fetchSchedulesRef.current()
+      })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [fetchSchedules, supabase])
+  }, [supabase])
 
   function applyScheduleFilter(list: typeof schedules) {
     return list.filter((s) => matchesScheduleFilter(s, scheduleFilter))
