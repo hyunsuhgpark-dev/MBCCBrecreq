@@ -131,6 +131,16 @@ html, body {
   overflow-x: hidden;
   font-family: 'MBCNew', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-weight: 400;
+  /* 모바일 키보드 및 하단 고정 바에 가려지지 않도록 스크롤 여백 확보 */
+  scroll-padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
+}
+
+/* 하단 고정 UI를 위한 safe-area 보조 유틸리티 */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-area-pb-bar {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 72px);
 }
 
 body {

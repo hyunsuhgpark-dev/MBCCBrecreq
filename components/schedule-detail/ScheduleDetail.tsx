@@ -349,7 +349,7 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
         </div>
 
         {/* 배정 정보 (배차 확정 후) */}
-        {isDispatch && schedule.assignment_vehicles && schedule.assignment_vehicles.length > 0 && (
+        {isDispatch && schedule.status === 'confirmed' && schedule.assignment_vehicles && schedule.assignment_vehicles.length > 0 && (
           <div className="mt-4 border rounded-xl p-4 shadow-sm print:mt-3" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}>
             <h3 className="font-bold text-sm mb-3 tracking-wide text-purple-200">차량 배정 정보</h3>
             <div className="space-y-3">

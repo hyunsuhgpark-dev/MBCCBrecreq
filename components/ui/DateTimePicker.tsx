@@ -66,13 +66,13 @@ export default function DateTimePicker({ value, onChange, error, className, hide
   }
 
   const selectCls = cn(
-    'h-8 rounded border text-sm px-1 focus:outline-none focus:border-[var(--accent)] cursor-pointer transition-colors',
+    'h-11 sm:h-8 rounded border text-base sm:text-sm px-2 sm:px-1 focus:outline-none focus:border-[var(--accent)] cursor-pointer transition-colors',
     'bg-[var(--bg-elevated)] text-[var(--text-primary)]',
     error ? 'border-red-400' : 'border-[var(--border-default)]'
   )
 
   return (
-    <div className={cn('flex items-center gap-1.5', className)}>
+    <div className={cn('flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-1.5 w-full', className)}>
       {/* 날짜 — 고정 너비로 hideDate 시 spacer와 열 맞춤 */}
       {!hideDate ? (
         <input
@@ -80,47 +80,49 @@ export default function DateTimePicker({ value, onChange, error, className, hide
           value={date}
           onChange={(e) => { setDate(e.target.value); emit(e.target.value, ampm, hour, minute) }}
           className={cn(
-            'h-8 w-[130px] shrink-0 rounded border text-sm px-1.5 focus:outline-none focus:border-[var(--accent)] cursor-pointer transition-colors',
+            'h-11 sm:h-8 w-full sm:w-[130px] shrink-0 rounded border text-base sm:text-sm px-2 focus:outline-none focus:border-[var(--accent)] cursor-pointer transition-colors',
             'bg-[var(--bg-elevated)] text-[var(--text-primary)]',
             error ? 'border-red-400' : 'border-[var(--border-default)]'
           )}
         />
       ) : (
         /* hideDate 모드: 날짜 input과 동일한 너비의 투명 spacer → 오전/오후 열 정렬 */
-        <div className="w-[130px] shrink-0" />
+        <div className="hidden sm:block w-[130px] shrink-0" />
       )}
 
-      {/* 오전/오후 */}
-      <select
-        value={ampm}
-        onChange={(e) => { const v = e.target.value as 'AM' | 'PM'; setAmpm(v); emit(date, v, hour, minute) }}
-        className={selectCls}
-      >
-        <option value="AM">오전</option>
-        <option value="PM">오후</option>
-      </select>
+      <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center sm:gap-1.5 w-full sm:w-auto">
+        {/* 오전/오후 */}
+        <select
+          value={ampm}
+          onChange={(e) => { const v = e.target.value as 'AM' | 'PM'; setAmpm(v); emit(date, v, hour, minute) }}
+          className={cn(selectCls, 'w-full sm:w-auto')}
+        >
+          <option value="AM">오전</option>
+          <option value="PM">오후</option>
+        </select>
 
-      {/* 시 */}
-      <select
-        value={hour}
-        onChange={(e) => { const v = parseInt(e.target.value); setHour(v); emit(date, ampm, v, minute) }}
-        className={cn(selectCls, 'w-14')}
-      >
-        {HOURS.map((h) => (
-          <option key={h} value={h}>{h}시</option>
-        ))}
-      </select>
+        {/* 시 */}
+        <select
+          value={hour}
+          onChange={(e) => { const v = parseInt(e.target.value); setHour(v); emit(date, ampm, v, minute) }}
+          className={cn(selectCls, 'w-full sm:w-14')}
+        >
+          {HOURS.map((h) => (
+            <option key={h} value={h}>{h}시</option>
+          ))}
+        </select>
 
-      {/* 분 */}
-      <select
-        value={minute}
-        onChange={(e) => { const v = parseInt(e.target.value); setMinute(v); emit(date, ampm, hour, v) }}
-        className={cn(selectCls, 'w-16')}
-      >
-        {MINUTES.map((m) => (
-          <option key={m} value={m}>{String(m).padStart(2, '0')}분</option>
-        ))}
-      </select>
+        {/* 분 */}
+        <select
+          value={minute}
+          onChange={(e) => { const v = parseInt(e.target.value); setMinute(v); emit(date, ampm, hour, v) }}
+          className={cn(selectCls, 'w-full sm:w-16')}
+        >
+          {MINUTES.map((m) => (
+            <option key={m} value={m}>{String(m).padStart(2, '0')}분</option>
+          ))}
+        </select>
+      </div>
     </div>
   )
 }

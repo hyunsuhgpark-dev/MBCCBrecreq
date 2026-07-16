@@ -32,6 +32,9 @@ export default async function EditSchedulePage({
 
   const isOwner = schedule.created_by === user.id
   if (!isOwner && profile.role !== 'Admin') redirect(`/schedules/${id}`)
+  if (schedule.status === 'assigned' && profile.role !== 'Admin') {
+    redirect(`/schedules/${id}`)
+  }
 
   const isDispatch = schedule.request_type === 'dispatch'
 

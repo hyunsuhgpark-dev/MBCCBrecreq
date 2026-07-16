@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { isStaffSubControlRole } from '@/lib/roles'
 import { notifyProducer } from '@/services/notification'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { assignmentRequestSchema } from '@/lib/validation/schedule'
 
 export async function POST(
   request: NextRequest,
@@ -39,28 +40,24 @@ export async function POST(
     return NextResponse.json({ error: '배정 대기 상태가 아닙니다' }, { status: 400 })
   }
 
-  const body = await request.json()
-  const vehicles = body.assignment_vehicles
-
-  if (!Array.isArray(vehicles) || vehicles.length === 0) {
-    return NextResponse.json({ error: '배정 차량 정보가 필요합니다' }, { status: 400 })
+  const parsed = assignmentRequestSchema.safeParse(await request.json())
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? '배정 정보를 확인해주세요' },
+      { status: 400 },
+    )
   }
-
-  const invalid = vehicles.some(
-    (v: { driver_name?: string }) => !v?.driver_name || typeof v.driver_name !== 'string' || !v.driver_name.trim()
-  )
-  if (invalid) {
-    return NextResponse.json({ error: '모든 차량의 기사명이 필요합니다' }, { status: 400 })
-  }
+  const body = parsed.data
 
   const now = new Date().toISOString()
+  const adminClient = await createAdminClient()
 
-  const { data: updated, error } = await supabase
+  const { data: updated, error } = await adminClient
     .from('schedules')
     .update({
       status: 'confirmed',
-      assignment_vehicles: vehicles,
-      assignment_director_accompany: body.assignment_director_accompany ?? false,
+      assignment_vehicles: body.assignment_vehicles,
+      assignment_director_accompany: body.assignment_director_accompany,
       assignment_notes: body.assignment_notes ?? null,
       assigned_at: now,
       assigned_by: user.id,
@@ -75,7 +72,7 @@ export async function POST(
   }
 
   await notifyProducer({
-    supabase: supabase as unknown as SupabaseClient,
+    supabase: adminClient as unknown as SupabaseClient,
     userId: schedule.created_by,
     scheduleId: id,
     type: 'assignment_completed',

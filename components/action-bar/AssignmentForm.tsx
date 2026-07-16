@@ -106,20 +106,23 @@ export default function AssignmentForm({ scheduleId, onComplete }: AssignmentFor
               onChange={(e) => updateVehicle(i, 'driver_name', e.target.value)}
               className="w-full h-11 px-3 rounded-lg text-sm bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
             />
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <input
                 type="text"
                 placeholder="차량번호/종류 (선택)"
                 value={vehicle.vehicle_info ?? ''}
                 onChange={(e) => updateVehicle(i, 'vehicle_info', e.target.value)}
-                className="h-11 px-3 rounded-lg text-sm bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                autoComplete="off"
+                className="h-11 px-3 rounded-lg text-base sm:text-sm bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
               />
               <input
-                type="text"
+                type="tel"
+                inputMode="tel"
                 placeholder="연락처 (선택)"
                 value={vehicle.contact ?? ''}
                 onChange={(e) => updateVehicle(i, 'contact', e.target.value)}
-                className="h-11 px-3 rounded-lg text-sm bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                autoComplete="tel"
+                className="h-11 px-3 rounded-lg text-base sm:text-sm bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
               />
             </div>
           </div>

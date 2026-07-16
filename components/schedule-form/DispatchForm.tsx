@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { Loader2, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Schedule } from '@/lib/types'
+import { useMobileKeyboard } from '@/lib/use-mobile-keyboard'
 
 const schema = z.object({
   program_name: z.string().min(1, '프로그램명을 입력하세요'),
@@ -58,6 +59,7 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
   const router = useRouter()
   const goBack = useAppBack('/schedules/new')
   const [loading, setLoading] = useState(false)
+  const { isKeyboardOpen, handleFocusCapture } = useMobileKeyboard()
   const isEdit = !!scheduleId
 
   const {
@@ -164,13 +166,13 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
     'px-3 py-[2px] md:py-3 bg-[var(--bg-surface)] text-[var(--text-primary)]'
   )
   const inputCls = cn(
-    'w-full bg-transparent border-0 border-b rounded-none h-8 text-sm px-1',
+    'w-full bg-transparent border-0 border-b rounded-none h-11 md:h-8 text-base md:text-sm px-1',
     'text-[var(--text-primary)] placeholder:text-[var(--text-muted)]',
     'border-[var(--border-default)] focus:outline-none focus:border-purple-400 transition-colors'
   )
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="max-w-4xl mx-auto">
+    <form onSubmit={handleSubmit(onSubmit)} onFocusCapture={handleFocusCapture} className="max-w-4xl mx-auto">
       <div
         className={cn(
           'rounded-2xl overflow-hidden border shadow-[0_10px_40px_rgba(0,0,0,0.35)]',
@@ -186,14 +188,14 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
         </div>
 
         <div>
-          <div className="grid grid-cols-[78px_1fr_44px_72px] md:grid-cols-[112px_1fr_72px_152px] border-b border-[var(--border-default)]">
+          <div className="grid grid-cols-[78px_1fr] md:grid-cols-[112px_1fr_72px_152px] border-b border-[var(--border-default)]">
             <div className={cn(labelCls, 'whitespace-nowrap text-[11px] md:text-sm px-1')}>프로그램명</div>
             <div className={cn(valueCls, 'border-t-0 border-b-0')}>
               <input type="text" placeholder="프로그램명 입력" {...register('program_name')} className={cn(inputCls, errors.program_name && 'border-red-400')} />
               {errors.program_name && <p className="text-red-500 text-[11px] mt-0.5">{errors.program_name.message}</p>}
             </div>
-            <div className={cn(labelCls, 'text-[10px] md:text-xs border-t-0 border-b-0 px-1')}>담당PD</div>
-            <div className={cn(valueCls, 'border-t-0 border-b-0 border-r-0 px-2 md:px-3')}>
+            <div className={cn(labelCls, 'text-[11px] md:text-xs border-t md:border-t-0 border-b-0 px-1')}>담당PD</div>
+            <div className={cn(valueCls, 'border-t md:border-t-0 border-b-0 border-r-0 px-2 md:px-3')}>
               <input type="text" placeholder="이름" {...register('responsible_pd')} className={cn(inputCls, errors.responsible_pd && 'border-red-400')} />
             </div>
           </div>
@@ -212,8 +214,8 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
                   />
                 )}
               />
-              <div className="relative flex items-center gap-2 mt-2">
-                <span className="absolute text-sm font-medium text-slate-500 pointer-events-none select-none" style={{ left: 0, width: '130px', textAlign: 'center' }}>~</span>
+              <div className="relative mt-2">
+                <span className="block sm:absolute text-sm font-medium text-slate-500 pointer-events-none select-none text-center mb-1 sm:mb-0" style={{ left: 0, width: '130px' }}>~</span>
                 <Controller
                   control={control}
                   name="broadcast_end"
@@ -276,12 +278,17 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
       </div>
 
       <div
-        className="md:relative md:mt-5 md:pb-0 md:bg-transparent md:border-0 md:shadow-none md:px-0
-                   fixed bottom-0 left-0 right-0 z-30 px-4 pb-safe border-t md:static"
+        className={cn(
+          'left-0 right-0 z-30 px-4 border-t',
+          isKeyboardOpen ? 'relative mt-5' : 'fixed bottom-0',
+          'md:static md:relative md:mt-5 md:pb-0 md:bg-transparent md:border-0 md:shadow-none md:px-0',
+        )}
         style={{
           backgroundColor: 'var(--bg-surface)',
           borderColor: 'var(--border-default)',
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 72px)',
+          paddingBottom: isKeyboardOpen
+            ? 'env(safe-area-inset-bottom, 0px)'
+            : 'calc(env(safe-area-inset-bottom, 0px) + 72px)',
         } as React.CSSProperties}
       >
         <div className="flex gap-3 py-3 justify-end">
@@ -293,7 +300,9 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
           </Button>
         </div>
       </div>
-      <div className="md:hidden" style={{ height: 'calc(env(safe-area-inset-bottom, 0px) + 120px)' }} />
+      {!isKeyboardOpen && (
+        <div className="md:hidden" style={{ height: 'calc(env(safe-area-inset-bottom, 0px) + 120px)' }} />
+      )}
     </form>
   )
 }

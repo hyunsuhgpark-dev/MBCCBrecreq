@@ -17,7 +17,7 @@ export async function detectConflicts(input: ConflictCheckInput): Promise<Confli
 
   if (error) {
     console.error('충돌 감지 오류:', error)
-    return { hasConflict: false, conflictingScheduleIds: [], conflictType: null }
+    throw new Error('일정 충돌 확인에 실패했습니다')
   }
 
   if (!data || data.length === 0) {
