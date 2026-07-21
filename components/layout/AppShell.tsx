@@ -229,7 +229,7 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
             </Link>
 
             {/* 사용자 정보 */}
-            <div className="hidden sm:flex items-center gap-2 pl-1">
+            <div className="hidden sm:flex items-center pl-1">
               <div className="flex flex-col items-end">
                 <span
                   className="text-[13px] font-semibold leading-none"
@@ -244,20 +244,15 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
                   {roleLabels[profile.role ?? ''] ?? profile.role}
                 </span>
               </div>
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-                style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}
-              >
-                <User className="w-3.5 h-3.5" />
-              </div>
             </div>
 
             {/* 로그아웃 */}
             <button
               onClick={handleLogout}
-              className="p-3 rounded-lg transition-all"
+              className="p-3 rounded-lg transition-all cursor-pointer hover:bg-white/10"
               style={{ color: 'var(--text-muted)' }}
               title="로그아웃"
+              aria-label="로그아웃"
             >
               <LogOut className="w-6 h-6" />
             </button>
