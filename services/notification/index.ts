@@ -8,6 +8,7 @@ interface SendNotificationParams {
   title: string
   body: string
   scheduleId?: string
+  url?: string
 }
 
 export async function sendPushNotification(params: SendNotificationParams): Promise<void> {
@@ -25,11 +26,11 @@ export async function sendPushNotification(params: SendNotificationParams): Prom
       data: {
         type: params.type,
         scheduleId: params.scheduleId ?? '',
-        url: params.scheduleId ? `/schedules/${params.scheduleId}` : '/calendar',
+        url: params.url ?? (params.scheduleId ? `/schedules/${params.scheduleId}` : '/calendar'),
       },
       webpush: {
         fcmOptions: {
-          link: params.scheduleId ? `/schedules/${params.scheduleId}` : '/calendar',
+          link: params.url ?? (params.scheduleId ? `/schedules/${params.scheduleId}` : '/calendar'),
         },
       },
     })
@@ -167,6 +168,43 @@ export const notificationMessages: Record<NotificationType, (name: string) => st
   confirmed: (name) => `'${name}' 일정이 최종 확정되었습니다.`,
   assignment_requested: (name) => `'${name}' 배차가 승인되었습니다. 차량 배정 후 알려드리겠습니다.`,
   assignment_completed: (name) => `'${name}' 배차 배정이 완료되었습니다. 의뢰서에서 기사·차량 정보를 확인하세요.`,
+  user_signup_requested: (name) => `${name}님이 회원가입을 신청했습니다.`,
+}
+
+/** 회원가입 신청 시 Admin에게 FCM 푸시 (앱 내 알림은 DB 트리거가 생성) */
+export async function notifyAdminsUserSignupPush(params: {
+  supabase: SupabaseClient
+  fullName: string
+  email: string
+}) {
+  const { supabase, fullName, email } = params
+  const displayName = fullName.trim() || '신규 사용자'
+  const message = `${displayName}님이 회원가입을 신청했습니다. (${email})`
+
+  const { data: admins, error } = await supabase
+    .from('profiles')
+    .select('fcm_token')
+    .eq('role', 'Admin')
+    .eq('is_approved', true)
+
+  if (error) {
+    console.error('Admin 프로필 조회 실패:', error)
+    return
+  }
+
+  const tokens = (admins ?? [])
+    .filter((a) => a.fcm_token)
+    .map((a) => a.fcm_token as string)
+
+  if (tokens.length === 0) return
+
+  await sendPushNotification({
+    tokens,
+    type: 'user_signup_requested',
+    title: '회원가입 신청',
+    body: message,
+    url: '/admin',
+  })
 }
 
 /**

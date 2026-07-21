@@ -32,6 +32,7 @@ export default function LoginPage() {
           options: { data: { full_name: form.fullName } },
         })
         if (error) throw error
+        void fetch('/api/auth/signup-notify', { method: 'POST' }).catch(() => {})
         toast.success('가입 완료! 관리자 승인 후 이용 가능합니다.')
         setIsLogin(true)
       }

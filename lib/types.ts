@@ -20,6 +20,7 @@ export type NotificationType =
   | 'confirmed'
   | 'assignment_requested'
   | 'assignment_completed'
+  | 'user_signup_requested'
 
 /** 영상국 배정 회신 — 차량 1대 단위 */
 export interface AssignmentVehicle {

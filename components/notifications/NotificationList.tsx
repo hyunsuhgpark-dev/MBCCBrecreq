@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import type { Notification } from '@/lib/types'
 import { format, parseISO } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { Bell, AlertTriangle, CheckCircle2, XCircle, MessageSquare, Zap, ClipboardList, Car } from 'lucide-react'
+import { Bell, AlertTriangle, CheckCircle2, XCircle, MessageSquare, Zap, ClipboardList, Car, UserPlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface NotificationListProps {
@@ -21,6 +21,7 @@ const typeConfig = {
   confirmed: { icon: Zap, color: 'text-[var(--accent)]', bg: 'bg-white/5 border-white/10' },
   assignment_requested: { icon: Car, color: 'text-purple-300', bg: 'bg-purple-950/25 border-purple-800' },
   assignment_completed: { icon: CheckCircle2, color: 'text-emerald-300', bg: 'bg-emerald-950/25 border-emerald-800' },
+  user_signup_requested: { icon: UserPlus, color: 'text-orange-300', bg: 'bg-orange-950/25 border-orange-800' },
 }
 
 function getScheduleId(notif: Notification): string | null {
@@ -50,7 +51,8 @@ export default function NotificationList({ notifications }: NotificationListProp
         const config = typeConfig[notif.type] ?? typeConfig.approval_requested
         const Icon = config.icon
         const scheduleId = getScheduleId(notif)
-        const isClickable = !!scheduleId
+        const linkUrl = notif.type === 'user_signup_requested' ? '/admin' : scheduleId ? `/schedules/${scheduleId}` : null
+        const isClickable = !!linkUrl
 
         return (
           <div
@@ -58,12 +60,12 @@ export default function NotificationList({ notifications }: NotificationListProp
             role={isClickable ? 'button' : undefined}
             tabIndex={isClickable ? 0 : undefined}
             onClick={() => {
-              if (scheduleId) router.push(`/schedules/${scheduleId}`)
+              if (linkUrl) router.push(linkUrl)
             }}
             onKeyDown={(e) => {
               if (isClickable && (e.key === 'Enter' || e.key === ' ')) {
                 e.preventDefault()
-                router.push(`/schedules/${scheduleId}`)
+                if (linkUrl) router.push(linkUrl)
               }
             }}
             className={cn(
@@ -88,7 +90,7 @@ export default function NotificationList({ notifications }: NotificationListProp
               </p>
               {isClickable && (
                 <p className="text-[11px] mt-1.5 font-medium" style={{ color: 'var(--accent)' }}>
-                  의뢰서 보기 →
+                  {notif.type === 'user_signup_requested' ? '회원 관리 →' : '의뢰서 보기 →'}
                 </p>
               )}
             </div>
