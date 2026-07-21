@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { Tv, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -60,29 +60,21 @@ export default function LoginPage() {
 
         {/* 로고 */}
         <div className="text-center mb-8">
-          <div
-            className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4"
-            style={{ backgroundColor: 'var(--accent)' }}
-          >
-            <Tv className="w-7 h-7 text-white" />
-          </div>
           <h1
             className="text-[22px] font-bold tracking-tight"
             style={{ color: 'var(--text-primary)' }}
           >
             MBC충북 제작 일정
           </h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            녹화의뢰서 디지털 워크플로우
-          </p>
         </div>
 
         {/* 카드 */}
         <div
-          className="rounded-2xl p-7 border"
+          className="rounded-2xl border"
           style={{
             backgroundColor: 'var(--bg-surface)',
             borderColor: 'var(--border-default)',
+            padding: '31px 28px',
           }}
         >
           {/* 탭 */}
@@ -96,8 +88,10 @@ export default function LoginPage() {
                 <button
                   key={label}
                   onClick={() => setIsLogin(i === 0)}
-                  className="flex-1 py-2 text-sm font-semibold rounded-lg transition-all"
+                  className="flex-1 text-sm font-semibold rounded-lg transition-all"
                   style={{
+                    paddingTop: '11px',
+                    paddingBottom: '11px',
                     backgroundColor: active ? 'var(--bg-elevated)' : 'transparent',
                     color: active ? 'var(--text-primary)' : 'var(--text-muted)',
                   }}
@@ -182,8 +176,8 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-11 text-sm font-bold rounded-xl transition-all text-white mt-2"
-              style={{ backgroundColor: loading ? 'var(--accent-dark)' : 'var(--accent)' }}
+              className="w-full h-11 text-sm font-bold rounded-xl transition-all text-white"
+              style={{ backgroundColor: loading ? 'var(--accent-dark)' : 'var(--accent)', marginTop: '24px' }}
             >
               {loading
                 ? <Loader2 className="w-4 h-4 animate-spin mx-auto" />
@@ -199,9 +193,6 @@ export default function LoginPage() {
           )}
         </div>
 
-        <p className="text-center text-[11px] mt-5" style={{ color: 'var(--text-muted)' }}>
-          MBC 방송문화진흥회 © 2026
-        </p>
       </div>
     </div>
   )
