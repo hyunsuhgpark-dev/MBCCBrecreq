@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Calendar, Plus, Settings, Bell, LogOut, Square, User, ChevronLeft } from 'lucide-react'
+import { Calendar, Plus, Settings, Bell, LogOut, User, ChevronLeft } from 'lucide-react'
 import type { Profile } from '@/lib/types'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
@@ -119,7 +119,7 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
 
   const navItems = [
     { href: '/calendar', icon: Calendar, label: '캘린더' },
-    { href: '/schedules/new', icon: Plus, label: '제작 의뢰' },
+    { href: '/schedules/new', icon: Plus, label: '제작의뢰' },
     ...(profile.role === 'Admin'
       ? [{ href: '/admin', icon: Settings, label: '관리' }]
       : []),
@@ -133,32 +133,23 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
         className="sticky top-0 z-40 backdrop-blur-md"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.15)', backgroundColor: 'rgba(10,10,10,0.92)' }}
       >
-        <div className="w-full px-4 sm:px-6 h-12 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+        <div className="w-full px-4 sm:px-6 h-12 flex items-center justify-between">
 
-          {/* 왼쪽: 뒤로가기 / 로고 */}
-          <div className="flex items-center min-w-0 justify-self-start">
-            {showMobileBack ? (
-              <button
-                type="button"
-                onClick={goBack}
-                className="sm:hidden flex items-center gap-1 shrink-0 p-1.5 -ml-1 rounded transition-colors"
-                style={{ color: '#A3A3A3' }}
-                aria-label="이전 화면"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-            ) : null}
+          {/* 모바일 뒤로가기 */}
+          {showMobileBack && (
+            <button
+              type="button"
+              onClick={goBack}
+              className="sm:hidden flex items-center gap-1 shrink-0 p-1.5 -ml-1 mr-1 rounded transition-colors"
+              style={{ color: '#A3A3A3' }}
+              aria-label="이전 화면"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
 
-            <Link href="/calendar" className={cn('flex items-center gap-2.5 shrink-0 min-w-0', showMobileBack && 'hidden sm:flex')}>
-              <Square className="w-3.5 h-3.5 shrink-0" style={{ color: '#A3A3A3' }} strokeWidth={2} />
-              <span className="font-semibold text-[14px] tracking-tight hidden sm:block truncate" style={{ color: '#EBEBEB' }}>
-                MBC충북 제작 일정
-              </span>
-            </Link>
-          </div>
-
-          {/* 가운데: 데스크탑 네비게이션 */}
-          <nav className="hidden sm:flex items-center justify-center gap-1">
+          {/* 데스크탑 네비게이션 — 왼쪽 정렬 */}
+          <nav className="hidden sm:flex items-center gap-2" style={{ marginLeft: '40px' }}>
             {navItems.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
               return (
@@ -166,14 +157,14 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'flex items-center gap-1.5 px-4 py-1.5 rounded text-[13px] transition-colors whitespace-nowrap',
+                    'flex items-center gap-0 px-3 py-1.5 rounded text-[13px] transition-colors whitespace-nowrap',
                     isActive
                       ? 'font-semibold'
                       : 'hover:bg-white/[0.06]'
                   )}
                   style={{ color: isActive ? '#EBEBEB' : '#A3A3A3' }}
                 >
-                  <item.icon className="w-3.5 h-3.5" />
+                  <item.icon className="w-3.5 h-3.5 mr-[3px]" />
                   {item.label}
                 </Link>
               )
@@ -181,13 +172,13 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
           </nav>
 
           {/* 오른쪽: 알림 / 사용자 / 로그아웃 */}
-          <div className="flex items-center gap-1 justify-self-end">
+          <div className="flex items-center gap-1" style={{ marginRight: '40px' }}>
             <Link
               href="/notifications"
               className="relative p-2 rounded transition-colors hover:bg-white/[0.06]"
               style={{ color: '#A3A3A3' }}
             >
-              <Bell className="w-4 h-4" />
+              <Bell className="w-[18px] h-[18px]" />
               {localUnread > 0 && (
                 <span className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full text-[8px] font-bold flex items-center justify-center" style={{ backgroundColor: '#BE123C', color: '#EBEBEB' }}>
                   {localUnread > 9 ? '9+' : localUnread}
@@ -195,15 +186,15 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
               )}
             </Link>
 
-            <div className="hidden sm:flex items-center px-2">
+            <div className="hidden sm:flex items-center px-1">
               <Link
                 href="/mypage"
-                className="flex items-center gap-1.5 rounded px-2 py-1 transition-colors hover:bg-white/[0.06]"
+                className="flex items-center gap-1.5 rounded px-2 py-1.5 transition-colors hover:bg-white/[0.06]"
               >
-                <span className="text-[10px] tracking-wide" style={{ color: '#737373' }}>
+                <span className="text-[12px] tracking-wide" style={{ color: '#737373' }}>
                   {roleLabels[profile.role ?? ''] ?? profile.role}
                 </span>
-                <span className="text-[12px] font-medium leading-none" style={{ color: '#EBEBEB' }}>
+                <span className="text-[13px] font-medium leading-none" style={{ color: '#EBEBEB' }}>
                   {profile.full_name}
                 </span>
               </Link>
@@ -216,7 +207,7 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
               title="로그아웃"
               aria-label="로그아웃"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-[18px] h-[18px]" />
             </button>
           </div>
         </div>
