@@ -30,15 +30,11 @@ export default async function NewRequestPage({
 
   return (
     <AppShell profile={profile}>
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">제작 의뢰</h1>
-          <p className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
-            의뢰 유형을 선택하세요.
-          </p>
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-3.5rem-5rem)] sm:min-h-[calc(100dvh-3.5rem)] w-full px-4 py-8">
+        <div className="max-w-2xl w-full flex flex-col" style={{ gap: '2rem' }}>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] text-center">제작 의뢰</h1>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2">
           <Link
             href={`/schedules/new/recording${dateQuery}`}
             className="rounded-2xl border flex flex-col items-center gap-4 transition-all hover:brightness-110 active:scale-[0.98]"
@@ -78,6 +74,7 @@ export default async function NewRequestPage({
               </p>
             </div>
           </Link>
+          </div>
         </div>
       </div>
     </AppShell>

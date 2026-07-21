@@ -300,7 +300,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
               className="flex items-center gap-1.5 h-11 pl-2.5 pr-1.5 rounded-lg text-sm font-semibold transition-colors hover:bg-white/10"
               style={{ color: 'var(--text-primary)' }}
             >
-              <span>{viewMode === 'week' ? '주간' : viewMode === 'month' ? '달력' : '목록'}</span>
+              <span>{viewMode === 'week' ? '주간' : viewMode === 'month' ? '월간' : '목록'}</span>
               <ChevronDown
                 className={cn('w-4 h-4 transition-transform', viewDropdownOpen && 'rotate-180')}
                 style={{ color: 'var(--text-muted)' }}
@@ -316,7 +316,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 >
                   {([
                     { mode: 'week'  as const, Icon: CalendarDays, label: '주간' },
-                    { mode: 'month' as const, Icon: LayoutGrid,   label: '달력' },
+                    { mode: 'month' as const, Icon: LayoutGrid,   label: '월간' },
                     { mode: 'list'  as const, Icon: LayoutList,   label: '목록' },
                   ]).map(({ mode, Icon, label }) => (
                     <button

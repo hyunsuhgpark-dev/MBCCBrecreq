@@ -56,6 +56,12 @@ function fmtRange(start: string, end: string) {
   return `${fmt(start)} ~ ${fmt(end)}`
 }
 
+function approvalStatusLabel(approval: NonNullable<Schedule['approvals']>[number]) {
+  if (approval.status === 'approved') return '승인'
+  if (approval.status === 'rejected') return '반려'
+  return '대기'
+}
+
 const resourceChips = [
   { label: '중계차', key: 'use_relay_car' as const, color: '#FCD34D', bg: 'rgba(217,119,6,0.18)', border: 'rgba(217,119,6,0.45)' },
   { label: '스튜디오', key: 'use_studio' as const, color: '#93C5FD', bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.4)' },
@@ -115,11 +121,11 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
   const border = 'border border-[var(--border-default)]'
   const labelCls = cn(
     border,
-    'bg-[var(--bg-elevated)] font-bold text-[var(--text-primary)] text-sm text-center tracking-wider px-3 py-2 flex items-center justify-center select-none'
+    'schedule-detail-cell bg-[var(--bg-elevated)] font-bold text-[var(--text-primary)] text-sm text-center tracking-wider px-3 flex items-center justify-center select-none'
   )
   const valueCls = cn(
     border,
-    'px-3 py-2 text-sm bg-[var(--bg-surface)] text-[var(--text-primary)]'
+    'schedule-detail-cell px-3 text-sm bg-[var(--bg-surface)] text-[var(--text-primary)]'
   )
 
   return (
@@ -226,24 +232,30 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
             <div className="absolute bottom-0 left-0 right-0 h-px" style={{ backgroundColor: 'var(--border-default)' }} />
           </div>
 
-          {!isDispatch && requestedResources.length > 0 && (
-          <div className="px-4 py-3 border-b border-[var(--border-default)]" style={{ backgroundColor: 'var(--bg-surface)' }}>
-            <div className="flex flex-wrap gap-2">
-              {requestedResources.map(({ label, key, color, bg, border: borderColor }) => (
-                <span
-                  key={key}
-                  className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold tracking-wide border"
-                  style={{ color, backgroundColor: bg, borderColor }}
-                >
-                  {label}
-                </span>
-              ))}
-            </div>
-          </div>
-          )}
-
           {/* 본문 */}
           <div>
+
+            {/* 분류 — 신청 자원을 표 행으로 표시 (본문 text-sm 대비 1.5배) */}
+            {!isDispatch && (
+              <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
+                <div className={labelCls}>분 류</div>
+                <div className={cn(valueCls, 'flex flex-wrap items-center gap-x-5 gap-y-1')}>
+                  {requestedResources.length > 0 ? (
+                    requestedResources.map(({ label, key, color }) => (
+                      <span
+                        key={key}
+                        className="text-sm font-semibold tracking-wide"
+                        style={{ color }}
+                      >
+                        {label}
+                      </span>
+                    ))
+                  ) : (
+                    <span style={{ color: 'var(--text-muted)' }}>—</span>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* 프로그램명 + 담당PD */}
             <div className="grid grid-cols-[112px_1fr_72px_152px] border-b border-[var(--border-default)]">
@@ -322,7 +334,7 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
 
             {/* 특기사항 */}
             <div className="grid grid-cols-[112px_1fr]">
-              <div className={cn(labelCls, 'items-start pt-3')}>특 기 사 항</div>
+              <div className={cn(labelCls, 'items-start')}>특 기 사 항</div>
               <div className={cn(valueCls, 'min-h-[100px] whitespace-pre-wrap border-b-0 border-r-0')}>
                 {schedule.notes || <span style={{ color: 'var(--text-muted)' }}>—</span>}
               </div>
@@ -352,46 +364,59 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
           </div>
         )}
 
-        {/* 승인 현황 */}
-        <div className="mt-4 border rounded-xl p-4 shadow-sm print:mt-3 print:border" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}>
-          <h3 className="font-bold text-sm mb-3 tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-            {isDispatch ? '영상국 승인 현황' : '스태프 승인 현황'}
-          </h3>
-          <div className={cn('grid gap-3', isDispatch ? 'grid-cols-1' : 'grid-cols-2')}>
-            {(isDispatch ? [subControlApproval] : [officeApproval, subControlApproval]).map((approval, i) => {
-              if (!approval) return null
-              const isApproved = approval.status === 'approved'
-              const isRejected = approval.status === 'rejected'
-              return (
-                <div key={i} className={cn(
-                  'border rounded-xl p-3 text-sm transition-colors',
-                  isApproved && 'border-emerald-800 bg-emerald-950/25',
-                  isRejected && 'border-rose-800 bg-rose-950/25',
-                  !isApproved && !isRejected && 'border-[var(--border-default)] bg-white/5'
-                )}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-[var(--text-primary)]">{partLabels[approval.part] ?? approval.part}</span>
-                    <span className={cn(
-                      'text-xs font-bold',
+        {/* 승인 현황 — 부서별 좌(라벨)/우(상태·시각) 분할 */}
+        <div className={cn('mt-4 grid gap-3 print:mt-3', isDispatch ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2')}>
+          {(isDispatch ? [subControlApproval] : [officeApproval, subControlApproval]).map((approval, i) => {
+            if (!approval) return null
+            const isApproved = approval.status === 'approved'
+            const isRejected = approval.status === 'rejected'
+            return (
+              <div
+                key={i}
+                className={cn(
+                  'grid grid-cols-2 border rounded-xl overflow-hidden',
+                  isApproved && 'border-emerald-800',
+                  isRejected && 'border-rose-800',
+                  !isApproved && !isRejected && 'border-[var(--border-default)]',
+                )}
+              >
+                <div
+                  className="schedule-detail-cell px-3 text-sm font-bold text-center tracking-wide flex items-center justify-center border-r border-[var(--border-default)]"
+                  style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)' }}
+                >
+                  {partLabels[approval.part] ?? approval.part}
+                </div>
+                <div
+                  className={cn(
+                    'schedule-detail-cell px-3 text-sm font-semibold text-center flex items-center justify-center gap-1.5',
+                    isApproved && 'bg-emerald-950/25',
+                    isRejected && 'bg-rose-950/25',
+                    !isApproved && !isRejected && 'bg-[var(--bg-surface)]',
+                  )}
+                >
+                  <span
+                    className={cn(
                       isApproved && 'text-emerald-300',
                       isRejected && 'text-rose-300',
-                      !isApproved && !isRejected && 'text-[var(--text-muted)]'
-                    )}>
-                      {isApproved ? '✓ 승인' : isRejected ? '✕ 반려' : '대기 중'}
-                    </span>
-                  </div>
-                  {isRejected && approval.reject_reason && (
-                    <p className="text-xs text-rose-300 mt-1">반려 사유: {approval.reject_reason}</p>
-                  )}
+                      !isApproved && !isRejected && 'text-[var(--text-muted)]',
+                    )}
+                  >
+                    {approvalStatusLabel(approval)}
+                  </span>
                   {approval.decided_at && (
-                    <p className="text-xs mt-1 text-[var(--text-secondary)]">
+                    <span style={{ color: 'var(--text-muted)' }}>
                       {format(parseISO(approval.decided_at), 'M/d HH:mm', { locale: ko })}
-                    </p>
+                    </span>
                   )}
                 </div>
-              )
-            })}
-          </div>
+                {isRejected && approval.reject_reason && (
+                  <div className="col-span-2 px-3 py-2 text-xs text-rose-300 border-t border-[var(--border-default)] bg-rose-950/20">
+                    반려 사유: {approval.reject_reason}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
 

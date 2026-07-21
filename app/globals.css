@@ -207,3 +207,9 @@ body {
   border-left-color: var(--color-rejected);
   color: #FCA5A5;
 }
+
+/* 녹화의뢰서 상세 — 표·승인 셀 상하 여백 (기본 8px + 1px) */
+.schedule-detail-cell {
+  padding-top: calc(0.5rem + 1px);
+  padding-bottom: calc(0.5rem + 1px);
+}
