@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Calendar, Plus, Settings, Bell, LogOut, Tv, User, ChevronLeft } from 'lucide-react'
+import { Calendar, Plus, Settings, Bell, LogOut, Square, User, ChevronLeft } from 'lucide-react'
 import type { Profile } from '@/lib/types'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
@@ -29,18 +29,6 @@ const roleLabels: Record<string, string> = {
   Staff_SubControl: '영상국',
   Producer: 'PD',
   Director: '편성',
-}
-
-const roleColors: Record<string, string> = {
-  Admin:    'bg-red-500/20 text-red-300 border border-red-500/30',
-  ENG:      'bg-blue-500/20 text-blue-300 border border-blue-500/30',
-  'ENG-M':  'bg-blue-500/10 text-blue-400 border border-blue-500/20',
-  CAM:      'bg-purple-500/20 text-purple-300 border border-purple-500/30',
-  'CAM-M':  'bg-purple-500/10 text-purple-400 border border-purple-500/20',
-  Staff_Office: 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
-  Staff_SubControl: 'bg-purple-500/20 text-purple-300 border border-purple-500/30',
-  Producer: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
-  Director: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
 }
 
 export default function AppShell({ children, profile, unreadCount = 0 }: AppShellProps) {
@@ -132,56 +120,45 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
   const navItems = [
     { href: '/calendar', icon: Calendar, label: '캘린더' },
     { href: '/schedules/new', icon: Plus, label: '제작 의뢰' },
-    { href: '/mypage', icon: User, label: '마이페이지' },
     ...(profile.role === 'Admin'
       ? [{ href: '/admin', icon: Settings, label: '관리' }]
       : []),
   ]
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ backgroundColor: 'var(--bg-body)' }}>
+    <div className="flex flex-col min-h-screen bg-background">
 
       {/* 상단 헤더 */}
       <header
-        className="sticky top-0 z-40 border-b"
-        style={{
-          backgroundColor: 'var(--bg-surface)',
-          borderColor: 'var(--border-default)',
-        }}
+        className="sticky top-0 z-40 backdrop-blur-md"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.15)', backgroundColor: 'rgba(10,10,10,0.92)' }}
       >
-        <div className="max-w-7xl mx-auto px-4 pr-6 h-14 flex items-center justify-between gap-4">
+        <div className="w-full px-4 sm:px-6 h-12 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
 
-          {/* 로고 */}
-          {/* 모바일: 뒤로가기 / 데스크탑·루트: 로고 */}
-          {showMobileBack ? (
-            <button
-              type="button"
-              onClick={goBack}
-              className="sm:hidden flex items-center gap-1 shrink-0 p-2 -ml-1 rounded-lg transition-colors"
-              style={{ color: 'var(--text-secondary)' }}
-              aria-label="이전 화면"
-            >
-              <ChevronLeft className="w-7 h-7" />
-            </button>
-          ) : null}
+          {/* 왼쪽: 뒤로가기 / 로고 */}
+          <div className="flex items-center min-w-0 justify-self-start">
+            {showMobileBack ? (
+              <button
+                type="button"
+                onClick={goBack}
+                className="sm:hidden flex items-center gap-1 shrink-0 p-1.5 -ml-1 rounded transition-colors"
+                style={{ color: '#A3A3A3' }}
+                aria-label="이전 화면"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            ) : null}
 
-          <Link href="/calendar" className={cn('flex items-center gap-2.5 shrink-0', showMobileBack && 'hidden sm:flex')}>
-            <div
-              className="rounded-lg p-1.5"
-              style={{ backgroundColor: 'var(--accent)', opacity: 0.9 }}
-            >
-              <Tv className="w-4 h-4 text-white" />
-            </div>
-            <span
-              className="font-bold text-[15px] tracking-tight hidden sm:block"
-              style={{ color: 'var(--text-primary)' }}
-            >
-              MBC충북 제작 일정
-            </span>
-          </Link>
+            <Link href="/calendar" className={cn('flex items-center gap-2.5 shrink-0 min-w-0', showMobileBack && 'hidden sm:flex')}>
+              <Square className="w-3.5 h-3.5 shrink-0" style={{ color: '#A3A3A3' }} strokeWidth={2} />
+              <span className="font-semibold text-[14px] tracking-tight hidden sm:block truncate" style={{ color: '#EBEBEB' }}>
+                MBC충북 제작 일정
+              </span>
+            </Link>
+          </div>
 
-          {/* 데스크탑 네비게이션 */}
-          <nav className="hidden sm:flex items-center gap-6">
+          {/* 가운데: 데스크탑 네비게이션 */}
+          <nav className="hidden sm:flex items-center justify-center gap-1">
             {navItems.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
               return (
@@ -189,22 +166,12 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
+                    'flex items-center gap-1.5 px-4 py-1.5 rounded text-[13px] transition-colors whitespace-nowrap',
                     isActive
-                      ? 'text-white'
-                      : 'hover:text-white'
+                      ? 'font-semibold'
+                      : 'hover:bg-white/[0.06]'
                   )}
-                  style={
-                    isActive
-                      ? { backgroundColor: 'var(--accent)', color: '#fff' }
-                      : { color: 'var(--text-secondary)' }
-                  }
-                  onMouseEnter={(e) => {
-                    if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-elevated)'
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'
-                  }}
+                  style={{ color: isActive ? '#EBEBEB' : '#A3A3A3' }}
                 >
                   <item.icon className="w-3.5 h-3.5" />
                   {item.label}
@@ -213,48 +180,43 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
             })}
           </nav>
 
-          <div className="flex items-center gap-3">
-            {/* 알림 벨 */}
+          {/* 오른쪽: 알림 / 사용자 / 로그아웃 */}
+          <div className="flex items-center gap-1 justify-self-end">
             <Link
               href="/notifications"
-              className="relative p-3 rounded-lg transition-all"
-              style={{ color: 'var(--text-secondary)' }}
+              className="relative p-2 rounded transition-colors hover:bg-white/[0.06]"
+              style={{ color: '#A3A3A3' }}
             >
-              <Bell className="w-6 h-6" />
+              <Bell className="w-4 h-4" />
               {localUnread > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] font-bold flex items-center justify-center text-white">
+                <span className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full text-[8px] font-bold flex items-center justify-center" style={{ backgroundColor: '#BE123C', color: '#EBEBEB' }}>
                   {localUnread > 9 ? '9+' : localUnread}
                 </span>
               )}
             </Link>
 
-            {/* 사용자 정보 */}
-            <div className="hidden sm:flex items-center pl-1">
-              <div className="flex flex-col items-end">
-                <span
-                  className="text-[13px] font-semibold leading-none"
-                  style={{ color: 'var(--text-primary)' }}
-                >
-                  {profile.full_name}
-                </span>
-                <span className={cn(
-                  'text-[10px] mt-1 px-1.5 py-0.5 rounded font-semibold tracking-wide',
-                  roleColors[profile.role ?? ''] ?? 'bg-white/10 text-white/60'
-                )}>
+            <div className="hidden sm:flex items-center px-2">
+              <Link
+                href="/mypage"
+                className="flex items-center gap-1.5 rounded px-2 py-1 transition-colors hover:bg-white/[0.06]"
+              >
+                <span className="text-[10px] tracking-wide" style={{ color: '#737373' }}>
                   {roleLabels[profile.role ?? ''] ?? profile.role}
                 </span>
-              </div>
+                <span className="text-[12px] font-medium leading-none" style={{ color: '#EBEBEB' }}>
+                  {profile.full_name}
+                </span>
+              </Link>
             </div>
 
-            {/* 로그아웃 */}
             <button
               onClick={handleLogout}
-              className="p-3 rounded-lg transition-all cursor-pointer hover:bg-white/10"
-              style={{ color: 'var(--text-muted)' }}
+              className="p-2 rounded transition-colors hover:bg-white/[0.06] cursor-pointer"
+              style={{ color: '#737373' }}
               title="로그아웃"
               aria-label="로그아웃"
             >
-              <LogOut className="w-6 h-6" />
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -267,27 +229,32 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
 
       {/* 모바일 하단 탭바 */}
       <nav
-        className="fixed bottom-0 left-0 right-0 sm:hidden z-40 border-t"
-        style={{
-          backgroundColor: 'var(--bg-surface)',
-          borderColor: 'var(--border-default)',
-        }}
+        className="fixed bottom-0 left-0 right-0 sm:hidden z-40"
+        style={{ borderTop: '1px solid rgba(255,255,255,0.15)', backgroundColor: 'rgba(10,10,10,0.96)', backdropFilter: 'blur(12px)' }}
       >
-        <div className="flex">
+        <div className="flex safe-area-pb">
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex-1 flex flex-col items-center justify-center py-3 gap-1.5 transition-colors min-h-[72px]"
-                style={{ color: isActive ? 'var(--accent)' : 'var(--text-muted)' }}
+                className="flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-colors min-h-[60px]"
+                style={{ color: isActive ? '#EBEBEB' : '#737373' }}
               >
-                <item.icon className={cn('w-7 h-7', isActive && 'stroke-2')} />
-                <span className="text-[11px] font-semibold">{item.label}</span>
+                <item.icon className={cn('w-5 h-5', isActive && 'stroke-[2.5]')} />
+                <span className="text-[10px] font-medium">{item.label}</span>
               </Link>
             )
           })}
+          <Link
+            href="/mypage"
+            className="flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-colors min-h-[60px]"
+            style={{ color: pathname === '/mypage' ? '#EBEBEB' : '#737373' }}
+          >
+            <User className={cn('w-5 h-5', pathname === '/mypage' && 'stroke-[2.5]')} />
+            <span className="text-[10px] font-medium">마이페이지</span>
+          </Link>
         </div>
       </nav>
     </div>

@@ -48,73 +48,73 @@ const statusConfig = {
   conflict: {
     label: '충돌',
     dot: 'bg-amber-400',
-    cardBg: '#2D1E00',
-    cardBorder: '#D97706',
-    cardText: '#FCD34D',
-    timeColor: '#D97706',
-    badge: 'bg-amber-950 text-amber-300 border border-amber-800',
-    listBorder: '#D97706',
+    cardBg: 'transparent',
+    cardBorder: '#78350F',
+    cardText: 'var(--text-primary)',
+    timeColor: 'var(--text-muted)',
+    badge: 'text-amber-400',
+    listBorder: '#78350F',
     icon: AlertTriangle,
     iconColor: 'text-amber-400',
   },
   pending: {
     label: '대기',
     dot: 'bg-slate-500',
-    cardBg: '#1E1E20',
-    cardBorder: '#4A4A4C',
-    cardText: '#9CA3AF',
-    timeColor: '#7A7A80',
-    badge: 'bg-[#2A2A2C] text-slate-400 border border-[#3A3A3C]',
-    listBorder: '#4A4A4C',
+    cardBg: 'transparent',
+    cardBorder: '#374151',
+    cardText: 'var(--text-primary)',
+    timeColor: 'var(--text-muted)',
+    badge: 'text-slate-500',
+    listBorder: '#374151',
     icon: Clock,
     iconColor: 'text-slate-500',
   },
   assigned: {
     label: '배정',
     dot: 'bg-purple-400',
-    cardBg: '#1C0A2D',
-    cardBorder: '#7C3AED',
-    cardText: '#C084FC',
-    timeColor: '#A855F7',
-    badge: 'bg-purple-950 text-purple-300 border border-purple-800',
-    listBorder: '#7C3AED',
+    cardBg: 'transparent',
+    cardBorder: '#5B21B6',
+    cardText: 'var(--text-primary)',
+    timeColor: 'var(--text-muted)',
+    badge: 'text-purple-400',
+    listBorder: '#5B21B6',
     icon: Car,
     iconColor: 'text-purple-400',
   },
   confirmed: {
     label: '확정',
     dot: 'bg-emerald-400',
-    cardBg: '#07291C',
-    cardBorder: '#059669',
-    cardText: '#6EE7B7',
-    timeColor: '#10B981',
-    badge: 'bg-emerald-950 text-emerald-300 border border-emerald-800',
-    listBorder: '#059669',
+    cardBg: 'transparent',
+    cardBorder: '#064E3B',
+    cardText: 'var(--text-primary)',
+    timeColor: 'var(--text-muted)',
+    badge: 'text-emerald-400',
+    listBorder: '#064E3B',
     icon: CheckCircle2,
     iconColor: 'text-emerald-400',
   },
   rejected: {
     label: '반려',
     dot: 'bg-rose-400',
-    cardBg: '#2D0A0A',
-    cardBorder: '#DC2626',
-    cardText: '#FCA5A5',
-    timeColor: '#F87171',
-    badge: 'bg-rose-950 text-rose-300 border border-rose-800',
-    listBorder: '#DC2626',
+    cardBg: 'transparent',
+    cardBorder: '#7F1D1D',
+    cardText: 'var(--text-primary)',
+    timeColor: 'var(--text-muted)',
+    badge: 'text-rose-400',
+    listBorder: '#7F1D1D',
     icon: XCircle,
     iconColor: 'text-rose-400',
   },
+} as const
+
+type StatusKey = keyof typeof statusConfig
+function getCfg(status: string) {
+  return statusConfig[(status as StatusKey) in statusConfig ? (status as StatusKey) : 'pending']
 }
 
 const DOW_LABELS = ['일', '월', '화', '수', '목', '금', '토']
-const DOW_COLORS = ['#F87171', 'var(--text-primary)', 'var(--text-primary)', 'var(--text-primary)', 'var(--text-primary)', 'var(--text-primary)', '#60A5FA']
+const DOW_COLORS = ['#C07070', '#4A4A4A', '#4A4A4A', '#4A4A4A', '#4A4A4A', '#4A4A4A', '#4A7090']
 
-// SSR에서는 window가 없으므로 데스크탑 여부를 알 수 없어 모바일(주간) 기준으로 시작
-function getInitialIsDesktop() {
-  if (typeof window === 'undefined') return false
-  return window.innerWidth >= 768
-}
 
 export default function CalendarView({ profile }: CalendarViewProps) {
   const router = useRouter()
@@ -123,12 +123,10 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [loading, setLoading] = useState(true)
-  // PC(≥768px)는 월간 달력, 모바일은 주간 기본 — 최초 렌더에서 바로 올바른 값으로 시작해
-  // "week → month" 뒤늦은 전환으로 인한 이중 fetch(cascading render)를 방지
-  const [isDesktop, setIsDesktop] = useState(getInitialIsDesktop)
-  const [viewMode, setViewMode] = useState<'week' | 'month' | 'list'>(() =>
-    getInitialIsDesktop() ? 'month' : 'week'
-  )
+  // SSR 안전: 항상 false/'week'로 시작 → hydration mismatch 방지
+  // useEffect 에서 실제 화면 크기로 업데이트
+  const [isDesktop, setIsDesktop] = useState(false)
+  const [viewMode, setViewMode] = useState<'week' | 'month' | 'list'>('week')
   // 스케줄 필터 — 역할별 기본값 (PD/Admin: 전체, 기술국: 기술, 영상국: 영상)
   const [scheduleFilter, setScheduleFilter] = useState<ScheduleFilter>(() =>
     getDefaultScheduleFilter(profile.role)
@@ -136,12 +134,16 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false)
   const [viewDropdownOpen, setViewDropdownOpen] = useState(false)
 
-  // 화면 크기 변경(창 리사이즈, 태블릿 회전 등)에만 대응 — 초기값은 이미 올바르게 세팅되어 있음
+  // 마운트 후 실제 화면 크기 반영 + resize 대응
   useEffect(() => {
+    const desktop = window.innerWidth >= 768
+    setIsDesktop(desktop)
+    if (desktop) setViewMode('month')
+
     function handleResize() {
-      const desktop = window.innerWidth >= 768
-      setIsDesktop(desktop)
-      setViewMode((prev) => (prev === 'week' && desktop ? 'month' : prev))
+      const d = window.innerWidth >= 768
+      setIsDesktop(d)
+      setViewMode((prev) => (prev === 'week' && d ? 'month' : prev))
     }
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
@@ -239,10 +241,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setCurrentDate(viewMode === 'week' ? subWeeks(currentDate, 1) : new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
-            className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors shrink-0"
-            style={{ color: 'var(--text-muted)' }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-elevated)')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+            className="w-8 h-8 flex items-center justify-center rounded text-[#4A4A4A] hover:text-[#BEBEBE] hover:bg-white/[0.05] transition-colors shrink-0"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -267,10 +266,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
 
           <button
             onClick={() => setCurrentDate(viewMode === 'week' ? addWeeks(currentDate, 1) : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}
-            className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors shrink-0"
-            style={{ color: 'var(--text-muted)' }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-elevated)')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+            className="w-8 h-8 flex items-center justify-center rounded text-[#4A4A4A] hover:text-[#BEBEBE] hover:bg-white/[0.05] transition-colors shrink-0"
           >
             <ChevronRight className="w-5 h-5" />
           </button>
@@ -278,14 +274,6 @@ export default function CalendarView({ profile }: CalendarViewProps) {
 
         <div className="flex items-center gap-x-4">
           {/* 범례 — 테두리/배경 없이 점 + 텍스트만 가볍게 */}
-          <div className="hidden md:flex items-center gap-x-4 text-[11px]">
-            {Object.entries(statusConfig).map(([, cfg]) => (
-              <div key={cfg.label} className="flex items-center gap-1.5">
-                <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', cfg.dot)} />
-                <span style={{ color: 'var(--text-muted)' }}>{cfg.label}</span>
-              </div>
-            ))}
-          </div>
 
           {/* '+ 의뢰' 버튼은 상단 GNB(PC) / 하단 탭바(모바일)에 이미 '제작 의뢰' 진입점이 있어 중복이므로 제거함 */}
 
@@ -297,13 +285,11 @@ export default function CalendarView({ profile }: CalendarViewProps) {
           <div className="relative">
             <button
               onClick={() => { setViewDropdownOpen((o) => !o); setFilterDropdownOpen(false) }}
-              className="flex items-center gap-1.5 h-11 pl-2.5 pr-1.5 rounded-lg text-sm font-semibold transition-colors hover:bg-white/10"
-              style={{ color: 'var(--text-primary)' }}
+              className="flex items-center gap-1.5 h-8 px-2.5 rounded text-[13px] font-medium text-[#4A4A4A] hover:text-[#C0C0C0] hover:bg-white/[0.05] transition-colors"
             >
               <span>{viewMode === 'week' ? '주간' : viewMode === 'month' ? '월간' : '목록'}</span>
               <ChevronDown
                 className={cn('w-4 h-4 transition-transform', viewDropdownOpen && 'rotate-180')}
-                style={{ color: 'var(--text-muted)' }}
               />
             </button>
 
@@ -311,8 +297,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setViewDropdownOpen(false)} />
                 <div
-                  className="absolute right-0 top-full mt-2 z-20 rounded-xl border overflow-hidden shadow-xl min-w-[140px]"
-                  style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
+                  className="absolute right-0 top-full mt-1 z-20 rounded-md border border-white/[0.15] overflow-hidden shadow-xl min-w-[120px]"
+                  style={{ backgroundColor: '#0F0F0F' }}
                 >
                   {([
                     { mode: 'week'  as const, Icon: CalendarDays, label: '주간' },
@@ -322,14 +308,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                     <button
                       key={mode}
                       onClick={() => { setViewMode(mode); setViewDropdownOpen(false) }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-all"
-                      style={{
-                        backgroundColor: viewMode === mode ? 'color-mix(in srgb, var(--accent) 28%, var(--bg-surface))' : 'transparent',
-                        color: viewMode === mode ? '#fff' : 'var(--text-secondary)',
-                        borderLeft: viewMode === mode ? '3px solid var(--accent)' : '3px solid transparent',
-                      }}
-                      onMouseEnter={e => { if (viewMode !== mode) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-elevated)' }}
-                      onMouseLeave={e => { if (viewMode !== mode) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}
+                      className={cn(
+                        'w-full flex items-center gap-2 px-3 py-2 text-[13px] transition-colors',
+                        viewMode === mode
+                          ? 'bg-white/[0.06] text-[#D0D0D0] font-medium'
+                          : 'text-[#4A4A4A] hover:bg-white/[0.04] hover:text-[#C0C0C0]'
+                      )}
                     >
                       <Icon className="w-4 h-4" />
                       {label}
@@ -344,13 +328,11 @@ export default function CalendarView({ profile }: CalendarViewProps) {
           <div className="relative">
             <button
               onClick={() => { setFilterDropdownOpen((o) => !o); setViewDropdownOpen(false) }}
-              className="flex items-center gap-1.5 h-11 pl-1.5 pr-2.5 rounded-lg text-sm font-semibold transition-colors hover:bg-white/10"
-              style={{ color: scheduleFilter !== 'all' ? 'var(--accent)' : 'var(--text-primary)' }}
+              className="flex items-center gap-1.5 h-8 px-2.5 rounded text-[13px] font-medium text-[#4A4A4A] hover:text-[#C0C0C0] hover:bg-white/[0.05] transition-colors"
             >
               <span>{scheduleFilter === 'all' ? '전체' : scheduleFilter === 'tech' ? '기술' : '영상'}</span>
               <ChevronDown
                 className={cn('w-4 h-4 transition-transform', filterDropdownOpen && 'rotate-180')}
-                style={{ color: 'var(--text-muted)' }}
               />
             </button>
 
@@ -362,8 +344,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   onClick={() => setFilterDropdownOpen(false)}
                 />
                 <div
-                  className="absolute right-0 top-full mt-2 z-20 rounded-xl border overflow-hidden shadow-xl min-w-[160px]"
-                  style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
+                  className="absolute right-0 top-full mt-1 z-20 rounded-md border border-white/[0.15] overflow-hidden shadow-xl min-w-[150px]"
+                  style={{ backgroundColor: '#0F0F0F' }}
                 >
                   {([
                     { key: 'all',  label: '전체 스케줄',  sub: '모든 일정 표시' },
@@ -373,18 +355,17 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                     <button
                       key={key}
                       onClick={() => { setScheduleFilter(key); setFilterDropdownOpen(false) }}
-                      className="w-full text-left px-4 py-3 transition-all flex flex-col gap-0.5"
-                      style={{
-                        backgroundColor: scheduleFilter === key ? 'color-mix(in srgb, var(--accent) 28%, var(--bg-surface))' : 'transparent',
-                        borderLeft: scheduleFilter === key ? '3px solid var(--accent)' : '3px solid transparent',
-                      }}
-                      onMouseEnter={e => { if (scheduleFilter !== key) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-elevated)' }}
-                      onMouseLeave={e => { if (scheduleFilter !== key) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}
+                      className={cn(
+                        'w-full text-left px-3 py-2.5 transition-colors flex flex-col gap-0.5',
+                        scheduleFilter === key
+                          ? 'bg-white/[0.06] text-[#D0D0D0]'
+                          : 'text-[#4A4A4A] hover:bg-white/[0.04] hover:text-[#C0C0C0]'
+                      )}
                     >
-                      <span className="text-sm font-semibold" style={{ color: scheduleFilter === key ? '#fff' : 'var(--text-muted)' }}>
+                      <span className="text-[13px] font-medium">
                         {label}
                       </span>
-                      <span className="text-[11px]" style={{ color: scheduleFilter === key ? 'rgba(255,255,255,0.65)' : 'var(--text-muted)' }}>{sub}</span>
+                      <span className="text-[11px] opacity-40">{sub}</span>
                     </button>
                   ))}
                 </div>
@@ -399,13 +380,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
 
       {/* ── 주간 뷰 ── */}
       {viewMode === 'week' && (
-        <div className="space-y-4">
+        <div className="border border-white/[0.15] rounded overflow-hidden">
           {loading ? (
             <div
-              className="rounded-2xl p-12 text-center border"
-              style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
+              className="p-12 text-center"
             >
-              <div className="w-5 h-5 border-2 border-[#4A9EE8]/30 border-t-[#4A9EE8] rounded-full animate-spin mx-auto mb-3" />
+              <div className="w-4 h-4 border border-white/[0.12] border-t-white/30 rounded-full animate-spin mx-auto mb-3" />
               <p className="text-sm" style={{ color: 'var(--text-muted)' }}>불러오는 중...</p>
             </div>
           ) : (
@@ -415,17 +395,15 @@ export default function CalendarView({ profile }: CalendarViewProps) {
               const isTodayDate = isToday(date)
               const dowLabel = DOW_LABELS[dow]
               const isWeekend = dow === 0 || dow === 6
-              const dateColor = isWeekend ? DOW_COLORS[dow] : 'var(--text-primary)'
+              const dateColor = isWeekend ? DOW_COLORS[dow] : '#585858'
 
               return (
                 <div
                   key={idx}
-                  className="rounded-2xl border overflow-hidden flex"
+                  className="flex border-b border-white/[0.15] last:border-b-0"
                   style={{
-                    borderColor: isTodayDate ? 'rgba(240,240,242,0.55)' : 'var(--border-default)',
-                    backgroundColor: 'var(--bg-surface)',
-                    boxShadow: isTodayDate ? '0 0 0 1px rgba(240,240,242,0.55)' : 'none',
-                    minHeight: '80px',
+                    minHeight: '64px',
+                    backgroundColor: isTodayDate ? 'rgba(255,255,255,0.02)' : 'transparent',
                   }}
                 >
                   {/* 왼쪽: 날짜 사이드바 (PD/Admin은 클릭 시 의뢰 이동) */}
@@ -433,28 +411,24 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                     role={canCreate ? 'button' : undefined}
                     onClick={canCreate ? () => router.push(`/schedules/new?date=${format(date, 'yyyy-MM-dd')}`) : undefined}
                     className={cn(
-                      'shrink-0 w-20 flex flex-col items-center justify-center gap-0.5 border-r',
-                      canCreate && 'cursor-pointer transition-colors hover:brightness-125'
+                      'shrink-0 w-[58px] flex flex-col items-center justify-center gap-0.5 border-r border-white/[0.15]',
+                      canCreate && 'cursor-pointer transition-colors hover:bg-white/[0.04]'
                     )}
-                    style={{
-                      borderColor: 'var(--border-subtle)',
-                      backgroundColor: 'var(--bg-elevated)',
-                    }}
                   >
                     <span
-                      className="text-[36px] font-bold tabular-nums leading-none"
+                      className="text-[22px] font-semibold tabular-nums leading-none"
                       style={{ color: dateColor }}
                     >
                       {format(date, 'd')}
                     </span>
                     <span
-                      className="text-[14px] font-semibold"
-                      style={{ color: 'var(--text-muted)' }}
+                      className="text-[11px] font-normal"
+                      style={{ color: '#3A3A3A' }}
                     >
                       ({dowLabel})
                     </span>
                     {isTodayDate && (
-                      <span className="text-[9px] font-bold mt-1 px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(240,240,242,0.15)', color: 'var(--text-secondary)', border: '1px solid rgba(240,240,242,0.3)' }}>
+                      <span className="text-[9px] font-bold mt-1 px-1.5 py-0.5 rounded" style={{ backgroundColor: 'transparent', color: '#383838', border: 'none' }}>
                         TODAY
                       </span>
                     )}
@@ -468,17 +442,16 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                         {canCreate && (
                           <button
                             onClick={() => router.push(`/schedules/new?date=${format(date, 'yyyy-MM-dd')}`)}
-                            className="flex items-center gap-1 text-[12px] px-2.5 py-1 rounded-lg border transition-opacity opacity-40 hover:opacity-100"
-                            style={{ color: 'var(--accent)', borderColor: 'var(--accent)' }}
+                            className="flex items-center gap-1 text-[12px] px-2 py-1 rounded border border-white/[0.15] text-[#5A5A5A] hover:text-[#C0C0C0] transition-colors opacity-70 hover:opacity-100"
                           >
                             <Plus className="w-3 h-3" /> 의뢰
                           </button>
                         )}
                       </div>
                     ) : (
-                      <div className="divide-y" style={{ '--tw-divide-color': 'var(--border-subtle)' } as React.CSSProperties}>
+                      <div className="divide-y divide-white/[0.12]">
                         {daySchedules.map((schedule) => {
-                          const cfg = statusConfig[schedule.status]
+                          const cfg = getCfg(schedule.status)
                           const startDt = parseISO(schedule.broadcast_start)
 
                           // 특기사항: 장소 + 비고(notes)만 표시
@@ -490,22 +463,22 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                           return (
                             <Link key={schedule.id} href={`/schedules/${schedule.id}`}>
                               <div
-                                className="flex items-center gap-0 px-0 transition-all hover:brightness-110 cursor-pointer border-l-4"
-                                style={{ borderLeftColor: cfg.cardBorder, backgroundColor: cfg.cardBg }}
+                                className="flex items-center cursor-pointer border-l-[2px] hover:bg-white/[0.025] transition-colors"
+                                style={{ borderLeftColor: cfg.cardBorder }}
                               >
                                 <div className="flex-1 min-w-0 px-5 py-4">
                                   <div className="flex items-baseline gap-3 flex-wrap">
                                     {/* 시간 */}
                                     <span
-                                      className="text-[18px] tabular-nums font-bold shrink-0 leading-none"
-                                      style={{ color: cfg.timeColor }}
+                                      className="text-[13px] tabular-nums font-normal shrink-0 leading-none"
+                                      style={{ color: 'var(--text-muted)' }}
                                     >
                                       {format(startDt, 'HH:mm')}
                                     </span>
                                     {/* 프로그램명 */}
                                     <span
-                                      className="text-[18px] font-bold leading-none"
-                                      style={{ color: cfg.cardText }}
+                                      className="text-[15px] font-medium leading-none"
+                                      style={{ color: 'var(--text-primary)' }}
                                     >
                                       {schedule.program_name}
                                     </span>
@@ -513,7 +486,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                     {note && (
                                       <span
                                         className="text-[13px] leading-none"
-                                        style={{ color: cfg.cardText, opacity: 0.8 }}
+                                        style={{ color: 'var(--text-muted)' }}
                                       >
                                         {note}
                                       </span>
@@ -526,11 +499,6 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                   </div>
                                 </div>
                                 {/* 상태 */}
-                                <div className="shrink-0 pr-4">
-                                  <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold', cfg.badge)}>
-                                    {cfg.label}
-                                  </span>
-                                </div>
                               </div>
                             </Link>
                           )
@@ -538,11 +506,10 @@ export default function CalendarView({ profile }: CalendarViewProps) {
 
                         {/* 일정 추가 버튼 (일정 있는 날) */}
                         {canCreate && (
-                          <div className="px-5 py-2.5 flex justify-end" style={{ backgroundColor: 'var(--bg-surface)' }}>
+                          <div className="px-4 py-2 flex justify-end">
                             <button
                               onClick={() => router.push(`/schedules/new?date=${format(date, 'yyyy-MM-dd')}`)}
-                              className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg border transition-opacity opacity-30 hover:opacity-100"
-                              style={{ color: 'var(--accent)', borderColor: 'var(--accent)' }}
+                              className="flex items-center gap-1 text-[11px] px-2 py-1 rounded border border-white/[0.15] text-[#5A5A5A] hover:text-[#C0C0C0] transition-colors opacity-60 hover:opacity-100"
                             >
                               <Plus className="w-3 h-3" /> 추가
                             </button>
@@ -563,25 +530,23 @@ export default function CalendarView({ profile }: CalendarViewProps) {
         <div>
           {loading ? (
             <div
-              className="rounded-2xl p-12 text-center border"
-              style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
+              className="p-12 text-center"
             >
-              <div className="w-5 h-5 border-2 border-[#4A9EE8]/30 border-t-[#4A9EE8] rounded-full animate-spin mx-auto mb-3" />
+              <div className="w-4 h-4 border border-white/[0.12] border-t-white/30 rounded-full animate-spin mx-auto mb-3" />
               <p className="text-sm" style={{ color: 'var(--text-muted)' }}>불러오는 중...</p>
             </div>
           ) : (
-            <>
-              {/* 요일 헤더 */}
-              <div className="grid grid-cols-7 mb-1">
+            <div className="border border-white/[0.15] rounded overflow-hidden">
+              {/* DOW header */}
+              <div className="grid grid-cols-7 border-b border-white/[0.15]">
                 {DOW_LABELS.map((label, i) => (
                   <div
                     key={i}
-                    className="text-center font-bold tracking-wide"
+                    className="text-center text-[11px] font-normal tracking-wider border-r border-white/[0.10] last:border-r-0"
                     style={{
                       color: DOW_COLORS[i],
-                      fontSize: isDesktop ? '14px' : '11px',
-                      paddingTop: isDesktop ? '10px' : '8px',
-                      paddingBottom: isDesktop ? '10px' : '8px',
+                      paddingTop: isDesktop ? '8px' : '6px',
+                      paddingBottom: isDesktop ? '8px' : '6px',
                     }}
                   >
                     {label}
@@ -589,8 +554,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 ))}
               </div>
 
-              {/* 날짜 그리드 */}
-              <div className="grid grid-cols-7" style={{ gap: isDesktop ? '4px' : '4px' }}>
+              {/* day grid */}
+              <div className="grid grid-cols-7">
                 {allGridDays.map((day, idx) => {
                   const daySchedules = getSchedulesForDay(day)
                   const isInCurrentMonth = isSameMonth(day, currentDate)
@@ -601,13 +566,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   return (
                     <div
                       key={idx}
-                      className="rounded-xl border overflow-hidden"
+                      className="overflow-hidden"
                       style={{
-                        minHeight: isDesktop ? '120px' : '112px',
-                        backgroundColor: isTodayDate ? 'rgba(240,240,242,0.05)' : 'var(--bg-surface)',
-                        borderColor: isTodayDate ? 'rgba(240,240,242,0.45)' : 'var(--border-subtle)',
-                        boxShadow: isTodayDate ? '0 0 0 1px rgba(240,240,242,0.25)' : 'none',
-                        opacity: isInCurrentMonth ? 1 : 0.28,
+                        minHeight: isDesktop ? '108px' : '96px',
+                        backgroundColor: isTodayDate ? 'rgba(255,255,255,0.025)' : 'transparent',
+                        borderRight: (idx % 7) !== 6 ? '1px solid rgba(255,255,255,0.15)' : 'none',
+                        borderBottom: idx < allGridDays.length - 7 ? '1px solid rgba(255,255,255,0.15)' : 'none',
                         cursor: canCreate && isInCurrentMonth ? 'pointer' : 'default',
                       }}
                       onDoubleClick={() => {
@@ -627,8 +591,9 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                       <div
                         className="text-right font-bold tabular-nums"
                         style={{
-                          color: isWeekend ? DOW_COLORS[dow] : 'var(--text-secondary)',
+                          color: isWeekend ? DOW_COLORS[dow] : '#484848',
                           fontSize: isDesktop ? '15px' : '9px',
+                          opacity: isInCurrentMonth ? 1 : 0.2,
                           padding: isDesktop ? '8px 10px 4px' : '5px 6px 1px',
                         }}
                       >
@@ -637,27 +602,25 @@ export default function CalendarView({ profile }: CalendarViewProps) {
 
                       {/* 일정 칩 — 모바일은 점/좌측 바/여백을 없애고 글자 색으로만 상태를 구분,
                           2줄(line-clamp-2)까지 노출해 프로그램명이 잘리지 않고 최대한 읽히게 함 */}
-                      <div style={{ padding: isDesktop ? '0 6px 8px' : '0 3px 4px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <div style={{ padding: isDesktop ? '0 6px 8px' : '0 3px 4px', display: 'flex', flexDirection: 'column', gap: '3px', opacity: isInCurrentMonth ? 1 : 0.18 }}>
                         {daySchedules.slice(0, isDesktop ? 5 : 3).map((s) => {
-                          const cfg = statusConfig[s.status]
+                          const cfg = getCfg(s.status)
                           return (
                             <Link key={s.id} href={`/schedules/${s.id}`}>
                               <div
-                                className={cn('rounded cursor-pointer transition-all hover:brightness-125', isDesktop && 'flex items-center gap-1')}
+                                className={cn('cursor-pointer transition-colors hover:bg-white/[0.04]', isDesktop && 'flex items-center gap-1')}
                                 style={{
                                   backgroundColor: cfg.cardBg,
-                                  borderLeft: isDesktop ? `3px solid ${cfg.cardBorder}` : 'none',
-                                  padding: isDesktop ? '4px 8px' : '2px 4px',
+                                  borderLeft: isDesktop ? `2px solid ${cfg.cardBorder}` : 'none',
+                                  padding: isDesktop ? '3px 6px' : '2px 4px',
                                 }}
                               >
-                                {isDesktop && (
-                                  <span className={cn('rounded-full shrink-0', cfg.dot)} style={{ width: '6px', height: '6px' }} />
-                                )}
+
                                 <span
                                   className={cn('font-medium', isDesktop ? 'truncate' : 'block')}
                                   style={{
-                                    color: cfg.cardText,
-                                    fontSize: isDesktop ? '13px' : '9px',
+                                    color: 'var(--text-primary)',
+                                    fontSize: isDesktop ? '12px' : '9px',
                                     lineHeight: isDesktop ? '1.4' : '1.25',
                                     ...(isDesktop
                                       ? {}
@@ -692,7 +655,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   )
                 })}
               </div>
-            </>
+            </div>
           )}
         </div>
       )}
@@ -701,19 +664,18 @@ export default function CalendarView({ profile }: CalendarViewProps) {
       {viewMode === 'list' && (
         <div>
           {loading ? (
-            <div className="rounded-2xl p-12 text-center border" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}>
-              <div className="w-5 h-5 border-2 border-[#4A9EE8]/30 border-t-[#4A9EE8] rounded-full animate-spin mx-auto mb-3" />
+            <div className="p-12 text-center">
+              <div className="w-5 h-5 border border-white/[0.12] border-t-white/30 rounded-full animate-spin mx-auto mb-3" />
               <p className="text-sm" style={{ color: 'var(--text-muted)' }}>불러오는 중...</p>
             </div>
           ) : applyScheduleFilter(schedules).length === 0 ? (
-            <div className="rounded-2xl p-16 text-center border" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}>
-              <CalendarDays className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />
+            <div className="p-16 text-center">
+              <CalendarDays className="w-8 h-8 mx-auto mb-3 opacity-20" />
               <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>이번 달 등록된 일정이 없습니다.</p>
               {canCreate && (
                 <Link href="/schedules/new">
                   <button
-                    className="mt-4 h-9 px-5 text-xs font-bold rounded-xl text-white transition-colors"
-                    style={{ backgroundColor: 'var(--accent)' }}
+                    className="mt-4 h-8 px-4 text-xs font-medium rounded border border-white/[0.15] text-[#6A6A6A] hover:text-[#C0C0C0] hover:bg-white/[0.04] transition-colors"
                   >
                     + 첫 의뢰하기
                   </button>
@@ -723,7 +685,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
           ) : (
             <div className="space-y-1.5">
               {applyScheduleFilter(schedules).map((schedule) => {
-                const cfg = statusConfig[schedule.status]
+                const cfg = getCfg(schedule.status)
                 const Icon = cfg.icon
                 const ratio = schedule.status === 'pending' ? getApprovalRatio(schedule) : null
                 const startDt = parseISO(schedule.broadcast_start)
@@ -736,10 +698,9 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 return (
                   <Link key={schedule.id} href={`/schedules/${schedule.id}`}>
                     <div
-                      className="group rounded-xl border border-l-4 transition-all duration-150 hover:brightness-110 overflow-hidden"
+                      className="group border-l-[2px] transition-colors hover:bg-white/[0.025] overflow-hidden"
                       style={{
-                        backgroundColor: 'var(--bg-surface)',
-                        borderColor: 'var(--border-subtle)',
+                        backgroundColor: 'transparent',
                         borderLeftColor: cfg.listBorder,
                       }}
                     >
@@ -753,7 +714,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                           </div>
                           <div className="text-[9px] tabular-nums" style={{ color: 'var(--text-muted)' }}>{durationStr}</div>
                         </div>
-                        <div className="w-px h-10 shrink-0" style={{ backgroundColor: 'var(--border-default)' }} />
+                        <div className="w-px h-8 shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             {schedule.is_live && (
@@ -776,7 +737,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-1.5 shrink-0">
-                          <span className={cn('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold', cfg.badge)}>
+                          <span className={cn('inline-flex items-center gap-1 text-[11px]', cfg.badge)}>
                             <Icon className={cn('w-3 h-3', cfg.iconColor)} />
                             {cfg.label}
                           </span>

@@ -362,7 +362,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
                   )}
                 />
               </div>
-              {/* 종료 시각 — hideDate + spacer 덕분에 오전/오후·시·분이 시작 시각과 열 정렬됨 */}
+              {/* 종료 시각 — hideDate + spacer 덕분에 시·분이 시작 시각과 열 정렬됨 */}
               <div className="relative mt-2">
                 {/* ~ 를 spacer 위에 절대 배치하여 날짜 열에 겹침 */}
                 <span
