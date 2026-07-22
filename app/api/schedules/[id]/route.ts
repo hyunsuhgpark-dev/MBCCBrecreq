@@ -54,8 +54,8 @@ export async function PATCH(
     if (!isAdmin) {
       return NextResponse.json({ error: '관리자만 승인 취소가 가능합니다' }, { status: 403 })
     }
-    if (existing.status !== 'confirmed') {
-      return NextResponse.json({ error: '확정 상태의 의뢰만 승인 취소할 수 있습니다' }, { status: 409 })
+    if (existing.status !== 'confirmed' && existing.status !== 'assigned') {
+      return NextResponse.json({ error: '확정 또는 배정 대기 상태의 의뢰만 승인 취소할 수 있습니다' }, { status: 409 })
     }
 
     const requiredParts = getRequiredApprovalParts(existing)

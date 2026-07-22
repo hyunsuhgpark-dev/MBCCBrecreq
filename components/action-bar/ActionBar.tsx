@@ -191,26 +191,77 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
   // 배정 대기 (배차 의뢰 승인 후)
   if (schedule.status === 'assigned') {
     return (
-      <div className="space-y-3">
-        {(isOwner || isAdmin) && (
-          <div
-            className="flex items-center gap-2 p-4 border rounded-xl"
-            style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
-          >
-            <Car className="w-5 h-5 text-purple-300 shrink-0" />
-            <div>
-              <p className="font-medium text-purple-200 text-sm">배정 대기 중</p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                영상국에서 차량·기사 배정 후 알림을 보내드립니다.
+      <>
+        <div className="space-y-3">
+          {(isOwner || isAdmin) && (
+            <div
+              className="flex items-center gap-2 p-4 border rounded-xl"
+              style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
+            >
+              <Car className="w-5 h-5 text-purple-300 shrink-0" />
+              <div>
+                <p className="font-medium text-purple-200 text-sm">배정 대기 중</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                  영상국에서 차량·기사 배정 후 알림을 보내드립니다.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isAdmin && (
+            <Button
+              onClick={() => setShowRevokeDialog(true)}
+              variant="outline"
+              disabled={loading}
+              className="w-full min-h-12 font-semibold gap-2 rounded-xl border-amber-800 text-amber-300 hover:bg-amber-950/20"
+            >
+              <XCircle className="w-4 h-4" />
+              승인 취소 (관리자)
+            </Button>
+          )}
+
+          {(isStaffSubControl || isAdmin) && (
+            <AssignmentForm scheduleId={schedule.id} onComplete={onUpdate} />
+          )}
+        </div>
+
+        {/* 승인 취소 확인 다이얼로그 */}
+        <Dialog open={showRevokeDialog} onOpenChange={setShowRevokeDialog}>
+          <DialogContent className="max-w-md border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-primary)]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-amber-300">
+                <XCircle className="w-5 h-5" />
+                승인 취소
+              </DialogTitle>
+            </DialogHeader>
+            <div className="py-2">
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                <span className="font-semibold text-[var(--text-primary)]">&apos;{schedule.program_name}&apos;</span> 의 승인을 취소하고 대기 상태로 되돌립니다.
+              </p>
+              <p className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
+                담당 스태프에게 재승인 요청이 발송됩니다.
               </p>
             </div>
-          </div>
-        )}
-
-        {(isStaffSubControl || isAdmin) && (
-          <AssignmentForm scheduleId={schedule.id} onComplete={onUpdate} />
-        )}
-      </div>
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowRevokeDialog(false)}
+                className="border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]"
+              >
+                취소
+              </Button>
+              <Button
+                onClick={handleRevokeApproval}
+                disabled={loading}
+                className="bg-amber-600 hover:bg-amber-700 text-white gap-2 min-h-12"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                승인 취소 확인
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
     )
   }
 
