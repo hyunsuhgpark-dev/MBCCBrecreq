@@ -49,6 +49,39 @@ export async function PATCH(
 
   const adminClient = await createAdminClient()
 
+  // 관리자 승인 취소 (confirmed → pending, 승인 초기화)
+  if (rawBody.action === 'revoke_approval') {
+    if (!isAdmin) {
+      return NextResponse.json({ error: '관리자만 승인 취소가 가능합니다' }, { status: 403 })
+    }
+    if (existing.status !== 'confirmed') {
+      return NextResponse.json({ error: '확정 상태의 의뢰만 승인 취소할 수 있습니다' }, { status: 409 })
+    }
+
+    const requiredParts = getRequiredApprovalParts(existing)
+    const { error: revokeError } = await adminClient.rpc('update_schedule_request', {
+      p_schedule_id: id,
+      p_payload: {},
+      p_status: 'pending',
+      p_required_parts: requiredParts,
+      p_conflicting_ids: [],
+      p_conflict_type: null,
+    })
+    if (revokeError) {
+      console.error('승인 취소 실패:', revokeError)
+      return NextResponse.json({ error: '승인 취소에 실패했습니다' }, { status: 500 })
+    }
+
+    await notifyStaffApprovalRequested({
+      supabase: adminClient as unknown as SupabaseClient,
+      scheduleId: id,
+      programName: existing.program_name,
+      scheduleResources: existing,
+    })
+
+    return NextResponse.json({ message: '승인 취소 완료' })
+  }
+
   // 협의 완료 처리 (의뢰자가 conflict → pending 전환)
   if (rawBody.action === 'resolve_conflict') {
     if (existing.status !== 'conflict') {

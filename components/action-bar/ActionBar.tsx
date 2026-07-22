@@ -42,6 +42,7 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
   const [showRejectDialog, setShowRejectDialog] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false)
+  const [showRevokeDialog, setShowRevokeDialog] = useState(false)
 
   const isOwner = schedule.created_by === profile.id
   const isStaffOffice = isStaffOfficeRole(profile.role)
@@ -133,6 +134,26 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
     }
   }
 
+  async function handleRevokeApproval() {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/schedules/${schedule.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'revoke_approval' }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error)
+      toast.success('승인이 취소되어 대기 상태로 전환되었습니다.')
+      setShowRevokeDialog(false)
+      router.refresh()
+      onUpdate()
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : '오류 발생')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function handleWithdraw() {
     setLoading(true)
     try {
@@ -197,30 +218,80 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
   if (schedule.status === 'confirmed') {
     if (isOwner || isAdmin) {
       return (
-        <div
-          className="border rounded-xl p-4 space-y-3"
-          style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
-        >
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-emerald-300 shrink-0" />
-            <span className="text-emerald-200 font-medium text-sm">
-              {isDispatch ? '배차가 최종 확정되었습니다.' : '이 일정은 최종 확정되었습니다.'}
-            </span>
-          </div>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            {isDispatch
-              ? '일정 변경이 필요하면 수정 후 다시 영상국 승인·배정을 받아야 합니다.'
-              : '일정 변경이 필요하면 수정 후 다시 기술국·영상국 승인을 받아야 합니다.'}
-          </p>
-          <Button
-            onClick={() => router.push(`/schedules/${schedule.id}/edit`)}
-            variant="outline"
-            className="w-full min-h-12 font-semibold gap-2 rounded-xl border-[var(--border-default)] text-[var(--text-secondary)]"
+        <>
+          <div
+            className="border rounded-xl p-4 space-y-3"
+            style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
           >
-            <Pencil className="w-4 h-4" />
-            일정 수정하기
-          </Button>
-        </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-emerald-300 shrink-0" />
+              <span className="text-emerald-200 font-medium text-sm">
+                {isDispatch ? '배차가 최종 확정되었습니다.' : '이 일정은 최종 확정되었습니다.'}
+              </span>
+            </div>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              {isDispatch
+                ? '일정 변경이 필요하면 수정 후 다시 영상국 승인·배정을 받아야 합니다.'
+                : '일정 변경이 필요하면 수정 후 다시 기술국·영상국 승인을 받아야 합니다.'}
+            </p>
+            <Button
+              onClick={() => router.push(`/schedules/${schedule.id}/edit`)}
+              variant="outline"
+              className="w-full min-h-12 font-semibold gap-2 rounded-xl border-[var(--border-default)] text-[var(--text-secondary)]"
+            >
+              <Pencil className="w-4 h-4" />
+              일정 수정하기
+            </Button>
+            {isAdmin && (
+              <Button
+                onClick={() => setShowRevokeDialog(true)}
+                variant="outline"
+                disabled={loading}
+                className="w-full min-h-12 font-semibold gap-2 rounded-xl border-amber-800 text-amber-300 hover:bg-amber-950/20"
+              >
+                <XCircle className="w-4 h-4" />
+                승인 취소 (관리자)
+              </Button>
+            )}
+          </div>
+
+          {/* 승인 취소 확인 다이얼로그 */}
+          <Dialog open={showRevokeDialog} onOpenChange={setShowRevokeDialog}>
+            <DialogContent className="max-w-md border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-primary)]">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-amber-300">
+                  <XCircle className="w-5 h-5" />
+                  승인 취소
+                </DialogTitle>
+              </DialogHeader>
+              <div className="py-2">
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  <span className="font-semibold text-[var(--text-primary)]">&apos;{schedule.program_name}&apos;</span> 의 확정을 취소하고 대기 상태로 되돌립니다.
+                </p>
+                <p className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
+                  담당 스태프에게 재승인 요청이 발송됩니다.
+                </p>
+              </div>
+              <DialogFooter className="gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowRevokeDialog(false)}
+                  className="border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]"
+                >
+                  취소
+                </Button>
+                <Button
+                  onClick={handleRevokeApproval}
+                  disabled={loading}
+                  className="bg-amber-600 hover:bg-amber-700 text-white gap-2 min-h-12"
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                  승인 취소 확인
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
       )
     }
     return (

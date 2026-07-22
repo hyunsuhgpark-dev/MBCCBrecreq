@@ -691,7 +691,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                           {daySchedules.slice(0, isDesktop ? 4 : 3).map((s) => {
                             const cfg = getCfg(s.status)
                             return (
-                              <Link key={s.id} href={`/schedules/${s.id}`}>
+                              <Link key={s.id} href={`/schedules/${s.id}`} onClick={(e) => e.stopPropagation()}>
                                 <div
                                   className={cn('cursor-pointer transition-colors hover:bg-white/[0.04]', isDesktop && 'flex items-center gap-1')}
                                   style={{
@@ -730,7 +730,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                               key={r.id}
                               className="flex items-center gap-1 cursor-pointer hover:bg-white/[0.04] transition-colors"
                               style={{ borderLeft: '2px solid #4B5563', padding: '3px 6px' }}
-                              onClick={() => setSelectedOfficeRecord(r)}
+                              onClick={(e) => { e.stopPropagation(); setSelectedOfficeRecord(r) }}
                             >
                               <span className="truncate text-[11px]" style={{ color: 'var(--text-primary)' }}>
                                 {r.details.title}
