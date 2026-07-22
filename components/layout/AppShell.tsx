@@ -149,7 +149,7 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
           )}
 
           {/* 데스크탑 네비게이션 — 왼쪽 정렬 */}
-          <nav className="hidden sm:flex items-center gap-2" style={{ marginLeft: '40px' }}>
+          <nav className="hidden sm:flex items-center gap-2" style={{ marginLeft: '20px' }}>
             {navItems.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
               return (
@@ -172,7 +172,7 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
           </nav>
 
           {/* 오른쪽: 알림 / 사용자 / 로그아웃 */}
-          <div className="flex items-center gap-1" style={{ marginRight: '40px' }}>
+          <div className="flex items-center gap-1" style={{ marginRight: '20px' }}>
             <Link
               href="/notifications"
               className="relative p-2 rounded transition-colors hover:bg-white/[0.06]"

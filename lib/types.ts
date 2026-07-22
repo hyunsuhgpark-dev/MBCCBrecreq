@@ -123,3 +123,24 @@ export interface ConflictResult {
   conflictingScheduleIds: string[]
   conflictType: ConflictType | null
 }
+
+export interface ScheduleRecordEntry {
+  date: string
+  time?: string
+  place?: string
+  note?: string
+}
+
+export interface ScheduleRecord {
+  id: string
+  type: 'office-schedule'
+  uploadedAt: string
+  memo: string
+  summary: string
+  details: {
+    title: string
+    program: string
+    period: string
+    entries: ScheduleRecordEntry[]
+  }
+}
