@@ -117,6 +117,35 @@ function getCfg(status: string) {
   return statusConfig[(status as StatusKey) in statusConfig ? (status as StatusKey) : 'pending']
 }
 
+/** 장비/구분별 밝은(확정) / 어두운(대기) 색상 */
+const RESOURCE_COLORS = {
+  relayCar: { bright: '#A78BFA', dark: '#4C1D95' },
+  studio:   { bright: '#34D399', dark: '#064E3B' },
+  eng:      { bright: '#60A5FA', dark: '#1E3A8A' },
+  audio:    { bright: '#FBBF24', dark: '#78350F' },
+  dispatch: { bright: '#F472B6', dark: '#831843' },
+  default:  { bright: '#9CA3AF', dark: '#374151' },
+} as const
+
+/** 일정의 왼쪽 색상 바 계산 — 장비×상태 조합 */
+function getScheduleBorderColor(schedule: Schedule): string {
+  const s = schedule.status
+  if (s === 'conflict')  return '#D97706'
+  if (s === 'rejected')  return '#BE185D'
+
+  const isLit = s === 'confirmed' || s === 'assigned'
+  let pair: { bright: string; dark: string }
+
+  if (schedule.request_type === 'dispatch') pair = RESOURCE_COLORS.dispatch
+  else if (schedule.use_relay_car) pair = RESOURCE_COLORS.relayCar
+  else if (schedule.use_studio)    pair = RESOURCE_COLORS.studio
+  else if (schedule.use_eng)       pair = RESOURCE_COLORS.eng
+  else if (schedule.use_audio)     pair = RESOURCE_COLORS.audio
+  else pair = RESOURCE_COLORS.default
+
+  return isLit ? pair.bright : pair.dark
+}
+
 const DOW_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 const DOW_COLORS = ['#C07070', '#4A4A4A', '#4A4A4A', '#4A4A4A', '#4A4A4A', '#4A4A4A', '#4A7090']
 
@@ -539,7 +568,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                               <Link key={schedule.id} href={`/schedules/${schedule.id}`}>
                                 <div
                                   className="flex items-center cursor-pointer border-l-[2px] hover:bg-white/[0.025] transition-colors"
-                                  style={{ borderLeftColor: cfg.cardBorder }}
+                                  style={{ borderLeftColor: getScheduleBorderColor(schedule) }}
                                 >
                                   <div className="flex-1 min-w-0 px-5 py-4">
                                     <div className="flex items-baseline gap-3 flex-wrap">
@@ -696,7 +725,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                   className={cn('cursor-pointer transition-colors hover:bg-white/[0.04]', isDesktop && 'flex items-center gap-1')}
                                   style={{
                                     backgroundColor: cfg.cardBg,
-                                    borderLeft: isDesktop ? `2px solid ${cfg.cardBorder}` : 'none',
+                                    borderLeft: isDesktop ? `2px solid ${getScheduleBorderColor(s)}` : 'none',
                                     padding: isDesktop ? '3px 6px' : '2px 4px',
                                   }}
                                 >
@@ -797,7 +826,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                     <Link key={schedule.id} href={`/schedules/${schedule.id}`}>
                       <div
                         className="group border-l-[2px] transition-colors hover:bg-white/[0.025] overflow-hidden"
-                        style={{ backgroundColor: 'transparent', borderLeftColor: cfg.listBorder }}
+                        style={{ backgroundColor: 'transparent', borderLeftColor: getScheduleBorderColor(schedule) }}
                       >
                         <div className="p-4 flex items-center gap-4">
                           <div className="shrink-0 w-14 text-center">
