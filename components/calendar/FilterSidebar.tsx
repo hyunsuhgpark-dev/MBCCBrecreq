@@ -196,7 +196,7 @@ export default function FilterSidebar({
                 label="송출/행정"
                 checked={filters.officeCalendar}
                 onChange={(v) => set('officeCalendar', v)}
-                accentColor="#6B7280"
+                accentColor="rgba(255,255,255,0.55)"
               />
               {filters.officeCalendar && officeConfigured === false && (
                 <p className="text-[10px] leading-snug mt-1 px-0.5" style={{ color: '#6B7280' }}>

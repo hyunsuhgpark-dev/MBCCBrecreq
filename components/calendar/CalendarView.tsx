@@ -64,13 +64,13 @@ const statusConfig = {
   },
   pending: {
     label: '대기중',
-    dot: 'bg-slate-500',
+    dot: 'bg-slate-600',
     cardBg: 'transparent',
-    cardBorder: '#4B5563',
-    cardText: '#6B7280',
+    cardBorder: '#374151',
+    cardText: '#4B5563',
     timeColor: 'var(--text-muted)',
     badge: 'text-slate-500',
-    listBorder: '#4B5563',
+    listBorder: '#374151',
     icon: Clock,
     iconColor: 'text-slate-500',
   },
@@ -578,7 +578,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                               <div
                                 key={record.id}
                                 className="flex items-center border-l-[2px] cursor-pointer hover:bg-white/[0.025] transition-colors"
-                                style={{ borderLeftColor: '#4B5563' }}
+                                style={{ borderLeftColor: 'rgba(255,255,255,0.55)' }}
                                 onClick={() => setSelectedOfficeRecord(record)}
                               >
                                 <div className="flex-1 min-w-0 px-5 py-3">
@@ -729,7 +729,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                             <div
                               key={r.id}
                               className="flex items-center gap-1 cursor-pointer hover:bg-white/[0.04] transition-colors"
-                              style={{ borderLeft: '2px solid #4B5563', padding: '3px 6px' }}
+                              style={{ borderLeft: '2px solid rgba(255,255,255,0.55)', padding: '3px 6px' }}
                               onClick={(e) => { e.stopPropagation(); setSelectedOfficeRecord(r) }}
                             >
                               <span className="truncate text-[11px]" style={{ color: 'var(--text-primary)' }}>
@@ -861,7 +861,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                     <div
                       key={`${record.id}-${entry.date}`}
                       className="border-l-[2px] overflow-hidden cursor-pointer hover:bg-white/[0.025] transition-colors"
-                      style={{ borderLeftColor: '#4B5563', backgroundColor: 'transparent' }}
+                      style={{ borderLeftColor: 'rgba(255,255,255,0.55)', backgroundColor: 'transparent' }}
                       onClick={() => setSelectedOfficeRecord(record)}
                     >
                       <div className="p-4 flex items-center gap-4">
@@ -918,7 +918,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
               <div className="flex items-center gap-2">
                 <span
                   className="w-[3px] h-[18px] rounded-full shrink-0"
-                  style={{ backgroundColor: '#4B5563' }}
+                  style={{ backgroundColor: 'rgba(255,255,255,0.55)' }}
                 />
                 <h2 className="text-[15px] font-semibold leading-snug" style={{ color: 'var(--text-primary)' }}>
                   {selectedOfficeRecord.details.title}
