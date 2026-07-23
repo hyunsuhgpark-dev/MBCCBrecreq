@@ -180,6 +180,10 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   // 업로드 후 재조회 트리거
   const [vacationVersion, setVacationVersion] = useState(0)
 
+  // 월간 뷰 일정 칩 툴팁/팝오버
+  const [hoveredScheduleId, setHoveredScheduleId] = useState<string | null>(null)
+  const [tappedScheduleId, setTappedScheduleId] = useState<string | null>(null)
+
   // 마운트 후 실제 화면 크기 반영
   useEffect(() => {
     const desktop = window.innerWidth >= 768
@@ -195,6 +199,14 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  // 모바일 팝오버 외부 클릭 시 닫기
+  useEffect(() => {
+    if (!tappedScheduleId) return
+    const close = () => setTappedScheduleId(null)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [tappedScheduleId])
 
   // localStorage에서 필터 상태 복원 (마운트 후 1회)
   useEffect(() => {
@@ -820,7 +832,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                           return (
                             <div
                               key={globalIdx}
-                              className="overflow-y-auto flex flex-col"
+                              className="overflow-visible flex flex-col"
                               style={{
                                 minHeight: isDesktop ? '100px' : '80px',
                                 backgroundColor: isTodayDate ? 'rgba(255,255,255,0.025)' : 'transparent',
@@ -853,18 +865,40 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                               </div>
 
                               {/* 방송 일정 칩 (상단 영역) */}
-                              <div className="flex-1 min-h-0" style={{ padding: isDesktop ? '0 6px 2px' : '0 3px 2px', display: 'flex', flexDirection: 'column', gap: '2px', opacity: isInCurrentMonth ? 1 : 0.18 }}>
+                              <div className="flex-1 min-h-0" style={{ padding: isDesktop ? '0 6px 2px' : '0 3px 2px', display: 'flex', flexDirection: 'column', gap: '2px', opacity: isInCurrentMonth ? 1 : 0.18, overflow: 'visible' }}>
                                 {/* 일반 일정 */}
                                 {daySchedules.slice(0, isDesktop ? 4 : 3).map((s) => {
                                   const cfg = getCfg(s.status)
+                                  const startDt = parseISO(s.broadcast_start)
+                                  const endDt = parseISO(s.broadcast_end)
+                                  const timeLabel = `${format(startDt, 'HH:mm')}~${format(endDt, 'HH:mm')}`
+                                  const isHovered = hoveredScheduleId === s.id
+                                  const isTapped = tappedScheduleId === s.id
+                                  // 마지막 두 열(토/일)은 툴팁을 왼쪽으로 표시
+                                  const isRightEdge = idx >= 5
+
                                   return (
-                                    <Link key={s.id} href={`/schedules/${s.id}`} onClick={(e) => e.stopPropagation()}>
+                                    <div
+                                      key={s.id}
+                                      className="relative"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
                                       <div
                                         className={cn('cursor-pointer transition-colors hover:bg-white/[0.04]', isDesktop && 'flex items-center gap-1')}
                                         style={{
                                           backgroundColor: cfg.cardBg,
                                           borderLeft: isDesktop ? `2px solid ${getScheduleBorderColor(s)}` : 'none',
                                           padding: isDesktop ? '2px 5px' : '2px 4px',
+                                        }}
+                                        onMouseEnter={() => isDesktop && setHoveredScheduleId(s.id)}
+                                        onMouseLeave={() => isDesktop && setHoveredScheduleId(null)}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          if (isDesktop) {
+                                            router.push(`/schedules/${s.id}`)
+                                          } else {
+                                            setTappedScheduleId(isTapped ? null : s.id)
+                                          }
                                         }}
                                       >
                                         <span
@@ -887,7 +921,73 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                           {s.program_name}
                                         </span>
                                       </div>
-                                    </Link>
+
+                                      {/* PC 호버 툴팁 */}
+                                      {isDesktop && isHovered && (
+                                        <div
+                                          className="absolute z-50 rounded shadow-xl pointer-events-none"
+                                          style={{
+                                            top: 0,
+                                            ...(isRightEdge
+                                              ? { right: '100%', marginRight: 4 }
+                                              : { left: '100%', marginLeft: 4 }),
+                                            backgroundColor: '#1A1A1A',
+                                            border: '1px solid rgba(255,255,255,0.12)',
+                                            minWidth: 160,
+                                            padding: '6px 10px',
+                                            whiteSpace: 'nowrap',
+                                          }}
+                                        >
+                                          <div className="text-[11px] font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+                                            {s.program_name}
+                                          </div>
+                                          <div className="text-[11px] tabular-nums" style={{ color: '#9CA3AF' }}>
+                                            {timeLabel}
+                                          </div>
+                                          {s.venue && (
+                                            <div className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
+                                              {s.venue}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {/* 모바일 탭 팝오버 */}
+                                      {!isDesktop && isTapped && (
+                                        <div
+                                          className="absolute z-50 rounded shadow-xl"
+                                          style={{
+                                            top: '100%',
+                                            left: 0,
+                                            marginTop: 2,
+                                            backgroundColor: '#1A1A1A',
+                                            border: '1px solid rgba(255,255,255,0.15)',
+                                            minWidth: 160,
+                                            padding: '8px 12px',
+                                            whiteSpace: 'nowrap',
+                                          }}
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            router.push(`/schedules/${s.id}`)
+                                          }}
+                                        >
+                                          <div className="text-[12px] font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>
+                                            {s.program_name}
+                                          </div>
+                                          <div className="text-[11px] tabular-nums" style={{ color: '#9CA3AF' }}>
+                                            {timeLabel}
+                                          </div>
+                                          {s.venue && (
+                                            <div className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
+                                              {s.venue}
+                                            </div>
+                                          )}
+                                          <div className="text-[10px] mt-2" style={{ color: '#6B7280' }}>
+                                            탭하여 상세보기 →
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
                                   )
                                 })}
 
