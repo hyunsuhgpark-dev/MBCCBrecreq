@@ -398,9 +398,9 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     )
   }
 
-  /** 휴가자 표시 라벨: 반차면 "이름 오전/오후", 일반 휴가면 "이름" */
+  /** 휴가자 표시 라벨: 이름만 표시 (반차 텍스트 제거) */
   function vacLabel(v: Vacation): string {
-    return v.half_day ? `${v.name} ${v.half_day}` : v.name
+    return v.name
   }
 
   /** 한 주(7일)에서 보이는 vacation들의 레인(row) 배정 결과 */
@@ -917,29 +917,40 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                           className="absolute inset-x-0 bottom-0 pointer-events-none"
                           style={{ height: vacZoneH }}
                         >
-                          {lanes.map((lane, li) => (
-                            <div
-                              key={li}
-                              style={{
-                                position: 'absolute',
-                                left: `${(lane.startCol / 7) * 100}%`,
-                                width: `${((lane.endCol - lane.startCol + 1) / 7) * 100}%`,
-                                top: (laneCount - 1 - lane.lane) * vacBarH + 4,
-                                height: vacBarH - 2,
-                                borderRadius: 2,
-                                backgroundColor: 'rgba(45, 15, 120, 0.45)',
-                                color: '#6B5A9E',
-                                fontSize: 10,
-                                paddingLeft: 5,
-                                display: 'flex',
-                                alignItems: 'center',
-                                overflow: 'hidden',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {vacLabel(lane.vacation)}
-                            </div>
-                          ))}
+                          {lanes.map((lane, li) => {
+                            const hd = lane.vacation.half_day
+                            // 반차: 해당 셀의 왼쪽/오른쪽 절반만 차지
+                            const leftPct = hd === '오후'
+                              ? ((lane.startCol + 0.5) / 7) * 100
+                              : (lane.startCol / 7) * 100
+                            const widthPct = hd
+                              ? (0.5 / 7) * 100
+                              : ((lane.endCol - lane.startCol + 1) / 7) * 100
+
+                            return (
+                              <div
+                                key={li}
+                                style={{
+                                  position: 'absolute',
+                                  left: `${leftPct}%`,
+                                  width: `${widthPct}%`,
+                                  top: (laneCount - 1 - lane.lane) * vacBarH + 4,
+                                  height: vacBarH - 2,
+                                  borderRadius: 2,
+                                  backgroundColor: 'rgba(45, 15, 120, 0.45)',
+                                  color: '#6B5A9E',
+                                  fontSize: 10,
+                                  paddingLeft: 4,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  overflow: 'hidden',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {vacLabel(lane.vacation)}
+                              </div>
+                            )
+                          })}
                         </div>
                       )}
                     </div>
