@@ -651,111 +651,115 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                     </div>
 
                     {/* 일정 목록 */}
-                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                      {allItems === 0 ? (
-                        <div className="px-5 py-6">
-                          <span className="text-[13px]" style={{ color: 'var(--text-muted)' }}>일정 없음</span>
-                        </div>
-                      ) : (
-                        <div className="divide-y divide-white/[0.12]">
-                          {/* 일반 일정 */}
-                          {daySchedules.map((schedule) => {
-                            const cfg = getCfg(schedule.status)
-                            const startDt = parseISO(schedule.broadcast_start)
-                            const noteParts: string[] = []
-                            if (schedule.venue) noteParts.push(schedule.venue)
-                            if (schedule.notes?.trim()) noteParts.push(schedule.notes.trim())
-                            const note = noteParts.join(' · ')
+                    <div className="flex-1 min-w-0 flex flex-col">
+                      {/* 상단: 일반 + 구글 일정 */}
+                      <div className="flex-1 flex flex-col justify-center">
+                        {daySchedules.length === 0 && officeItems.length === 0 ? (
+                          dayVacations.length === 0 && (
+                            <div className="px-5 py-6">
+                              <span className="text-[13px]" style={{ color: 'var(--text-muted)' }}>일정 없음</span>
+                            </div>
+                          )
+                        ) : (
+                          <div className="divide-y divide-white/[0.12]">
+                            {/* 일반 일정 */}
+                            {daySchedules.map((schedule) => {
+                              const cfg = getCfg(schedule.status)
+                              const startDt = parseISO(schedule.broadcast_start)
+                              const noteParts: string[] = []
+                              if (schedule.venue) noteParts.push(schedule.venue)
+                              if (schedule.notes?.trim()) noteParts.push(schedule.notes.trim())
+                              const note = noteParts.join(' · ')
 
-                            return (
-                              <Link key={schedule.id} href={`/schedules/${schedule.id}`}>
+                              return (
+                                <Link key={schedule.id} href={`/schedules/${schedule.id}`}>
+                                  <div
+                                    className="flex items-center cursor-pointer border-l-[2px] hover:bg-white/[0.025] transition-colors"
+                                    style={{ borderLeftColor: getScheduleBorderColor(schedule) }}
+                                  >
+                                    <div className="flex-1 min-w-0 px-5 py-4">
+                                      <div className="flex items-baseline gap-3 flex-wrap">
+                                        <span className="text-[13px] tabular-nums font-normal shrink-0 leading-none" style={{ color: 'var(--text-muted)' }}>
+                                          {format(startDt, 'HH:mm')}
+                                        </span>
+                                        <span className="text-[15px] font-medium leading-none" style={{ color: cfg.cardText }}>
+                                          {schedule.program_name}
+                                        </span>
+                                        {schedule.status === 'pending' && (
+                                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-slate-600 text-slate-400">
+                                            대기중
+                                          </span>
+                                        )}
+                                        {note && (
+                                          <span className="text-[13px] leading-none" style={{ color: 'var(--text-muted)' }}>
+                                            {note}
+                                          </span>
+                                        )}
+                                        {schedule.is_live && (
+                                          <span className="inline-flex items-center gap-1 bg-red-500 text-white px-1.5 py-0.5 rounded text-[10px] font-bold">
+                                            <span className="w-1 h-1 bg-white rounded-full animate-pulse" />LIVE
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </Link>
+                              )
+                            })}
+
+                            {/* 기술사무실/송중계 구글 캘린더 일정 */}
+                            {officeItems.map((record) => {
+                              const entry = record.details.entries.find((e) => e.date === format(date, 'yyyy-MM-dd'))
+                              return (
                                 <div
-                                  className="flex items-center cursor-pointer border-l-[2px] hover:bg-white/[0.025] transition-colors"
-                                  style={{ borderLeftColor: getScheduleBorderColor(schedule) }}
+                                  key={record.id}
+                                  className="flex items-center border-l-[2px] cursor-pointer hover:bg-white/[0.025] transition-colors"
+                                  style={{ borderLeftColor: 'rgba(255,255,255,0.55)' }}
+                                  onClick={() => setSelectedOfficeRecord(record)}
                                 >
-                                  <div className="flex-1 min-w-0 px-5 py-4">
+                                  <div className="flex-1 min-w-0 px-5 py-3">
                                     <div className="flex items-baseline gap-3 flex-wrap">
-                                      <span className="text-[13px] tabular-nums font-normal shrink-0 leading-none" style={{ color: 'var(--text-muted)' }}>
-                                        {format(startDt, 'HH:mm')}
+                                      {entry?.time && (
+                                        <span className="text-[13px] tabular-nums font-normal shrink-0 leading-none" style={{ color: '#9CA3AF' }}>
+                                          {entry.time}
+                                        </span>
+                                      )}
+                                      <span className="text-[14px] font-normal leading-none" style={{ color: 'var(--text-primary)' }}>
+                                        {record.details.title}
                                       </span>
-                                      <span className="text-[15px] font-medium leading-none" style={{ color: cfg.cardText }}>
-                                        {schedule.program_name}
+                                      {entry?.place && (
+                                        <span className="text-[12px] leading-none" style={{ color: '#9CA3AF' }}>
+                                          {entry.place}
+                                        </span>
+                                      )}
+                                      <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(75,85,99,0.2)', color: '#9CA3AF' }}>
+                                        사무실
                                       </span>
-                                      {schedule.status === 'pending' && (
-                                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-slate-600 text-slate-400">
-                                          대기중
-                                        </span>
-                                      )}
-                                      {note && (
-                                        <span className="text-[13px] leading-none" style={{ color: 'var(--text-muted)' }}>
-                                          {note}
-                                        </span>
-                                      )}
-                                      {schedule.is_live && (
-                                        <span className="inline-flex items-center gap-1 bg-red-500 text-white px-1.5 py-0.5 rounded text-[10px] font-bold">
-                                          <span className="w-1 h-1 bg-white rounded-full animate-pulse" />LIVE
-                                        </span>
-                                      )}
                                     </div>
                                   </div>
                                 </div>
-                              </Link>
-                            )
-                          })}
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
 
-                          {/* 기술사무실/송중계 구글 캘린더 일정 */}
-                          {officeItems.map((record) => {
-                            const entry = record.details.entries.find((e) => e.date === format(date, 'yyyy-MM-dd'))
-                            return (
-                              <div
-                                key={record.id}
-                                className="flex items-center border-l-[2px] cursor-pointer hover:bg-white/[0.025] transition-colors"
-                                style={{ borderLeftColor: 'rgba(255,255,255,0.55)' }}
-                                onClick={() => setSelectedOfficeRecord(record)}
-                              >
-                                <div className="flex-1 min-w-0 px-5 py-3">
-                                  <div className="flex items-baseline gap-3 flex-wrap">
-                                    {entry?.time && (
-                                      <span className="text-[13px] tabular-nums font-normal shrink-0 leading-none" style={{ color: '#9CA3AF' }}>
-                                        {entry.time}
-                                      </span>
-                                    )}
-                                    <span className="text-[14px] font-normal leading-none" style={{ color: 'var(--text-primary)' }}>
-                                      {record.details.title}
-                                    </span>
-                                    {entry?.place && (
-                                      <span className="text-[12px] leading-none" style={{ color: '#9CA3AF' }}>
-                                        {entry.place}
-                                      </span>
-                                    )}
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(75,85,99,0.2)', color: '#9CA3AF' }}>
-                                      사무실
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            )
-                          })}
-
-                          {/* 휴가 — 퍼플 바 스타일 */}
-                          {dayVacations.map((v) => (
-                            <div
-                              key={v.id}
-                              className="flex items-center"
-                              style={{
-                                backgroundColor: 'rgba(45, 15, 120, 0.40)',
-                                borderRadius: 2,
-                                margin: '1px 0',
-                              }}
-                            >
-                              <div className="flex-1 min-w-0 px-2 py-[2px]">
-                                <span className="text-[11px] font-normal leading-none truncate block" style={{ color: '#6B5A9E' }}>
-                                  {vacLabel(v)}
-                                </span>
-                              </div>
-                            </div>
+                      {/* 하단 고정: 휴가 — 바 하나에 이름 가로 나열 */}
+                      {dayVacations.length > 0 && (
+                        <div
+                          className="flex items-center gap-2 flex-wrap"
+                          style={{
+                            backgroundColor: '#131719',
+                            borderTop: '1px solid rgba(255,255,255,0.06)',
+                            padding: '3px 8px',
+                          }}
+                        >
+                          {dayVacations.map((v, i) => (
+                            <span key={v.id} className="text-[11px] font-normal leading-none whitespace-nowrap" style={{ color: '#7f8c93' }}>
+                              {v.half_day ? `${v.name} ${v.half_day}` : v.name}
+                              {i < dayVacations.length - 1 && <span style={{ color: 'rgba(255,255,255,0.4)', marginLeft: 6 }}>·</span>}
+                            </span>
                           ))}
-
                         </div>
                       )}
                     </div>
@@ -942,8 +946,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                   top: (laneCount - 1 - lane.lane) * vacBarH + 4,
                                   height: vacBarH - 2,
                                   borderRadius: 2,
-                                  backgroundColor: 'rgba(45, 15, 120, 0.45)',
-                                  color: '#6B5A9E',
+                                  backgroundColor: '#131719',
+                                  color: '#7f8c93',
                                   fontSize: 10,
                                   paddingLeft: 4,
                                   display: 'flex',
@@ -1120,7 +1124,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                       </div>
                       <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} />
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-normal truncate text-[13px]" style={{ color: '#6B5A9E' }}>
+                        <h3 className="font-normal truncate text-[13px]" style={{ color: '#ffffff' }}>
                           {vacLabel(v)}
                         </h3>
                       </div>
