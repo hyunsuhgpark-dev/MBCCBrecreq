@@ -464,7 +464,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   const displayedSchedules = applyFilters(schedules)
 
   return (
-    <div className="flex overflow-hidden" style={{ height: 'calc(100vh - 56px)' }}>
+    <div className={cn('flex', isDesktop ? 'overflow-hidden' : 'overflow-y-auto')} style={{ height: isDesktop ? 'calc(100vh - 56px)' : 'auto', minHeight: isDesktop ? undefined : 'calc(100vh - 56px)' }}>
 
       {/* ── 데스크탑 사이드바 ── */}
       {isDesktop && (
@@ -505,7 +505,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
       )}
 
       {/* ── 메인 캘린더 영역 ── */}
-      <div className={cn('flex-1 min-w-0 px-4 py-5 flex flex-col overflow-hidden min-h-0', !isDesktop && 'max-w-full')}>
+      <div className={cn('flex-1 min-w-0 px-4 py-5 flex flex-col min-h-0', isDesktop ? 'overflow-hidden' : '', !isDesktop && 'max-w-full')}>
 
         {/* ── 컨트롤 바 ── */}
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap shrink-0">
@@ -801,7 +801,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 <div className="flex flex-col flex-1 min-h-0">
                 {weekRows.map((wDays, wIdx) => {
                   const lanes = getVacationLanes(wDays)
-                  const laneCount = isDesktop && lanes.length > 0 ? Math.max(...lanes.map(l => l.lane)) + 1 : 0
+                  const laneCount = lanes.length > 0 ? Math.max(...lanes.map(l => l.lane)) + 1 : 0
                   const vacBarH = 13   // 바 슬롯 높이 (바 12px + 간격 1px)
                   const vacZoneH = laneCount * vacBarH + (laneCount > 0 ? 2 : 0)
 
@@ -923,7 +923,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                       </div>
 
                       {/* 휴가 멀티데이 바 오버레이 */}
-                      {isDesktop && vacZoneH > 0 && (
+                      {vacZoneH > 0 && (
                         <div
                           className="absolute inset-x-0 bottom-0 pointer-events-none"
                           style={{ height: vacZoneH }}
