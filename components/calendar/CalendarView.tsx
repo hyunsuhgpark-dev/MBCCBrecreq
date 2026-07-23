@@ -784,14 +784,14 @@ export default function CalendarView({ profile }: CalendarViewProps) {
 
         {/* ── 월간 달력 뷰 ── */}
         {viewMode === 'month' && (
-          <div className="flex flex-col flex-1 min-h-0">
+          <div className={cn(isDesktop ? 'flex flex-col flex-1 min-h-0' : '')}>
             {loading ? (
               <div className="p-12 text-center">
                 <div className="w-4 h-4 border border-white/[0.12] border-t-white/30 rounded-full animate-spin mx-auto mb-3" />
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>불러오는 중...</p>
               </div>
             ) : (
-              <div className="border border-white/[0.15] rounded overflow-hidden flex flex-col flex-1 min-h-0">
+              <div className={cn('border border-white/[0.15] rounded overflow-hidden', isDesktop && 'flex flex-col flex-1 min-h-0')}>
                 {/* DOW header */}
                 <div className="grid grid-cols-7 border-b border-white/[0.15] shrink-0">
                   {DOW_LABELS.map((label, i) => (
@@ -810,7 +810,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 </div>
 
                 {/* day grid — week-row 단위 relative 컨테이너 */}
-                <div className="flex flex-col flex-1 min-h-0">
+                <div className={cn(isDesktop ? 'flex flex-col flex-1 min-h-0' : '')}>
                 {weekRows.map((wDays, wIdx) => {
                   const lanes = getVacationLanes(wDays)
                   const laneCount = lanes.length > 0 ? Math.max(...lanes.map(l => l.lane)) + 1 : 0
@@ -818,8 +818,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   const vacZoneH = laneCount * vacBarH + (laneCount > 0 ? 2 : 0)
 
                   return (
-                    <div key={wIdx} className="relative flex-1 min-h-0">
-                      <div className="grid grid-cols-7 h-full">
+                    <div key={wIdx} className={cn('relative', isDesktop && 'flex-1 min-h-0')}>
+                      <div className={cn('grid grid-cols-7', isDesktop && 'h-full')}>
                         {wDays.map((day, idx) => {
                           const globalIdx = wIdx * 7 + idx
                           const daySchedules = getSchedulesForDay(day)
@@ -834,7 +834,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                               key={globalIdx}
                               className="overflow-visible flex flex-col"
                               style={{
-                                minHeight: isDesktop ? '100px' : '80px',
+                                minHeight: isDesktop ? '100px' : '96px',
                                 backgroundColor: isTodayDate ? 'rgba(255,255,255,0.025)' : 'transparent',
                                 borderRight: idx !== 6 ? '1px solid rgba(255,255,255,0.15)' : 'none',
                                 borderBottom: wIdx < weekRows.length - 1 ? '1px solid rgba(255,255,255,0.15)' : 'none',
