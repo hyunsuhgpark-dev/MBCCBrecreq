@@ -476,7 +476,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   const displayedSchedules = applyFilters(schedules)
 
   return (
-    <div className={cn('flex', isDesktop ? 'overflow-hidden' : 'overflow-y-auto')} style={{ height: isDesktop ? 'calc(100vh - 56px)' : 'auto', minHeight: isDesktop ? undefined : 'calc(100vh - 56px)' }}>
+    <div className={cn('flex', isDesktop && 'overflow-hidden')} style={{ height: isDesktop ? 'calc(100vh - 56px)' : 'auto' }}>
 
       {/* ── 데스크탑 사이드바 ── */}
       {isDesktop && (
