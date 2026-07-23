@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
     vacation_type: string
     start_date: string
     end_date: string
+    half_day: string | null
   }
 
   const validRows: VacationRow[] = []
@@ -98,10 +99,12 @@ export async function POST(request: NextRequest) {
     const startDate = toDateStr(row[6])                  // G열 (index 6)
     const endDate = toDateStr(row[8])                    // I열 (index 8)
     const approvalNumber = String(row[14] ?? '').trim()  // O열 (index 14)
+    const halfDayRaw = String(row[10] ?? '').trim()      // K열 (index 10): 오전 | 오후 | ''
+    const halfDay = (halfDayRaw === '오전' || halfDayRaw === '오후') ? halfDayRaw : null
 
     if (!name || !startDate || !endDate || !approvalNumber) continue
 
-    validRows.push({ approval_number: approvalNumber, name, vacation_type: vacationType, start_date: startDate, end_date: endDate })
+    validRows.push({ approval_number: approvalNumber, name, vacation_type: vacationType, start_date: startDate, end_date: endDate, half_day: halfDay })
   }
 
   // 엑셀 내 중복 결재번호 제거 (같은 번호가 여러 행이면 마지막 행 기준)

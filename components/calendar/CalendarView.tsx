@@ -179,8 +179,6 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   const [, setVacationLoading] = useState(false)
   // 업로드 후 재조회 트리거
   const [vacationVersion, setVacationVersion] = useState(0)
-  // 휴가 popover (날짜 ymd → 표시 여부)
-  const [vacPopover, setVacPopover] = useState<string | null>(null)
 
   // 마운트 후 실제 화면 크기 반영
   useEffect(() => {
@@ -197,14 +195,6 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
-
-  // 휴가 popover 외부 클릭 시 닫기
-  useEffect(() => {
-    if (!vacPopover) return
-    function handleOutside() { setVacPopover(null) }
-    document.addEventListener('click', handleOutside)
-    return () => document.removeEventListener('click', handleOutside)
-  }, [vacPopover])
 
   // localStorage에서 필터 상태 복원 (마운트 후 1회)
   useEffect(() => {
@@ -315,6 +305,11 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   const gridStart = startOfWeek(monthStart, { weekStartsOn: 0 })
   const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 0 })
   const allGridDays = viewMode === 'month' ? eachDayOfInterval({ start: gridStart, end: gridEnd }) : []
+  // 7일씩 주 단위로 분리
+  const weekRows: Date[][] = []
+  for (let i = 0; i < allGridDays.length; i += 7) {
+    weekRows.push(allGridDays.slice(i, i + 7))
+  }
 
   const latestRequestIdRef = useRef(0)
 
@@ -401,6 +396,50 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     return officeSchedules.filter((r) =>
       r.details.entries.some((e) => e.date === ymd)
     )
+  }
+
+  /** 휴가자 표시 라벨: 반차면 "이름 오전/오후", 일반 휴가면 "이름" */
+  function vacLabel(v: Vacation): string {
+    return v.half_day ? `${v.name} ${v.half_day}` : v.name
+  }
+
+  /** 한 주(7일)에서 보이는 vacation들의 레인(row) 배정 결과 */
+  interface VacationLane {
+    vacation: Vacation
+    startCol: number  // 0~6
+    endCol: number    // 0~6
+    lane: number
+  }
+
+  function getVacationLanes(weekDays: Date[]): VacationLane[] {
+    if (!filters.vacation || vacations.length === 0) return []
+
+    const weekStart = format(weekDays[0], 'yyyy-MM-dd')
+    const weekEnd   = format(weekDays[6], 'yyyy-MM-dd')
+
+    // 이 주에 걸치는 vacation만 추출
+    const inWeek = vacations.filter((v) => v.start_date <= weekEnd && v.end_date >= weekStart)
+    if (inWeek.length === 0) return []
+
+    // 각 vacation의 startCol / endCol 계산
+    const items = inWeek.map((v) => {
+      const effStart = v.start_date < weekStart ? weekStart : v.start_date
+      const effEnd   = v.end_date   > weekEnd   ? weekEnd   : v.end_date
+      const startCol = weekDays.findIndex((d) => format(d, 'yyyy-MM-dd') === effStart)
+      const endCol   = weekDays.findIndex((d) => format(d, 'yyyy-MM-dd') === effEnd)
+      return { vacation: v, startCol: Math.max(startCol, 0), endCol: Math.max(endCol, 0) }
+    })
+
+    // Greedy 레인 배정
+    const lanes: VacationLane[] = []
+    for (const item of items) {
+      let lane = 0
+      while (lanes.some((l) => l.lane === lane && l.startCol <= item.endCol && l.endCol >= item.startCol)) {
+        lane++
+      }
+      lanes.push({ ...item, lane })
+    }
+    return lanes
   }
 
   function getVacationsForDay(date: Date): Vacation[] {
@@ -693,48 +732,25 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                             )
                           })}
 
-                          {/* 휴가 — 1명: 이름 바, 2명 이상: 요약 바 + popover */}
-                          {dayVacations.length === 1 && (
-                            <div className="flex items-center border-l-[2px]" style={{ borderLeftColor: 'rgba(20,184,166,0.22)' }}>
-                              <div className="flex-1 min-w-0 px-5 py-[3px]">
-                                <span className="text-[11px] font-normal leading-none" style={{ color: '#3D9A8E' }}>
-                                  {dayVacations[0].name}
+                          {/* 휴가 — 퍼플 바 스타일 */}
+                          {dayVacations.map((v) => (
+                            <div
+                              key={v.id}
+                              className="flex items-center"
+                              style={{
+                                borderLeft: '2px solid rgba(167, 139, 250, 0.35)',
+                                backgroundColor: 'rgba(88, 28, 235, 0.14)',
+                                borderRadius: 3,
+                                margin: '1px 0',
+                              }}
+                            >
+                              <div className="flex-1 min-w-0 px-2 py-[2px]">
+                                <span className="text-[11px] font-normal leading-none truncate block" style={{ color: '#C4B5FD' }}>
+                                  {vacLabel(v)}
                                 </span>
                               </div>
                             </div>
-                          )}
-                          {dayVacations.length >= 2 && (() => {
-                            const ymd = format(date, 'yyyy-MM-dd')
-                            const isOpen = vacPopover === `w-${ymd}`
-                            return (
-                              <div className="relative">
-                                <div
-                                  className="flex items-center border-l-[2px] cursor-pointer transition-colors"
-                                  style={{ borderLeftColor: 'rgba(20,184,166,0.22)' }}
-                                  onClick={(e) => { e.stopPropagation(); setVacPopover(isOpen ? null : `w-${ymd}`) }}
-                                >
-                                  <div className="flex-1 min-w-0 px-5 py-[3px]">
-                                    <span className="text-[11px] font-normal leading-none" style={{ color: '#3D9A8E' }}>
-                                      휴가 {dayVacations.length}명
-                                    </span>
-                                  </div>
-                                </div>
-                                {isOpen && (
-                                  <div
-                                    className="absolute left-5 z-50 rounded-md shadow-xl py-1.5 px-2 min-w-[110px]"
-                                    style={{ top: '100%', backgroundColor: '#1A2325', border: '1px solid rgba(20,184,166,0.2)' }}
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    {dayVacations.map((v) => (
-                                      <div key={v.id} className="text-[11px] py-0.5" style={{ color: '#5EEAD4' }}>
-                                        {v.name}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          })()}
+                          ))}
 
                         </div>
                       )}
@@ -773,167 +789,164 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   ))}
                 </div>
 
-                {/* day grid */}
-                <div className="grid grid-cols-7">
-                  {allGridDays.map((day, idx) => {
-                    const daySchedules = getSchedulesForDay(day)
-                    const officeItems = getOfficeSchedulesForDay(day)
-                    const dayVacations = getVacationsForDay(day)
-                    const isInCurrentMonth = isSameMonth(day, currentDate)
-                    const isTodayDate = isToday(day)
-                    const dow = day.getDay()
-                    const isWeekend = dow === 0 || dow === 6
+                {/* day grid — week-row 단위 relative 컨테이너 */}
+                {weekRows.map((wDays, wIdx) => {
+                  const lanes = getVacationLanes(wDays)
+                  const laneCount = isDesktop && lanes.length > 0 ? Math.max(...lanes.map(l => l.lane)) + 1 : 0
+                  const vacBarH = 18
+                  const vacZoneH = laneCount * vacBarH + (laneCount > 0 ? 4 : 0)
 
-                    return (
-                      <div
-                        key={idx}
-                        className="overflow-hidden flex flex-col"
-                        style={{
-                          minHeight: isDesktop ? '108px' : '96px',
-                          backgroundColor: isTodayDate ? 'rgba(255,255,255,0.025)' : 'transparent',
-                          borderRight: (idx % 7) !== 6 ? '1px solid rgba(255,255,255,0.15)' : 'none',
-                          borderBottom: idx < allGridDays.length - 7 ? '1px solid rgba(255,255,255,0.15)' : 'none',
-                          cursor: canCreate && isInCurrentMonth ? 'pointer' : 'default',
-                        }}
-                        onClick={() => {
-                          if (canCreate && isInCurrentMonth) {
-                            router.push(`/schedules/new?date=${format(day, 'yyyy-MM-dd')}`)
-                          }
-                        }}
-                      >
-                        {/* 날짜 숫자 */}
-                        <div
-                          className="text-[11px] tabular-nums font-normal shrink-0"
-                          style={{
-                            padding: isDesktop ? '6px 8px 3px' : '4px 5px 2px',
-                            opacity: isInCurrentMonth ? 1 : 0.22,
-                            color: isTodayDate
-                              ? 'var(--text-primary)'
-                              : isWeekend
-                              ? (dow === 0 ? '#C07070' : '#4A7090')
-                              : '#3A3A3A',
-                          }}
-                        >
-                          {format(day, 'd')}
-                        </div>
+                  return (
+                    <div key={wIdx} className="relative">
+                      <div className="grid grid-cols-7">
+                        {wDays.map((day, idx) => {
+                          const globalIdx = wIdx * 7 + idx
+                          const daySchedules = getSchedulesForDay(day)
+                          const officeItems = getOfficeSchedulesForDay(day)
+                          const isInCurrentMonth = isSameMonth(day, currentDate)
+                          const isTodayDate = isToday(day)
+                          const dow = day.getDay()
+                          const isWeekend = dow === 0 || dow === 6
 
-                        {/* 방송 일정 칩 (상단 영역) */}
-                        <div className="flex-1 min-h-0" style={{ padding: isDesktop ? '0 6px 2px' : '0 3px 2px', display: 'flex', flexDirection: 'column', gap: '2px', opacity: isInCurrentMonth ? 1 : 0.18 }}>
-                          {/* 일반 일정 */}
-                          {daySchedules.slice(0, isDesktop ? 4 : 3).map((s) => {
-                            const cfg = getCfg(s.status)
-                            return (
-                              <Link key={s.id} href={`/schedules/${s.id}`} onClick={(e) => e.stopPropagation()}>
-                                <div
-                                  className={cn('cursor-pointer transition-colors hover:bg-white/[0.04]', isDesktop && 'flex items-center gap-1')}
-                                  style={{
-                                    backgroundColor: cfg.cardBg,
-                                    borderLeft: isDesktop ? `2px solid ${getScheduleBorderColor(s)}` : 'none',
-                                    padding: isDesktop ? '2px 5px' : '2px 4px',
-                                  }}
-                                >
-                                  <span
-                                    className={cn('font-medium', isDesktop ? 'truncate' : 'block')}
-                                    style={{
-                                      color: cfg.cardText,
-                                      fontSize: isDesktop ? '11px' : '9px',
-                                      lineHeight: isDesktop ? '1.35' : '1.25',
-                                      ...(isDesktop
-                                        ? {}
-                                        : {
-                                            display: '-webkit-box',
-                                            WebkitLineClamp: 2,
-                                            WebkitBoxOrient: 'vertical' as const,
-                                            overflow: 'hidden',
-                                            wordBreak: 'break-all' as const,
-                                          }),
-                                    }}
-                                  >
-                                    {s.program_name}
-                                  </span>
-                                </div>
-                              </Link>
-                            )
-                          })}
-
-                          {/* 기술사무실 구글 캘린더 칩 */}
-                          {isDesktop && officeItems.slice(0, 1).map((r) => (
-                            <div
-                              key={r.id}
-                              className="flex items-center gap-1 cursor-pointer hover:bg-white/[0.04] transition-colors"
-                              style={{ borderLeft: '2px solid rgba(255,255,255,0.55)', padding: '2px 5px' }}
-                              onClick={(e) => { e.stopPropagation(); setSelectedOfficeRecord(r) }}
-                            >
-                              <span className="truncate text-[11px]" style={{ color: 'var(--text-primary)', fontSize: '11px' }}>
-                                {r.details.title}
-                              </span>
-                            </div>
-                          ))}
-
-                          {/* 더보기 */}
-                          {(() => {
-                            const limit = isDesktop ? 4 : 3
-                            const over = daySchedules.length + (isDesktop ? officeItems.length : 0) - limit
-                            if (over <= 0) return null
-                            return (
-                              <div style={{ color: 'var(--text-muted)', fontSize: isDesktop ? '11px' : '9px', padding: isDesktop ? '1px 7px' : '0 4px' }}>
-                                +{over}건 더
-                              </div>
-                            )
-                          })()}
-                        </div>
-
-                        {/* 휴가 영역 — 하단 고정 구분 구역 */}
-                        {isDesktop && dayVacations.length > 0 && isInCurrentMonth && (() => {
-                          const ymd = format(day, 'yyyy-MM-dd')
-                          const isOpen = vacPopover === `m-${ymd}`
                           return (
                             <div
-                              className="shrink-0 relative"
-                              style={{ borderTop: '1px solid rgba(20,184,166,0.12)', margin: '0 0 0 0' }}
-                              onClick={(e) => e.stopPropagation()}
+                              key={globalIdx}
+                              className="overflow-hidden flex flex-col"
+                              style={{
+                                minHeight: isDesktop ? '108px' : '96px',
+                                backgroundColor: isTodayDate ? 'rgba(255,255,255,0.025)' : 'transparent',
+                                borderRight: idx !== 6 ? '1px solid rgba(255,255,255,0.15)' : 'none',
+                                borderBottom: wIdx < weekRows.length - 1 ? '1px solid rgba(255,255,255,0.15)' : 'none',
+                                cursor: canCreate && isInCurrentMonth ? 'pointer' : 'default',
+                                paddingBottom: vacZoneH,
+                              }}
+                              onClick={() => {
+                                if (canCreate && isInCurrentMonth) {
+                                  router.push(`/schedules/new?date=${format(day, 'yyyy-MM-dd')}`)
+                                }
+                              }}
                             >
-                              {dayVacations.length === 1 ? (
-                                <div
-                                  className="flex items-center"
-                                  style={{ borderLeft: '2px solid rgba(20,184,166,0.22)', padding: '2px 5px' }}
-                                >
-                                  <span className="truncate" style={{ color: '#3D9A8E', fontSize: '10px', lineHeight: '1.3' }}>
-                                    {dayVacations[0].name}
-                                  </span>
-                                </div>
-                              ) : (
-                                <>
+                              {/* 날짜 숫자 */}
+                              <div
+                                className="text-[11px] tabular-nums font-normal shrink-0"
+                                style={{
+                                  padding: isDesktop ? '6px 8px 3px' : '4px 5px 2px',
+                                  opacity: isInCurrentMonth ? 1 : 0.22,
+                                  color: isTodayDate
+                                    ? 'var(--text-primary)'
+                                    : isWeekend
+                                    ? (dow === 0 ? '#C07070' : '#4A7090')
+                                    : '#3A3A3A',
+                                }}
+                              >
+                                {format(day, 'd')}
+                              </div>
+
+                              {/* 방송 일정 칩 (상단 영역) */}
+                              <div className="flex-1 min-h-0" style={{ padding: isDesktop ? '0 6px 2px' : '0 3px 2px', display: 'flex', flexDirection: 'column', gap: '2px', opacity: isInCurrentMonth ? 1 : 0.18 }}>
+                                {/* 일반 일정 */}
+                                {daySchedules.slice(0, isDesktop ? 4 : 3).map((s) => {
+                                  const cfg = getCfg(s.status)
+                                  return (
+                                    <Link key={s.id} href={`/schedules/${s.id}`} onClick={(e) => e.stopPropagation()}>
+                                      <div
+                                        className={cn('cursor-pointer transition-colors hover:bg-white/[0.04]', isDesktop && 'flex items-center gap-1')}
+                                        style={{
+                                          backgroundColor: cfg.cardBg,
+                                          borderLeft: isDesktop ? `2px solid ${getScheduleBorderColor(s)}` : 'none',
+                                          padding: isDesktop ? '2px 5px' : '2px 4px',
+                                        }}
+                                      >
+                                        <span
+                                          className={cn('font-medium', isDesktop ? 'truncate' : 'block')}
+                                          style={{
+                                            color: cfg.cardText,
+                                            fontSize: isDesktop ? '11px' : '9px',
+                                            lineHeight: isDesktop ? '1.35' : '1.25',
+                                            ...(isDesktop
+                                              ? {}
+                                              : {
+                                                  display: '-webkit-box',
+                                                  WebkitLineClamp: 2,
+                                                  WebkitBoxOrient: 'vertical' as const,
+                                                  overflow: 'hidden',
+                                                  wordBreak: 'break-all' as const,
+                                                }),
+                                          }}
+                                        >
+                                          {s.program_name}
+                                        </span>
+                                      </div>
+                                    </Link>
+                                  )
+                                })}
+
+                                {/* 기술사무실 구글 캘린더 칩 */}
+                                {isDesktop && officeItems.slice(0, 1).map((r) => (
                                   <div
-                                    className="flex items-center cursor-pointer transition-colors"
-                                    style={{ borderLeft: '2px solid rgba(20,184,166,0.22)', padding: '2px 5px' }}
-                                    onClick={() => setVacPopover(isOpen ? null : `m-${ymd}`)}
+                                    key={r.id}
+                                    className="flex items-center gap-1 cursor-pointer hover:bg-white/[0.04] transition-colors"
+                                    style={{ borderLeft: '2px solid rgba(255,255,255,0.55)', padding: '2px 5px' }}
+                                    onClick={(e) => { e.stopPropagation(); setSelectedOfficeRecord(r) }}
                                   >
-                                    <span className="truncate" style={{ color: '#3D9A8E', fontSize: '10px', lineHeight: '1.3' }}>
-                                      휴가 {dayVacations.length}명
+                                    <span className="truncate text-[11px]" style={{ color: 'var(--text-primary)', fontSize: '11px' }}>
+                                      {r.details.title}
                                     </span>
                                   </div>
-                                  {isOpen && (
-                                    <div
-                                      className="absolute z-50 rounded-md shadow-xl py-1.5 px-2 min-w-[110px]"
-                                      style={{ bottom: '100%', left: 0, backgroundColor: '#1A2325', border: '1px solid rgba(20,184,166,0.2)' }}
-                                    >
-                                      {dayVacations.map((v) => (
-                                        <div key={v.id} className="text-[11px] py-0.5" style={{ color: '#5EEAD4' }}>
-                                          {v.name}
-                                        </div>
-                                      ))}
+                                ))}
+
+                                {/* 더보기 */}
+                                {(() => {
+                                  const limit = isDesktop ? 4 : 3
+                                  const over = daySchedules.length + (isDesktop ? officeItems.length : 0) - limit
+                                  if (over <= 0) return null
+                                  return (
+                                    <div style={{ color: 'var(--text-muted)', fontSize: isDesktop ? '11px' : '9px', padding: isDesktop ? '1px 7px' : '0 4px' }}>
+                                      +{over}건 더
                                     </div>
-                                  )}
-                                </>
-                              )}
+                                  )
+                                })()}
+                              </div>
                             </div>
                           )
-                        })()}
+                        })}
                       </div>
-                    )
-                  })}
-                </div>
+
+                      {/* 휴가 멀티데이 바 오버레이 */}
+                      {isDesktop && vacZoneH > 0 && (
+                        <div
+                          className="absolute inset-x-0 bottom-0 pointer-events-none"
+                          style={{ height: vacZoneH }}
+                        >
+                          {lanes.map((lane, li) => (
+                            <div
+                              key={li}
+                              style={{
+                                position: 'absolute',
+                                left: `${(lane.startCol / 7) * 100}%`,
+                                width: `${((lane.endCol - lane.startCol + 1) / 7) * 100}%`,
+                                top: lane.lane * vacBarH + 2,
+                                height: vacBarH - 2,
+                                borderRadius: 3,
+                                backgroundColor: 'rgba(88, 28, 235, 0.18)',
+                                border: '1px solid rgba(167, 139, 250, 0.35)',
+                                color: '#C4B5FD',
+                                fontSize: 10,
+                                paddingLeft: 5,
+                                display: 'flex',
+                                alignItems: 'center',
+                                overflow: 'hidden',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {vacLabel(lane.vacation)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -1073,12 +1086,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   ))
                 ))}
 
-                {/* 휴가 목록 — 민트 톤 바 스타일 */}
+                {/* 휴가 목록 — 퍼플 톤 바 스타일 */}
                 {filters.vacation && vacations.map((v) => (
                   <div
                     key={v.id}
                     className="border-l-[2px] overflow-hidden transition-colors"
-                    style={{ borderLeftColor: 'rgba(20,184,166,0.25)', backgroundColor: 'transparent' }}
+                    style={{ borderLeftColor: 'rgba(167, 139, 250, 0.35)', backgroundColor: 'transparent' }}
                   >
                     <div className="px-4 py-2 flex items-center gap-4">
                       <div className="shrink-0 w-[64px] text-center">
@@ -1091,10 +1104,10 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                           </div>
                         )}
                       </div>
-                      <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'rgba(20,184,166,0.15)' }} />
+                      <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} />
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-normal truncate text-[13px]" style={{ color: '#3D9A8E' }}>
-                          {v.name}
+                        <h3 className="font-normal truncate text-[13px]" style={{ color: '#C4B5FD' }}>
+                          {vacLabel(v)}
                         </h3>
                       </div>
                     </div>

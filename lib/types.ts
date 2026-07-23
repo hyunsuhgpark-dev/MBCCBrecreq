@@ -153,5 +153,6 @@ export interface Vacation {
   vacation_type: string
   start_date: string   // YYYY-MM-DD
   end_date: string     // YYYY-MM-DD
+  half_day: string | null  // K열: '오전' | '오후' | null (일반 휴가)
   uploaded_at: string
 }
