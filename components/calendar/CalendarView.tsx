@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { Schedule, Profile, ScheduleRecord } from '@/lib/types'
+import type { Schedule, Profile, ScheduleRecord, Vacation } from '@/lib/types'
 import {
   ChevronLeft,
   ChevronRight,
@@ -174,6 +174,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   // 구글 캘린더 일정 상세 모달
   const [selectedOfficeRecord, setSelectedOfficeRecord] = useState<ScheduleRecord | null>(null)
 
+  // 사내 휴가 일정
+  const [vacations, setVacations] = useState<Vacation[]>([])
+  const [, setVacationLoading] = useState(false)
+  // 업로드 후 재조회 트리거
+  const [vacationVersion, setVacationVersion] = useState(0)
+
   // 마운트 후 실제 화면 크기 반영
   useEffect(() => {
     const desktop = window.innerWidth >= 768
@@ -255,6 +261,40 @@ export default function CalendarView({ profile }: CalendarViewProps) {
       })
     return () => { cancelled = true }
   }, [filters.officeCalendar, currentDate, viewMode])
+
+  // 휴가 fetch — vacation 체크 또는 날짜 이동 / 업로드 시 재조회
+  useEffect(() => {
+    if (!filters.vacation) {
+      setVacations([])
+      return
+    }
+    let cancelled = false
+    setVacationLoading(true)
+
+    const rangeStart = viewMode === 'week'
+      ? startOfWeek(currentDate, { locale: ko })
+      : viewMode === 'month'
+      ? startOfWeek(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1), { weekStartsOn: 0 })
+      : new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+    const rangeEnd = viewMode === 'week'
+      ? endOfWeek(currentDate, { locale: ko })
+      : viewMode === 'month'
+      ? endOfWeek(endOfMonth(currentDate), { weekStartsOn: 0 })
+      : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+
+    const startParam = format(rangeStart, 'yyyy-MM-dd')
+    const endParam = format(rangeEnd, 'yyyy-MM-dd')
+
+    fetch(`/api/vacations?start=${startParam}&end=${endParam}`)
+      .then((r) => r.json())
+      .then((data: { vacations?: Vacation[] }) => {
+        if (!cancelled) setVacations(data.vacations ?? [])
+      })
+      .catch(() => { if (!cancelled) setVacations([]) })
+      .finally(() => { if (!cancelled) setVacationLoading(false) })
+
+    return () => { cancelled = true }
+  }, [filters.vacation, currentDate, viewMode, vacationVersion])
 
   const weekStart = startOfWeek(currentDate, { locale: ko })
   const weekEnd = endOfWeek(currentDate, { locale: ko })
@@ -353,6 +393,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     )
   }
 
+  function getVacationsForDay(date: Date): Vacation[] {
+    if (!filters.vacation) return []
+    const ymd = format(date, 'yyyy-MM-dd')
+    return vacations.filter((v) => v.start_date <= ymd && ymd <= v.end_date)
+  }
+
   function getApprovalRatio(schedule: Schedule) {
     if (!schedule.approvals) return null
     const approved = schedule.approvals.filter((a) => a.status === 'approved').length
@@ -373,6 +419,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
           onChange={setFilters}
           profile={profile}
           officeConfigured={officeConfigured}
+          onVacationUploaded={() => setVacationVersion((v) => v + 1)}
         />
       )}
 
@@ -396,6 +443,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 onChange={setFilters}
                 profile={profile}
                 officeConfigured={officeConfigured}
+                onVacationUploaded={() => setVacationVersion((v) => v + 1)}
               />
             </div>
           </div>
@@ -509,12 +557,13 @@ export default function CalendarView({ profile }: CalendarViewProps) {
               weekDays.map((date, idx) => {
                 const daySchedules = getSchedulesForDay(date)
                 const officeItems = getOfficeSchedulesForDay(date)
+                const dayVacations = getVacationsForDay(date)
                 const dow = date.getDay()
                 const isTodayDate = isToday(date)
                 const dowLabel = DOW_LABELS[dow]
                 const isWeekend = dow === 0 || dow === 6
                 const dateColor = isWeekend ? DOW_COLORS[dow] : '#585858'
-                const allItems = daySchedules.length + officeItems.length
+                const allItems = daySchedules.length + officeItems.length + dayVacations.length
 
                 return (
                   <div
@@ -634,6 +683,29 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                             )
                           })}
 
+                          {/* 휴가 일정 */}
+                          {dayVacations.map((v) => (
+                            <div
+                              key={v.id}
+                              className="flex items-center border-l-[2px] hover:bg-white/[0.025] transition-colors"
+                              style={{ borderLeftColor: '#F59E0B' }}
+                            >
+                              <div className="flex-1 min-w-0 px-5 py-3">
+                                <div className="flex items-baseline gap-3 flex-wrap">
+                                  <span className="text-[14px] font-normal leading-none" style={{ color: 'var(--text-primary)' }}>
+                                    {v.name}
+                                  </span>
+                                  <span className="text-[12px] leading-none" style={{ color: '#9CA3AF' }}>
+                                    {v.vacation_type}
+                                  </span>
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(245,158,11,0.1)', color: '#F59E0B' }}>
+                                    휴가
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+
                         </div>
                       )}
                     </div>
@@ -676,6 +748,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   {allGridDays.map((day, idx) => {
                     const daySchedules = getSchedulesForDay(day)
                     const officeItems = getOfficeSchedulesForDay(day)
+                    const dayVacations = getVacationsForDay(day)
                     const isInCurrentMonth = isSameMonth(day, currentDate)
                     const isTodayDate = isToday(day)
                     const dow = day.getDay()
@@ -767,8 +840,22 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                             </div>
                           ))}
 
+                          {/* 휴가 칩 */}
+                          {isDesktop && dayVacations.slice(0, 1).map((v) => (
+                            <div
+                              key={v.id}
+                              className="flex items-center gap-1 hover:bg-white/[0.04] transition-colors"
+                              style={{ borderLeft: '2px solid #F59E0B', padding: '3px 6px' }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <span className="truncate text-[11px]" style={{ color: 'var(--text-primary)' }}>
+                                {v.name} {v.vacation_type}
+                              </span>
+                            </div>
+                          ))}
+
                           {/* 더보기 */}
-                          {(daySchedules.length + (isDesktop ? officeItems.length : 0)) > (isDesktop ? 5 : 3) && (
+                          {(daySchedules.length + (isDesktop ? officeItems.length + dayVacations.length : 0)) > (isDesktop ? 5 : 3) && (
                             <div
                               style={{
                                 color: 'var(--text-muted)',
@@ -776,7 +863,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                 padding: isDesktop ? '2px 8px' : '0 4px',
                               }}
                             >
-                              +{(daySchedules.length + (isDesktop ? officeItems.length : 0)) - (isDesktop ? 5 : 3)}건 더
+                              +{(daySchedules.length + (isDesktop ? officeItems.length + dayVacations.length : 0)) - (isDesktop ? 5 : 3)}건 더
                             </div>
                           )}
                         </div>
@@ -797,7 +884,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 <div className="w-5 h-5 border border-white/[0.12] border-t-white/30 rounded-full animate-spin mx-auto mb-3" />
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>불러오는 중...</p>
               </div>
-            ) : displayedSchedules.length === 0 && officeSchedules.length === 0 ? (
+            ) : displayedSchedules.length === 0 && officeSchedules.length === 0 && vacations.length === 0 ? (
               <div className="p-16 text-center">
                 <CalendarDays className="w-8 h-8 mx-auto mb-3 opacity-20" />
                 <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>이번 달 등록된 일정이 없습니다.</p>
@@ -921,6 +1008,40 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                       </div>
                     </div>
                   ))
+                ))}
+
+                {/* 휴가 목록 */}
+                {filters.vacation && vacations.map((v) => (
+                  <div
+                    key={v.id}
+                    className="border-l-[2px] overflow-hidden hover:bg-white/[0.025] transition-colors"
+                    style={{ borderLeftColor: '#F59E0B', backgroundColor: 'transparent' }}
+                  >
+                    <div className="p-4 flex items-center gap-4">
+                      <div className="shrink-0 w-[64px] text-center">
+                        <div className="text-[11px] tabular-nums whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
+                          {format(parseISO(v.start_date), 'M/d', { locale: ko })}({format(parseISO(v.start_date), 'EEE', { locale: ko })})
+                        </div>
+                        {v.start_date !== v.end_date && (
+                          <div className="text-[10px] tabular-nums mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                            ~{format(parseISO(v.end_date), 'M/d')}
+                          </div>
+                        )}
+                      </div>
+                      <div className="w-px h-8 shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.10)' }} />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium truncate text-[13px]" style={{ color: 'var(--text-primary)' }}>
+                          {v.name}
+                        </h3>
+                        <div className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
+                          {v.vacation_type}
+                        </div>
+                      </div>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded shrink-0" style={{ backgroundColor: 'rgba(245,158,11,0.1)', color: '#F59E0B' }}>
+                        휴가
+                      </span>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}

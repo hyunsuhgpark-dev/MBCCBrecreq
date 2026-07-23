@@ -144,3 +144,14 @@ export interface ScheduleRecord {
     entries: ScheduleRecordEntry[]
   }
 }
+
+/** 사내 ERP 휴가 데이터 */
+export interface Vacation {
+  id: string
+  approval_number: string
+  name: string
+  vacation_type: string
+  start_date: string   // YYYY-MM-DD
+  end_date: string     // YYYY-MM-DD
+  uploaded_at: string
+}

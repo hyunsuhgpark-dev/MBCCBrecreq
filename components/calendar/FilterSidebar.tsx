@@ -1,8 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import type { Profile } from '@/lib/types'
+import { VacationUploadModal } from '@/components/calendar/VacationUploadModal'
+import { FileSpreadsheet } from 'lucide-react'
 
 export interface SidebarFilters {
   myScheduleOnly: boolean
@@ -12,6 +15,7 @@ export interface SidebarFilters {
   audio: boolean
   officeCalendar: boolean
   dispatch: boolean
+  vacation: boolean
 }
 
 export const DEFAULT_SIDEBAR_FILTERS: SidebarFilters = {
@@ -22,6 +26,7 @@ export const DEFAULT_SIDEBAR_FILTERS: SidebarFilters = {
   audio: true,
   officeCalendar: false,
   dispatch: false,
+  vacation: false,
 }
 
 export const LS_FILTER_KEY = 'cal-sidebar-filters'
@@ -36,6 +41,7 @@ interface FilterSidebarProps {
   onChange: (next: SidebarFilters) => void
   profile: Profile
   officeConfigured?: boolean
+  onVacationUploaded?: () => void
   className?: string
 }
 
@@ -97,8 +103,11 @@ export default function FilterSidebar({
   onChange,
   profile,
   officeConfigured,
+  onVacationUploaded,
   className,
 }: FilterSidebarProps) {
+  const [uploadModalOpen, setUploadModalOpen] = useState(false)
+
   const set = <K extends keyof SidebarFilters>(key: K, value: SidebarFilters[K]) => {
     onChange({ ...filters, [key]: value })
   }
@@ -183,7 +192,7 @@ export default function FilterSidebar({
         </div>
       </div>
 
-      {/* 송출/행정 — ENG / ENG-M / Admin 에게만 표시 */}
+      {/* 송출/행정 + 휴가 정보 — ENG / ENG-M / Admin 에게만 표시 */}
       {showOffice && (
         <>
           <div className="border-t border-white/[0.06] my-4" />
@@ -203,10 +212,37 @@ export default function FilterSidebar({
                   구글 캘린더 환경변수가 설정되지 않았습니다.
                 </p>
               )}
+
+              {/* 휴가 정보 */}
+              <CheckboxItem
+                label="휴가 정보"
+                checked={filters.vacation}
+                onChange={(v) => set('vacation', v)}
+                accentColor="#F59E0B"
+              />
+              {/* 엑셀 업로드 버튼 */}
+              <button
+                type="button"
+                onClick={() => setUploadModalOpen(true)}
+                className="flex items-center gap-1.5 mt-1 ml-[21px] text-[11px] text-zinc-500 hover:text-amber-400 transition-colors"
+              >
+                <FileSpreadsheet className="w-3 h-3" />
+                엑셀 업로드
+              </button>
             </div>
           </div>
         </>
       )}
+
+      {/* 업로드 모달 */}
+      <VacationUploadModal
+        open={uploadModalOpen}
+        onOpenChange={setUploadModalOpen}
+        onComplete={() => {
+          setUploadModalOpen(false)
+          onVacationUploaded?.()
+        }}
+      />
     </aside>
   )
 }
