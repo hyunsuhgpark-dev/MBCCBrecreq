@@ -104,20 +104,28 @@ export async function POST(request: NextRequest) {
     validRows.push({ approval_number: approvalNumber, name, vacation_type: vacationType, start_date: startDate, end_date: endDate })
   }
 
+  // 엑셀 내 중복 결재번호 제거 (같은 번호가 여러 행이면 마지막 행 기준)
+  const deduped = Object.values(
+    validRows.reduce((acc, r) => {
+      acc[r.approval_number] = r
+      return acc
+    }, {} as Record<string, VacationRow>)
+  )
+
   const adminClient = await createAdminClient()
-  const uploadedNumbers = validRows.map(r => r.approval_number)
+  const uploadedNumbers = deduped.map(r => r.approval_number)
 
   // 4. UPSERT
   let upsertCount = 0
-  if (validRows.length > 0) {
+  if (deduped.length > 0) {
     const { error: upsertError } = await adminClient
       .from('vacations')
-      .upsert(validRows, { onConflict: 'approval_number' })
+      .upsert(deduped, { onConflict: 'approval_number' })
     if (upsertError) {
       console.error('vacation upsert error:', upsertError)
       return NextResponse.json({ error: '저장에 실패했습니다: ' + upsertError.message }, { status: 500 })
     }
-    upsertCount = validRows.length
+    upsertCount = deduped.length
   }
 
   // 5. Sync Delete — 엑셀에 없는 기존 데이터 삭제
