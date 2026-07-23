@@ -430,6 +430,11 @@ export default function CalendarView({ profile }: CalendarViewProps) {
       return { vacation: v, startCol: Math.max(startCol, 0), endCol: Math.max(endCol, 0) }
     })
 
+    // 표시 우선순위: 종일(0) → 오전반차(1) → 오후반차(2)
+    // bottom-up 렌더링이므로 낮은 숫자가 아래, 높은 숫자가 위에 배치됨
+    const halfDayPriority = (hd: string | null) => hd === null ? 0 : hd === '오전' ? 1 : 2
+    items.sort((a, b) => halfDayPriority(a.vacation.half_day) - halfDayPriority(b.vacation.half_day))
+
     // Greedy 레인 배정
     const lanes: VacationLane[] = []
     for (const item of items) {
