@@ -695,10 +695,10 @@ export default function CalendarView({ profile }: CalendarViewProps) {
 
                           {/* 휴가 — 1명: 이름 바, 2명 이상: 요약 바 + popover */}
                           {dayVacations.length === 1 && (
-                            <div className="flex items-center border-l-[2px] border-teal-500/30" style={{ borderLeftColor: 'rgba(20,184,166,0.35)' }}>
+                            <div className="flex items-center border-l-[2px]" style={{ borderLeftColor: 'rgba(20,184,166,0.22)' }}>
                               <div className="flex-1 min-w-0 px-5 py-[3px]">
-                                <span className="text-[11px] font-normal leading-none" style={{ color: '#5EEAD4' }}>
-                                  {dayVacations[0].name} 휴가
+                                <span className="text-[11px] font-normal leading-none" style={{ color: '#3D9A8E' }}>
+                                  {dayVacations[0].name}
                                 </span>
                               </div>
                             </div>
@@ -709,12 +709,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                             return (
                               <div className="relative">
                                 <div
-                                  className="flex items-center border-l-[2px] cursor-pointer hover:bg-teal-500/[0.04] transition-colors"
-                                  style={{ borderLeftColor: 'rgba(20,184,166,0.35)' }}
+                                  className="flex items-center border-l-[2px] cursor-pointer transition-colors"
+                                  style={{ borderLeftColor: 'rgba(20,184,166,0.22)' }}
                                   onClick={(e) => { e.stopPropagation(); setVacPopover(isOpen ? null : `w-${ymd}`) }}
                                 >
                                   <div className="flex-1 min-w-0 px-5 py-[3px]">
-                                    <span className="text-[11px] font-normal leading-none" style={{ color: '#5EEAD4' }}>
+                                    <span className="text-[11px] font-normal leading-none" style={{ color: '#3D9A8E' }}>
                                       휴가 {dayVacations.length}명
                                     </span>
                                   </div>
@@ -722,11 +722,11 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                 {isOpen && (
                                   <div
                                     className="absolute left-5 z-50 rounded-md shadow-xl py-1.5 px-2 min-w-[110px]"
-                                    style={{ top: '100%', backgroundColor: '#1C2427', border: '1px solid rgba(20,184,166,0.3)' }}
+                                    style={{ top: '100%', backgroundColor: '#1A2325', border: '1px solid rgba(20,184,166,0.2)' }}
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     {dayVacations.map((v) => (
-                                      <div key={v.id} className="text-[11px] py-0.5" style={{ color: '#99F6E4' }}>
+                                      <div key={v.id} className="text-[11px] py-0.5" style={{ color: '#5EEAD4' }}>
                                         {v.name}
                                       </div>
                                     ))}
@@ -890,36 +890,36 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                           return (
                             <div
                               className="shrink-0 relative"
-                              style={{ borderTop: '1px solid rgba(20,184,166,0.18)', margin: '0 0 0 0' }}
+                              style={{ borderTop: '1px solid rgba(20,184,166,0.12)', margin: '0 0 0 0' }}
                               onClick={(e) => e.stopPropagation()}
                             >
                               {dayVacations.length === 1 ? (
                                 <div
                                   className="flex items-center"
-                                  style={{ borderLeft: '2px solid rgba(20,184,166,0.35)', padding: '2px 5px' }}
+                                  style={{ borderLeft: '2px solid rgba(20,184,166,0.22)', padding: '2px 5px' }}
                                 >
-                                  <span className="truncate" style={{ color: '#5EEAD4', fontSize: '10px', lineHeight: '1.3' }}>
-                                    {dayVacations[0].name} 휴가
+                                  <span className="truncate" style={{ color: '#3D9A8E', fontSize: '10px', lineHeight: '1.3' }}>
+                                    {dayVacations[0].name}
                                   </span>
                                 </div>
                               ) : (
                                 <>
                                   <div
-                                    className="flex items-center cursor-pointer hover:bg-teal-500/[0.04] transition-colors"
-                                    style={{ borderLeft: '2px solid rgba(20,184,166,0.35)', padding: '2px 5px' }}
+                                    className="flex items-center cursor-pointer transition-colors"
+                                    style={{ borderLeft: '2px solid rgba(20,184,166,0.22)', padding: '2px 5px' }}
                                     onClick={() => setVacPopover(isOpen ? null : `m-${ymd}`)}
                                   >
-                                    <span className="truncate" style={{ color: '#5EEAD4', fontSize: '10px', lineHeight: '1.3' }}>
+                                    <span className="truncate" style={{ color: '#3D9A8E', fontSize: '10px', lineHeight: '1.3' }}>
                                       휴가 {dayVacations.length}명
                                     </span>
                                   </div>
                                   {isOpen && (
                                     <div
                                       className="absolute z-50 rounded-md shadow-xl py-1.5 px-2 min-w-[110px]"
-                                      style={{ bottom: '100%', left: 0, backgroundColor: '#1C2427', border: '1px solid rgba(20,184,166,0.3)' }}
+                                      style={{ bottom: '100%', left: 0, backgroundColor: '#1A2325', border: '1px solid rgba(20,184,166,0.2)' }}
                                     >
                                       {dayVacations.map((v) => (
-                                        <div key={v.id} className="text-[11px] py-0.5" style={{ color: '#99F6E4' }}>
+                                        <div key={v.id} className="text-[11px] py-0.5" style={{ color: '#5EEAD4' }}>
                                           {v.name}
                                         </div>
                                       ))}
@@ -1078,7 +1078,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   <div
                     key={v.id}
                     className="border-l-[2px] overflow-hidden transition-colors"
-                    style={{ borderLeftColor: 'rgba(20,184,166,0.45)', backgroundColor: 'rgba(20,184,166,0.03)' }}
+                    style={{ borderLeftColor: 'rgba(20,184,166,0.25)', backgroundColor: 'transparent' }}
                   >
                     <div className="px-4 py-2 flex items-center gap-4">
                       <div className="shrink-0 w-[64px] text-center">
@@ -1091,10 +1091,10 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                           </div>
                         )}
                       </div>
-                      <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'rgba(20,184,166,0.2)' }} />
+                      <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'rgba(20,184,166,0.15)' }} />
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-normal truncate text-[13px]" style={{ color: '#5EEAD4' }}>
-                          {v.name} 휴가
+                        <h3 className="font-normal truncate text-[13px]" style={{ color: '#3D9A8E' }}>
+                          {v.name}
                         </h3>
                       </div>
                     </div>
