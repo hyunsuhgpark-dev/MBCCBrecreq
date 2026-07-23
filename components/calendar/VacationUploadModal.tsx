@@ -83,12 +83,12 @@ export function VacationUploadModal({ open, onOpenChange, onComplete }: Vacation
             {file ? (
               <span className="text-xs text-neutral-300 truncate max-w-full">{file.name}</span>
             ) : (
-              <span className="text-xs text-zinc-500">클릭하여 .xlsx 파일 선택</span>
+              <span className="text-xs text-zinc-500">클릭하여 .xls / .xlsx 파일 선택</span>
             )}
             <input
               ref={fileInputRef}
               type="file"
-              accept=".xlsx"
+              accept=".xls,.xlsx"
               className="hidden"
               onChange={handleFileChange}
             />

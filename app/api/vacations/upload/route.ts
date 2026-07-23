@@ -57,9 +57,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '파일이 없습니다' }, { status: 400 })
   }
 
+  const filename = (file as File).name ?? ''
+  const ext = filename.split('.').pop()?.toLowerCase()
+  if (ext !== 'xls' && ext !== 'xlsx') {
+    return NextResponse.json({ error: '.xls 또는 .xlsx 파일만 업로드할 수 있습니다' }, { status: 400 })
+  }
+
   const buffer = Buffer.from(await file.arrayBuffer())
 
-  // 3. SheetJS 파싱
+  // 3. SheetJS 파싱 — xls/xlsx 모두 자동 감지
   let workbook: XLSX.WorkBook
   try {
     workbook = XLSX.read(buffer, { type: 'buffer', cellDates: false })
