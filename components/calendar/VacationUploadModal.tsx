@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface VacationUploadModalProps {
   open: boolean
@@ -16,18 +17,51 @@ interface UploadResult {
   deleted: number
 }
 
+const ALLOWED_EXTS = ['xls', 'xlsx']
+
+function isExcelFile(f: File) {
+  const ext = f.name.split('.').pop()?.toLowerCase() ?? ''
+  return ALLOWED_EXTS.includes(ext)
+}
+
 export function VacationUploadModal({ open, onOpenChange, onComplete }: VacationUploadModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<UploadResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [dragging, setDragging] = useState(false)
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0] ?? null
+  function pickFile(f: File | null) {
+    if (!f) return
+    if (!isExcelFile(f)) {
+      setError('.xls 또는 .xlsx 파일만 올릴 수 있습니다')
+      return
+    }
     setFile(f)
     setResult(null)
     setError(null)
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    pickFile(e.target.files?.[0] ?? null)
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault()
+    setDragging(true)
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault()
+    setDragging(false)
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setDragging(false)
+    const dropped = e.dataTransfer.files[0]
+    pickFile(dropped ?? null)
   }
 
   async function handleUpload() {
@@ -59,6 +93,7 @@ export function VacationUploadModal({ open, onOpenChange, onComplete }: Vacation
       setFile(null)
       setResult(null)
       setError(null)
+      setDragging(false)
     }
     onOpenChange(v)
   }
@@ -74,16 +109,29 @@ export function VacationUploadModal({ open, onOpenChange, onComplete }: Vacation
         </DialogHeader>
 
         <div className="py-3 space-y-4">
-          {/* 파일 선택 영역 */}
+          {/* 드래그 앤 드롭 / 파일 선택 영역 */}
           <div
-            className="border border-dashed border-zinc-700 rounded-md px-4 py-6 flex flex-col items-center gap-2 cursor-pointer hover:border-zinc-500 transition-colors"
+            className={cn(
+              'border border-dashed rounded-md px-4 py-8 flex flex-col items-center gap-2 cursor-pointer transition-colors',
+              dragging
+                ? 'border-amber-500 bg-amber-500/[0.06]'
+                : 'border-zinc-700 hover:border-zinc-500'
+            )}
             onClick={() => fileInputRef.current?.click()}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
           >
-            <Upload className="w-6 h-6 text-zinc-500" />
+            <Upload className={cn('w-6 h-6 transition-colors', dragging ? 'text-amber-400' : 'text-zinc-500')} />
             {file ? (
               <span className="text-xs text-neutral-300 truncate max-w-full">{file.name}</span>
+            ) : dragging ? (
+              <span className="text-xs text-amber-400">여기에 놓으세요</span>
             ) : (
-              <span className="text-xs text-zinc-500">클릭하여 .xls / .xlsx 파일 선택</span>
+              <>
+                <span className="text-xs text-zinc-400">파일을 여기에 끌어다 놓거나</span>
+                <span className="text-xs text-zinc-600">클릭하여 선택 (.xls / .xlsx)</span>
+              </>
             )}
             <input
               ref={fileInputRef}
