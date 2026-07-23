@@ -464,7 +464,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   const displayedSchedules = applyFilters(schedules)
 
   return (
-    <div className="flex min-h-0" style={{ minHeight: 'calc(100vh - 56px)' }}>
+    <div className="flex overflow-hidden" style={{ height: 'calc(100vh - 56px)' }}>
 
       {/* ── 데스크탑 사이드바 ── */}
       {isDesktop && (
@@ -505,10 +505,10 @@ export default function CalendarView({ profile }: CalendarViewProps) {
       )}
 
       {/* ── 메인 캘린더 영역 ── */}
-      <div className={cn('flex-1 min-w-0 px-4 py-5', !isDesktop && 'max-w-full')}>
+      <div className={cn('flex-1 min-w-0 px-4 py-5 flex flex-col overflow-hidden min-h-0', !isDesktop && 'max-w-full')}>
 
         {/* ── 컨트롤 바 ── */}
-        <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+        <div className="flex items-center justify-between mb-4 gap-3 flex-wrap shrink-0">
           <div className="flex items-center gap-2">
             {/* 모바일: 필터 토글 버튼 */}
             {!isDesktop && (
@@ -772,16 +772,16 @@ export default function CalendarView({ profile }: CalendarViewProps) {
 
         {/* ── 월간 달력 뷰 ── */}
         {viewMode === 'month' && (
-          <div>
+          <div className="flex flex-col flex-1 min-h-0">
             {loading ? (
               <div className="p-12 text-center">
                 <div className="w-4 h-4 border border-white/[0.12] border-t-white/30 rounded-full animate-spin mx-auto mb-3" />
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>불러오는 중...</p>
               </div>
             ) : (
-              <div className="border border-white/[0.15] rounded overflow-hidden">
+              <div className="border border-white/[0.15] rounded overflow-hidden flex flex-col flex-1 min-h-0">
                 {/* DOW header */}
-                <div className="grid grid-cols-7 border-b border-white/[0.15]">
+                <div className="grid grid-cols-7 border-b border-white/[0.15] shrink-0">
                   {DOW_LABELS.map((label, i) => (
                     <div
                       key={i}
@@ -798,6 +798,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 </div>
 
                 {/* day grid — week-row 단위 relative 컨테이너 */}
+                <div className="flex flex-col flex-1 min-h-0">
                 {weekRows.map((wDays, wIdx) => {
                   const lanes = getVacationLanes(wDays)
                   const laneCount = isDesktop && lanes.length > 0 ? Math.max(...lanes.map(l => l.lane)) + 1 : 0
@@ -805,8 +806,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   const vacZoneH = laneCount * vacBarH + (laneCount > 0 ? 4 : 0)
 
                   return (
-                    <div key={wIdx} className="relative">
-                      <div className="grid grid-cols-7">
+                    <div key={wIdx} className="relative flex-1 min-h-0">
+                      <div className="grid grid-cols-7 h-full">
                         {wDays.map((day, idx) => {
                           const globalIdx = wIdx * 7 + idx
                           const daySchedules = getSchedulesForDay(day)
@@ -819,12 +820,13 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                           return (
                             <div
                               key={globalIdx}
-                              className="overflow-hidden flex flex-col"
+                              className="overflow-y-auto flex flex-col"
                               style={{
-                                minHeight: isDesktop ? '108px' : '96px',
+                                minHeight: isDesktop ? '100px' : '80px',
                                 backgroundColor: isTodayDate ? 'rgba(255,255,255,0.025)' : 'transparent',
                                 borderRight: idx !== 6 ? '1px solid rgba(255,255,255,0.15)' : 'none',
                                 borderBottom: wIdx < weekRows.length - 1 ? '1px solid rgba(255,255,255,0.15)' : 'none',
+                                boxShadow: isTodayDate ? 'inset 0 0 0 1px rgba(235, 222, 175, 0.80)' : 'none',
                                 cursor: canCreate && isInCurrentMonth ? 'pointer' : 'default',
                                 paddingBottom: vacZoneH,
                               }}
@@ -965,6 +967,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                     </div>
                   )
                 })}
+                </div>
               </div>
             )}
           </div>
