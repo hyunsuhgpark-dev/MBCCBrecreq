@@ -738,14 +738,13 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                               key={v.id}
                               className="flex items-center"
                               style={{
-                                borderLeft: '2px solid rgba(167, 139, 250, 0.35)',
-                                backgroundColor: 'rgba(88, 28, 235, 0.14)',
-                                borderRadius: 3,
+                                backgroundColor: 'rgba(45, 15, 120, 0.40)',
+                                borderRadius: 2,
                                 margin: '1px 0',
                               }}
                             >
                               <div className="flex-1 min-w-0 px-2 py-[2px]">
-                                <span className="text-[11px] font-normal leading-none truncate block" style={{ color: '#C4B5FD' }}>
+                                <span className="text-[11px] font-normal leading-none truncate block" style={{ color: '#6B5A9E' }}>
                                   {vacLabel(v)}
                                 </span>
                               </div>
@@ -925,12 +924,11 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                 position: 'absolute',
                                 left: `${(lane.startCol / 7) * 100}%`,
                                 width: `${((lane.endCol - lane.startCol + 1) / 7) * 100}%`,
-                                top: lane.lane * vacBarH + 2,
+                                top: (laneCount - 1 - lane.lane) * vacBarH + 4,
                                 height: vacBarH - 2,
-                                borderRadius: 3,
-                                backgroundColor: 'rgba(88, 28, 235, 0.18)',
-                                border: '1px solid rgba(167, 139, 250, 0.35)',
-                                color: '#C4B5FD',
+                                borderRadius: 2,
+                                backgroundColor: 'rgba(45, 15, 120, 0.45)',
+                                color: '#6B5A9E',
                                 fontSize: 10,
                                 paddingLeft: 5,
                                 display: 'flex',
@@ -1091,7 +1089,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   <div
                     key={v.id}
                     className="border-l-[2px] overflow-hidden transition-colors"
-                    style={{ borderLeftColor: 'rgba(167, 139, 250, 0.35)', backgroundColor: 'transparent' }}
+                    style={{ borderLeftColor: 'rgba(45, 15, 120, 0.7)', backgroundColor: 'transparent' }}
                   >
                     <div className="px-4 py-2 flex items-center gap-4">
                       <div className="shrink-0 w-[64px] text-center">
@@ -1106,7 +1104,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                       </div>
                       <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} />
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-normal truncate text-[13px]" style={{ color: '#C4B5FD' }}>
+                        <h3 className="font-normal truncate text-[13px]" style={{ color: '#6B5A9E' }}>
                           {vacLabel(v)}
                         </h3>
                       </div>
