@@ -802,8 +802,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 {weekRows.map((wDays, wIdx) => {
                   const lanes = getVacationLanes(wDays)
                   const laneCount = isDesktop && lanes.length > 0 ? Math.max(...lanes.map(l => l.lane)) + 1 : 0
-                  const vacBarH = 18
-                  const vacZoneH = laneCount * vacBarH + (laneCount > 0 ? 4 : 0)
+                  const vacBarH = 13   // 바 슬롯 높이 (바 12px + 간격 1px)
+                  const vacZoneH = laneCount * vacBarH + (laneCount > 0 ? 2 : 0)
 
                   return (
                     <div key={wIdx} className="relative flex-1 min-h-0">
@@ -945,8 +945,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                   position: 'absolute',
                                   left: `${leftPct}%`,
                                   width: `${widthPct}%`,
-                                  top: (laneCount - 1 - lane.lane) * vacBarH + 4,
-                                  height: vacBarH - 2,
+                                  top: (laneCount - 1 - lane.lane) * vacBarH + 1,
+                                  height: vacBarH - 1,
                                   borderRadius: 2,
                                   backgroundColor: '#131719',
                                   color: '#7f8c93',
