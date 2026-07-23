@@ -179,6 +179,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   const [, setVacationLoading] = useState(false)
   // 업로드 후 재조회 트리거
   const [vacationVersion, setVacationVersion] = useState(0)
+  // 휴가 popover (날짜 ymd → 표시 여부)
+  const [vacPopover, setVacPopover] = useState<string | null>(null)
 
   // 마운트 후 실제 화면 크기 반영
   useEffect(() => {
@@ -195,6 +197,14 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  // 휴가 popover 외부 클릭 시 닫기
+  useEffect(() => {
+    if (!vacPopover) return
+    function handleOutside() { setVacPopover(null) }
+    document.addEventListener('click', handleOutside)
+    return () => document.removeEventListener('click', handleOutside)
+  }, [vacPopover])
 
   // localStorage에서 필터 상태 복원 (마운트 후 1회)
   useEffect(() => {
@@ -683,27 +693,48 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                             )
                           })}
 
-                          {/* 휴가 일정 — 3명 이상이면 요약 칩, 이하면 이름 바 */}
-                          {dayVacations.length >= 3 ? (
-                            <div className="flex items-center border-l-[2px] border-teal-500/40 hover:bg-teal-500/[0.04] transition-colors">
-                              <div className="flex-1 min-w-0 px-5 py-2">
-                                <span className="inline-flex items-center gap-1.5 text-[13px] font-normal" style={{ color: '#5EEAD4' }}>
-                                  🌴 휴가 {dayVacations.length}명
+                          {/* 휴가 — 1명: 이름 바, 2명 이상: 요약 바 + popover */}
+                          {dayVacations.length === 1 && (
+                            <div className="flex items-center border-l-[2px] border-teal-500/30" style={{ borderLeftColor: 'rgba(20,184,166,0.35)' }}>
+                              <div className="flex-1 min-w-0 px-5 py-[3px]">
+                                <span className="text-[11px] font-normal leading-none" style={{ color: '#5EEAD4' }}>
+                                  {dayVacations[0].name} 휴가
                                 </span>
                               </div>
                             </div>
-                          ) : dayVacations.map((v) => (
-                            <div
-                              key={v.id}
-                              className="flex items-center border-l-[2px] border-teal-500/40 hover:bg-teal-500/[0.04] transition-colors"
-                            >
-                              <div className="flex-1 min-w-0 px-5 py-2">
-                                <span className="text-[13px] font-normal leading-none" style={{ color: '#5EEAD4' }}>
-                                  🌴 {v.name}
-                                </span>
+                          )}
+                          {dayVacations.length >= 2 && (() => {
+                            const ymd = format(date, 'yyyy-MM-dd')
+                            const isOpen = vacPopover === `w-${ymd}`
+                            return (
+                              <div className="relative">
+                                <div
+                                  className="flex items-center border-l-[2px] cursor-pointer hover:bg-teal-500/[0.04] transition-colors"
+                                  style={{ borderLeftColor: 'rgba(20,184,166,0.35)' }}
+                                  onClick={(e) => { e.stopPropagation(); setVacPopover(isOpen ? null : `w-${ymd}`) }}
+                                >
+                                  <div className="flex-1 min-w-0 px-5 py-[3px]">
+                                    <span className="text-[11px] font-normal leading-none" style={{ color: '#5EEAD4' }}>
+                                      휴가 {dayVacations.length}명
+                                    </span>
+                                  </div>
+                                </div>
+                                {isOpen && (
+                                  <div
+                                    className="absolute left-5 z-50 rounded-md shadow-xl py-1.5 px-2 min-w-[110px]"
+                                    style={{ top: '100%', backgroundColor: '#1C2427', border: '1px solid rgba(20,184,166,0.3)' }}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {dayVacations.map((v) => (
+                                      <div key={v.id} className="text-[11px] py-0.5" style={{ color: '#99F6E4' }}>
+                                        {v.name}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          ))}
+                            )
+                          })()}
 
                         </div>
                       )}
@@ -756,7 +787,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                     return (
                       <div
                         key={idx}
-                        className="overflow-hidden"
+                        className="overflow-hidden flex flex-col"
                         style={{
                           minHeight: isDesktop ? '108px' : '96px',
                           backgroundColor: isTodayDate ? 'rgba(255,255,255,0.025)' : 'transparent',
@@ -772,7 +803,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                       >
                         {/* 날짜 숫자 */}
                         <div
-                          className="text-[11px] tabular-nums font-normal"
+                          className="text-[11px] tabular-nums font-normal shrink-0"
                           style={{
                             padding: isDesktop ? '6px 8px 3px' : '4px 5px 2px',
                             opacity: isInCurrentMonth ? 1 : 0.22,
@@ -786,8 +817,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                           {format(day, 'd')}
                         </div>
 
-                        {/* 일정 칩 */}
-                        <div style={{ padding: isDesktop ? '0 6px 8px' : '0 3px 4px', display: 'flex', flexDirection: 'column', gap: '3px', opacity: isInCurrentMonth ? 1 : 0.18 }}>
+                        {/* 방송 일정 칩 (상단 영역) */}
+                        <div className="flex-1 min-h-0" style={{ padding: isDesktop ? '0 6px 2px' : '0 3px 2px', display: 'flex', flexDirection: 'column', gap: '2px', opacity: isInCurrentMonth ? 1 : 0.18 }}>
                           {/* 일반 일정 */}
                           {daySchedules.slice(0, isDesktop ? 4 : 3).map((s) => {
                             const cfg = getCfg(s.status)
@@ -798,15 +829,15 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                   style={{
                                     backgroundColor: cfg.cardBg,
                                     borderLeft: isDesktop ? `2px solid ${getScheduleBorderColor(s)}` : 'none',
-                                    padding: isDesktop ? '3px 6px' : '2px 4px',
+                                    padding: isDesktop ? '2px 5px' : '2px 4px',
                                   }}
                                 >
                                   <span
                                     className={cn('font-medium', isDesktop ? 'truncate' : 'block')}
                                     style={{
                                       color: cfg.cardText,
-                                      fontSize: isDesktop ? '12px' : '9px',
-                                      lineHeight: isDesktop ? '1.4' : '1.25',
+                                      fontSize: isDesktop ? '11px' : '9px',
+                                      lineHeight: isDesktop ? '1.35' : '1.25',
                                       ...(isDesktop
                                         ? {}
                                         : {
@@ -830,62 +861,75 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                             <div
                               key={r.id}
                               className="flex items-center gap-1 cursor-pointer hover:bg-white/[0.04] transition-colors"
-                              style={{ borderLeft: '2px solid rgba(255,255,255,0.55)', padding: '3px 6px' }}
+                              style={{ borderLeft: '2px solid rgba(255,255,255,0.55)', padding: '2px 5px' }}
                               onClick={(e) => { e.stopPropagation(); setSelectedOfficeRecord(r) }}
                             >
-                              <span className="truncate text-[11px]" style={{ color: 'var(--text-primary)' }}>
+                              <span className="truncate text-[11px]" style={{ color: 'var(--text-primary)', fontSize: '11px' }}>
                                 {r.details.title}
                               </span>
                             </div>
                           ))}
 
-                          {/* 휴가 칩 — 3명 이상: 요약, 이하: 이름 바 */}
-                          {isDesktop && dayVacations.length > 0 && (
-                            dayVacations.length >= 3 ? (
-                              <div
-                                className="flex items-center gap-1 hover:bg-teal-500/[0.06] transition-colors"
-                                style={{ borderLeft: '2px solid rgba(20,184,166,0.45)', padding: '2px 6px', backgroundColor: 'rgba(20,184,166,0.08)' }}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <span className="truncate text-[11px]" style={{ color: '#5EEAD4' }}>
-                                  🌴 휴가 {dayVacations.length}명
-                                </span>
-                              </div>
-                            ) : (
-                              dayVacations.map((v) => (
-                                <div
-                                  key={v.id}
-                                  className="flex items-center gap-1 hover:bg-teal-500/[0.06] transition-colors"
-                                  style={{ borderLeft: '2px solid rgba(20,184,166,0.45)', padding: '2px 6px', backgroundColor: 'rgba(20,184,166,0.08)' }}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <span className="truncate text-[11px]" style={{ color: '#5EEAD4' }}>
-                                    🌴 {v.name}
-                                  </span>
-                                </div>
-                              ))
-                            )
-                          )}
-
-                          {/* 더보기 — 3명 이상 휴가는 칩 1개로 집계 */}
+                          {/* 더보기 */}
                           {(() => {
-                            const vacChipCount = isDesktop ? (dayVacations.length > 0 ? (dayVacations.length >= 3 ? 1 : dayVacations.length) : 0) : 0
-                            const totalVisible = daySchedules.length + (isDesktop ? officeItems.length : 0) + vacChipCount
-                            const limit = isDesktop ? 5 : 3
-                            if (totalVisible <= limit) return null
+                            const limit = isDesktop ? 4 : 3
+                            const over = daySchedules.length + (isDesktop ? officeItems.length : 0) - limit
+                            if (over <= 0) return null
                             return (
-                              <div
-                                style={{
-                                  color: 'var(--text-muted)',
-                                  fontSize: isDesktop ? '12px' : '9px',
-                                  padding: isDesktop ? '2px 8px' : '0 4px',
-                                }}
-                              >
-                                +{totalVisible - limit}건 더
+                              <div style={{ color: 'var(--text-muted)', fontSize: isDesktop ? '11px' : '9px', padding: isDesktop ? '1px 7px' : '0 4px' }}>
+                                +{over}건 더
                               </div>
                             )
                           })()}
                         </div>
+
+                        {/* 휴가 영역 — 하단 고정 구분 구역 */}
+                        {isDesktop && dayVacations.length > 0 && isInCurrentMonth && (() => {
+                          const ymd = format(day, 'yyyy-MM-dd')
+                          const isOpen = vacPopover === `m-${ymd}`
+                          return (
+                            <div
+                              className="shrink-0 relative"
+                              style={{ borderTop: '1px solid rgba(20,184,166,0.18)', margin: '0 0 0 0' }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {dayVacations.length === 1 ? (
+                                <div
+                                  className="flex items-center"
+                                  style={{ borderLeft: '2px solid rgba(20,184,166,0.35)', padding: '2px 5px' }}
+                                >
+                                  <span className="truncate" style={{ color: '#5EEAD4', fontSize: '10px', lineHeight: '1.3' }}>
+                                    {dayVacations[0].name} 휴가
+                                  </span>
+                                </div>
+                              ) : (
+                                <>
+                                  <div
+                                    className="flex items-center cursor-pointer hover:bg-teal-500/[0.04] transition-colors"
+                                    style={{ borderLeft: '2px solid rgba(20,184,166,0.35)', padding: '2px 5px' }}
+                                    onClick={() => setVacPopover(isOpen ? null : `m-${ymd}`)}
+                                  >
+                                    <span className="truncate" style={{ color: '#5EEAD4', fontSize: '10px', lineHeight: '1.3' }}>
+                                      휴가 {dayVacations.length}명
+                                    </span>
+                                  </div>
+                                  {isOpen && (
+                                    <div
+                                      className="absolute z-50 rounded-md shadow-xl py-1.5 px-2 min-w-[110px]"
+                                      style={{ bottom: '100%', left: 0, backgroundColor: '#1C2427', border: '1px solid rgba(20,184,166,0.3)' }}
+                                    >
+                                      {dayVacations.map((v) => (
+                                        <div key={v.id} className="text-[11px] py-0.5" style={{ color: '#99F6E4' }}>
+                                          {v.name}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          )
+                        })()}
                       </div>
                     )
                   })}
@@ -1034,9 +1078,9 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   <div
                     key={v.id}
                     className="border-l-[2px] overflow-hidden transition-colors"
-                    style={{ borderLeftColor: 'rgba(20,184,166,0.55)', backgroundColor: 'rgba(20,184,166,0.04)' }}
+                    style={{ borderLeftColor: 'rgba(20,184,166,0.45)', backgroundColor: 'rgba(20,184,166,0.03)' }}
                   >
-                    <div className="px-4 py-2.5 flex items-center gap-4">
+                    <div className="px-4 py-2 flex items-center gap-4">
                       <div className="shrink-0 w-[64px] text-center">
                         <div className="text-[11px] tabular-nums whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
                           {format(parseISO(v.start_date), 'M/d', { locale: ko })}({format(parseISO(v.start_date), 'EEE', { locale: ko })})
@@ -1047,16 +1091,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                           </div>
                         )}
                       </div>
-                      <div className="w-px h-6 shrink-0" style={{ backgroundColor: 'rgba(20,184,166,0.2)' }} />
-                      <div className="flex-1 min-w-0 flex items-center gap-2">
-                        <span className="text-sm">🌴</span>
+                      <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'rgba(20,184,166,0.2)' }} />
+                      <div className="flex-1 min-w-0">
                         <h3 className="font-normal truncate text-[13px]" style={{ color: '#5EEAD4' }}>
-                          {v.name}
+                          {v.name} 휴가
                         </h3>
                       </div>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded shrink-0" style={{ backgroundColor: 'rgba(20,184,166,0.12)', color: '#5EEAD4', border: '1px solid rgba(20,184,166,0.25)' }}>
-                        휴가
-                      </span>
                     </div>
                   </div>
                 ))}
