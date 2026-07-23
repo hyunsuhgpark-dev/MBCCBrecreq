@@ -992,18 +992,65 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                 })}
 
                                 {/* 기술사무실 구글 캘린더 칩 */}
-                                {isDesktop && officeItems.slice(0, 1).map((r) => (
-                                  <div
-                                    key={r.id}
-                                    className="flex items-center gap-1 cursor-pointer hover:bg-white/[0.04] transition-colors"
-                                    style={{ borderLeft: '2px solid rgba(255,255,255,0.55)', padding: '2px 5px' }}
-                                    onClick={(e) => { e.stopPropagation(); setSelectedOfficeRecord(r) }}
-                                  >
-                                    <span className="truncate text-[11px]" style={{ color: 'var(--text-primary)', fontSize: '11px' }}>
-                                      {r.details.title}
-                                    </span>
-                                  </div>
-                                ))}
+                                {isDesktop && officeItems.slice(0, 1).map((r) => {
+                                  const entry = r.details.entries.find((e) => e.date === format(day, 'yyyy-MM-dd'))
+                                  const isOfficeHovered = hoveredScheduleId === `office-${r.id}`
+                                  const isRightEdgeOffice = idx >= 5
+                                  return (
+                                    <div
+                                      key={r.id}
+                                      className="relative"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <div
+                                        className="flex items-center gap-1 cursor-pointer hover:bg-white/[0.04] transition-colors"
+                                        style={{ borderLeft: '2px solid rgba(255,255,255,0.55)', padding: '2px 5px' }}
+                                        onMouseEnter={() => setHoveredScheduleId(`office-${r.id}`)}
+                                        onMouseLeave={() => setHoveredScheduleId(null)}
+                                        onClick={(e) => { e.stopPropagation(); setSelectedOfficeRecord(r) }}
+                                      >
+                                        <span className="truncate text-[11px]" style={{ color: 'var(--text-primary)', fontSize: '11px' }}>
+                                          {r.details.title}
+                                        </span>
+                                      </div>
+
+                                      {/* 호버 툴팁 */}
+                                      {isOfficeHovered && (
+                                        <div
+                                          className="absolute z-50 rounded shadow-xl pointer-events-none"
+                                          style={{
+                                            top: 0,
+                                            ...(isRightEdgeOffice
+                                              ? { right: '100%', marginRight: 4 }
+                                              : { left: '100%', marginLeft: 4 }),
+                                            backgroundColor: '#1A1A1A',
+                                            border: '1px solid rgba(255,255,255,0.12)',
+                                            minWidth: 160,
+                                            padding: '6px 10px',
+                                            whiteSpace: 'nowrap',
+                                          }}
+                                        >
+                                          <div className="text-[11px] font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+                                            {r.details.title}
+                                          </div>
+                                          {entry?.time && (
+                                            <div className="text-[11px] tabular-nums" style={{ color: '#9CA3AF' }}>
+                                              {entry.time}
+                                            </div>
+                                          )}
+                                          {entry?.place && (
+                                            <div className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
+                                              {entry.place}
+                                            </div>
+                                          )}
+                                          <div className="text-[10px] mt-1.5" style={{ color: '#6B7280' }}>
+                                            클릭하여 상세보기
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )
+                                })}
 
                                 {/* 더보기 */}
                                 {(() => {
