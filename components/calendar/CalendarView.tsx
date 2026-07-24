@@ -186,13 +186,22 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   useEffect(() => {
     const desktop = window.innerWidth >= 768
     setIsDesktop(desktop)
-    if (desktop) setViewMode('month')
-    if (desktop) setSidebarOpen(true)
+    if (desktop) {
+      setViewMode('month')
+      setSidebarOpen(true)
+    } else {
+      // 모바일 기본 뷰는 세로보기(week)
+      setViewMode('week')
+    }
 
     function handleResize() {
       const d = window.innerWidth >= 768
       setIsDesktop(d)
-      setViewMode((prev) => (prev === 'week' && d ? 'month' : prev))
+      setViewMode((prev) => {
+        if (d && prev === 'week') return 'month'   // 모바일→PC: week → month
+        if (!d && prev === 'month') return 'week'  // PC→모바일: month → week
+        return prev
+      })
     }
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
@@ -741,7 +750,14 @@ export default function CalendarView({ profile }: CalendarViewProps) {
 
         {/* ── 주간 뷰 ── */}
         {viewMode === 'week' && (
-          <div className="border border-white/[0.15] rounded overflow-hidden overflow-y-auto" style={{ maxHeight: isDesktop ? 'calc(100vh - 160px)' : undefined }}>
+          <div
+            className="border border-white/[0.15] rounded overflow-hidden overflow-y-auto"
+            style={{
+              maxHeight: isDesktop ? 'calc(100vh - 160px)' : undefined,
+              // 모바일: 고정 탭바(60px) + safe-area 홈 바를 완전히 벗어나도록 하단 여백 확보
+              paddingBottom: !isDesktop ? 'calc(env(safe-area-inset-bottom, 0px) + 16px)' : undefined,
+            }}
+          >
             {loading ? (
               <div className="p-12 text-center">
                 <div className="w-4 h-4 border border-white/[0.12] border-t-white/30 rounded-full animate-spin mx-auto mb-3" />
