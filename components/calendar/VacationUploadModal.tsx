@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, PenLine } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface VacationUploadModalProps {
@@ -31,6 +31,15 @@ export function VacationUploadModal({ open, onOpenChange, onComplete }: Vacation
   const [result, setResult] = useState<UploadResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
+
+  // 수기 입력 상태
+  const [manualName, setManualName] = useState('')
+  const [manualStart, setManualStart] = useState('')
+  const [manualEnd, setManualEnd] = useState('')
+  const [manualHalfDay, setManualHalfDay] = useState('')
+  const [manualLoading, setManualLoading] = useState(false)
+  const [manualResult, setManualResult] = useState<string | null>(null)
+  const [manualError, setManualError] = useState<string | null>(null)
 
   function pickFile(f: File | null) {
     if (!f) return
@@ -88,15 +97,61 @@ export function VacationUploadModal({ open, onOpenChange, onComplete }: Vacation
     }
   }
 
+  async function handleManualSave() {
+    if (!manualName.trim() || !manualStart || !manualEnd) {
+      setManualError('이름, 시작일, 종료일은 필수입니다')
+      return
+    }
+    setManualLoading(true)
+    setManualError(null)
+    setManualResult(null)
+    try {
+      const res = await fetch('/api/vacations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: manualName.trim(),
+          start_date: manualStart,
+          end_date: manualEnd,
+          half_day: manualHalfDay || null,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setManualError(json.error ?? '저장에 실패했습니다')
+      } else {
+        setManualResult('저장 완료')
+        setManualName('')
+        setManualStart('')
+        setManualEnd('')
+        setManualHalfDay('')
+        onComplete?.()
+      }
+    } catch (err) {
+      setManualError('네트워크 오류가 발생했습니다')
+      console.error(err)
+    } finally {
+      setManualLoading(false)
+    }
+  }
+
   function handleClose(v: boolean) {
     if (!v) {
       setFile(null)
       setResult(null)
       setError(null)
       setDragging(false)
+      setManualName('')
+      setManualStart('')
+      setManualEnd('')
+      setManualHalfDay('')
+      setManualResult(null)
+      setManualError(null)
     }
     onOpenChange(v)
   }
+
+  const inputCls = 'w-full bg-zinc-800 border border-zinc-700 rounded px-2.5 py-1.5 text-[12px] text-neutral-200 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500'
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -104,7 +159,7 @@ export function VacationUploadModal({ open, onOpenChange, onComplete }: Vacation
         <DialogHeader>
           <DialogTitle className="text-sm font-medium text-neutral-100 flex items-center gap-2">
             <FileSpreadsheet className="w-4 h-4 text-amber-400" />
-            사내 휴가 엑셀 업로드
+            휴가 정보 업로드
           </DialogTitle>
         </DialogHeader>
 
@@ -142,15 +197,7 @@ export function VacationUploadModal({ open, onOpenChange, onComplete }: Vacation
             />
           </div>
 
-          {/* 칼럼 안내 */}
-          <div className="text-[11px] text-zinc-500 space-y-0.5 border border-zinc-800 rounded-md p-3">
-            <p className="text-zinc-400 font-medium mb-1">엑셀 컬럼 매핑</p>
-            <p>E열: 성명 &nbsp; F열: 휴가구분 &nbsp; G열: 시작일 &nbsp; I열: 종료일</p>
-            <p>O열: 결재번호(고유키) &nbsp; P열: 결재상태</p>
-            <p className="text-amber-400/70 mt-1">※ P열 = &apos;결재완료&apos;인 행만 처리됩니다</p>
-          </div>
-
-          {/* 결과 */}
+          {/* 엑셀 업로드 결과 */}
           {result && (
             <div className="flex items-start gap-2 text-xs text-green-400 border border-green-800/50 bg-green-900/20 rounded-md px-3 py-2">
               <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -163,6 +210,64 @@ export function VacationUploadModal({ open, onOpenChange, onComplete }: Vacation
               <span>{error}</span>
             </div>
           )}
+
+          {/* 수기 입력 섹션 */}
+          <div className="border-t border-zinc-800 pt-4 space-y-2.5">
+            <p className="text-[11px] text-zinc-400 font-medium flex items-center gap-1.5">
+              <PenLine className="w-3 h-3" />
+              휴가 정보 직접 입력
+            </p>
+            <input
+              className={inputCls}
+              placeholder="이름"
+              value={manualName}
+              onChange={(e) => setManualName(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <input
+                type="date"
+                className={inputCls}
+                value={manualStart}
+                onChange={(e) => setManualStart(e.target.value)}
+              />
+              <input
+                type="date"
+                className={inputCls}
+                value={manualEnd}
+                onChange={(e) => setManualEnd(e.target.value)}
+              />
+            </div>
+            <select
+              className={inputCls}
+              value={manualHalfDay}
+              onChange={(e) => setManualHalfDay(e.target.value)}
+            >
+              <option value="">종일</option>
+              <option value="오전">오전 반차</option>
+              <option value="오후">오후 반차</option>
+            </select>
+            {manualResult && (
+              <div className="flex items-center gap-2 text-xs text-green-400">
+                <CheckCircle className="w-3.5 h-3.5" />
+                {manualResult}
+              </div>
+            )}
+            {manualError && (
+              <div className="flex items-center gap-2 text-xs text-red-400">
+                <AlertCircle className="w-3.5 h-3.5" />
+                {manualError}
+              </div>
+            )}
+            <Button
+              size="sm"
+              className="w-full bg-zinc-700 hover:bg-zinc-600 text-neutral-200 text-xs"
+              disabled={manualLoading}
+              onClick={handleManualSave}
+            >
+              {manualLoading ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+              저장
+            </Button>
+          </div>
         </div>
 
         <DialogFooter className="gap-2">
@@ -181,7 +286,7 @@ export function VacationUploadModal({ open, onOpenChange, onComplete }: Vacation
             onClick={handleUpload}
           >
             {loading ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
-            업로드
+            엑셀 업로드
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -308,9 +308,9 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     return () => { cancelled = true }
   }, [filters.vacation, currentDate, viewMode, vacationVersion])
 
-  const weekStart = startOfWeek(currentDate, { locale: ko })
-  const weekEnd = endOfWeek(currentDate, { locale: ko })
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 })  // 월요일 시작
+  const weekEnd = addDays(weekStart, 13)  // 2주(14일)
+  const weekDays = Array.from({ length: 14 }, (_, i) => addDays(weekStart, i))
 
   const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
   const monthEnd = endOfMonth(currentDate)
@@ -472,7 +472,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   }
 
   const canCreate = profile.role === 'Producer' || profile.role === 'Admin'
-  const isCurrentWeek = isSameWeek(currentDate, new Date(), { locale: ko })
+  const isCurrentWeek = isSameWeek(currentDate, new Date(), { weekStartsOn: 1 })
   const displayedSchedules = applyFilters(schedules)
 
   return (
@@ -572,7 +572,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 onClick={() => setViewDropdownOpen((o) => !o)}
                 className="flex items-center gap-1.5 h-8 px-2.5 rounded text-[13px] font-medium text-[#4A4A4A] hover:text-[#C0C0C0] hover:bg-white/[0.05] transition-colors"
               >
-                <span>{viewMode === 'week' ? '주간' : viewMode === 'month' ? '월간' : '목록'}</span>
+                <span>VIEW</span>
                 <ChevronDown
                   className={cn('w-4 h-4 transition-transform', viewDropdownOpen && 'rotate-180')}
                 />
@@ -586,9 +586,9 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                     style={{ backgroundColor: '#0F0F0F' }}
                   >
                     {([
-                      { mode: 'week'  as const, Icon: CalendarDays, label: '주간' },
-                      { mode: 'month' as const, Icon: LayoutGrid,   label: '월간' },
-                      { mode: 'list'  as const, Icon: LayoutList,   label: '목록' },
+                      { mode: 'week'  as const, Icon: CalendarDays, label: 'Weekly' },
+                      { mode: 'month' as const, Icon: LayoutGrid,   label: 'Monthly' },
+                      { mode: 'list'  as const, Icon: LayoutList,   label: 'List' },
                     ]).map(({ mode, Icon, label }) => (
                       <button
                         key={mode}
@@ -613,7 +613,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
 
         {/* ── 주간 뷰 ── */}
         {viewMode === 'week' && (
-          <div className="border border-white/[0.15] rounded overflow-hidden">
+          <div className="border border-white/[0.15] rounded overflow-hidden overflow-y-auto" style={{ maxHeight: isDesktop ? 'calc(100vh - 160px)' : undefined }}>
             {loading ? (
               <div className="p-12 text-center">
                 <div className="w-4 h-4 border border-white/[0.12] border-t-white/30 rounded-full animate-spin mx-auto mb-3" />
@@ -636,7 +636,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                     key={idx}
                     className="flex border-b border-white/[0.15] last:border-b-0"
                     style={{
-                      minHeight: '64px',
+                      minHeight: '128px',
                       backgroundColor: isTodayDate ? 'rgba(255,255,255,0.02)' : 'transparent',
                     }}
                   >
@@ -726,7 +726,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                 <div
                                   key={record.id}
                                   className="flex items-center border-l-[2px] cursor-pointer hover:bg-white/[0.025] transition-colors"
-                                  style={{ borderLeftColor: 'rgba(255,255,255,0.55)' }}
+                                  style={{ borderLeftColor: '#C9A84C' }}
                                   onClick={() => setSelectedOfficeRecord(record)}
                                 >
                                   <div className="flex-1 min-w-0 px-5 py-3">
@@ -756,25 +756,26 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                         )}
                       </div>
 
-                      {/* 하단 고정: 휴가 — 바 하나에 이름 가로 나열 */}
-                      {dayVacations.length > 0 && (
-                        <div
-                          className="flex items-center gap-2 flex-wrap"
-                          style={{
-                            backgroundColor: '#131719',
-                            borderTop: '1px solid rgba(255,255,255,0.06)',
-                            padding: '3px 8px',
-                          }}
-                        >
-                          {dayVacations.map((v, i) => (
-                            <span key={v.id} className="text-[11px] font-normal leading-none whitespace-nowrap" style={{ color: '#7f8c93' }}>
-                              {v.half_day ? `${v.name} ${v.half_day}` : v.name}
-                              {i < dayVacations.length - 1 && <span style={{ color: 'rgba(255,255,255,0.4)', marginLeft: 6 }}>·</span>}
-                            </span>
-                          ))}
-                        </div>
-                      )}
                     </div>
+
+                    {/* 휴가자 우측 고정 컬럼 */}
+                    {dayVacations.length > 0 && (
+                      <div
+                        className="shrink-0 flex flex-col justify-center gap-0.5 border-l"
+                        style={{
+                          width: 88,
+                          padding: '6px 8px',
+                          borderLeftColor: 'rgba(255,255,255,0.06)',
+                          backgroundColor: '#0E1012',
+                        }}
+                      >
+                        {dayVacations.map((v) => (
+                          <span key={v.id} className="text-[10px] leading-snug truncate" style={{ color: '#7f8c93' }}>
+                            {v.half_day ? `${v.name} ${v.half_day}` : v.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )
               })
@@ -1004,7 +1005,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                     >
                                       <div
                                         className="flex items-center gap-1 cursor-pointer hover:bg-white/[0.04] transition-colors"
-                                        style={{ borderLeft: '2px solid rgba(255,255,255,0.55)', padding: '2px 5px' }}
+                                        style={{ borderLeft: '2px solid #C9A84C', padding: '2px 5px' }}
                                         onMouseEnter={() => setHoveredScheduleId(`office-${r.id}`)}
                                         onMouseLeave={() => setHoveredScheduleId(null)}
                                         onClick={(e) => { e.stopPropagation(); setSelectedOfficeRecord(r) }}
@@ -1221,7 +1222,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                     <div
                       key={`${record.id}-${entry.date}`}
                       className="border-l-[2px] overflow-hidden cursor-pointer hover:bg-white/[0.025] transition-colors"
-                      style={{ borderLeftColor: 'rgba(255,255,255,0.55)', backgroundColor: 'transparent' }}
+                      style={{ borderLeftColor: '#C9A84C', backgroundColor: 'transparent' }}
                       onClick={() => setSelectedOfficeRecord(record)}
                     >
                       <div className="p-4 flex items-center gap-4">
@@ -1306,7 +1307,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
               <div className="flex items-center gap-2">
                 <span
                   className="w-[3px] h-[18px] rounded-full shrink-0"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.55)' }}
+                  style={{ backgroundColor: '#C9A84C' }}
                 />
                 <h2 className="text-[15px] font-semibold leading-snug" style={{ color: 'var(--text-primary)' }}>
                   {selectedOfficeRecord.details.title}

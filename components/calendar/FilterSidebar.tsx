@@ -227,7 +227,7 @@ export default function FilterSidebar({
                 className="flex items-center gap-1.5 mt-1 ml-[21px] text-[11px] text-zinc-500 hover:text-amber-400 transition-colors"
               >
                 <FileSpreadsheet className="w-3 h-3" />
-                엑셀 업로드
+                휴가 정보 업로드
               </button>
             </div>
           </div>
