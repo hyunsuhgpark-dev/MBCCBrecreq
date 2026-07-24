@@ -352,6 +352,51 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     return () => el.removeEventListener('wheel', onWheel)
   }, [viewMode])
 
+  // 터치 스와이프 내비게이션 — 모바일에서 가로 스와이프로 주 이동
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
+  useEffect(() => {
+    const el = monthGridRef.current
+    if (!el || viewMode !== 'month') return
+
+    function onTouchStart(e: TouchEvent) {
+      const t = e.touches[0]
+      touchStartRef.current = { x: t.clientX, y: t.clientY }
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      if (!touchStartRef.current) return
+      const t = e.touches[0]
+      const dx = t.clientX - touchStartRef.current.x
+      const dy = t.clientY - touchStartRef.current.y
+      // 가로 스와이프가 명확한 경우에만 세로 스크롤 방지
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
+        e.preventDefault()
+      }
+    }
+
+    function onTouchEnd(e: TouchEvent) {
+      if (!touchStartRef.current) return
+      const t = e.changedTouches[0]
+      const dx = t.clientX - touchStartRef.current.x
+      const dy = t.clientY - touchStartRef.current.y
+      touchStartRef.current = null
+      // |dx| > |dy| && |dx| > 40px → 가로 스와이프로 판정
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+        // 왼쪽 스와이프 → 다음 주, 오른쪽 스와이프 → 이전 주
+        setCurrentDate(prev => dx < 0 ? addWeeks(prev, 1) : subWeeks(prev, 1))
+      }
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [viewMode])
+
   const latestRequestIdRef = useRef(0)
 
   const fetchSchedules = useCallback(async () => {
@@ -863,7 +908,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
           <div
             ref={monthGridRef}
             className={cn(isDesktop ? 'flex flex-col flex-1 min-h-0' : '')}
-            style={{ touchAction: 'pan-y' }}
+            style={{ touchAction: 'auto' }}
           >
             {loading ? (
               <div className="p-12 text-center">
