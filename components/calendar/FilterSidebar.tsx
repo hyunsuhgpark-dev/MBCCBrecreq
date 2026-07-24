@@ -113,6 +113,7 @@ export default function FilterSidebar({
   }
 
   const showOffice = canSeeOfficeCalendar(profile.role)
+  const showMyOnly = profile.role === 'Producer' || profile.role === 'Admin'
 
   return (
     <aside
@@ -126,19 +127,21 @@ export default function FilterSidebar({
       {/* 컨트롤바(py-5+h-8+mb-4=68) - 요일헤더(32) = 36px */}
       <div style={{ height: '37px', flexShrink: 0 }} />
 
-      {/* 내 일정만 보기 */}
-      <div className="mb-5">
-        <div
-          className="flex items-center justify-between gap-2"
-          style={{ paddingTop: '5px', paddingBottom: '5px' }}
-        >
-          <span className="text-[13px] font-medium text-zinc-400 leading-none">내 일정만 보기</span>
-          <Switch
-            checked={filters.myScheduleOnly}
-            onCheckedChange={(v) => set('myScheduleOnly', v)}
-          />
+      {/* 내 일정만 보기 — Producer · Admin 에게만 표시 */}
+      {showMyOnly && (
+        <div className="mb-5">
+          <div
+            className="flex items-center justify-between gap-2"
+            style={{ paddingTop: '5px', paddingBottom: '5px' }}
+          >
+            <span className="text-[13px] font-medium text-zinc-400 leading-none">내 일정만 보기</span>
+            <Switch
+              checked={filters.myScheduleOnly}
+              onCheckedChange={(v) => set('myScheduleOnly', v)}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 구분선 */}
       <div className="border-t border-white/[0.06] mb-4" />
@@ -146,7 +149,7 @@ export default function FilterSidebar({
       {/* 장비 / 구분 */}
       <div className="mb-1">
         <p className="text-[12px] font-semibold tracking-wide text-zinc-600 mb-3 px-0.5">
-          장비 / 구분
+          제작 일정
         </p>
         <div className="flex flex-col gap-0">
           <CheckboxItem
@@ -198,7 +201,7 @@ export default function FilterSidebar({
           <div className="border-t border-white/[0.06] my-4" />
           <div>
             <p className="text-[12px] font-semibold tracking-wide text-zinc-600 mb-3 px-0.5">
-              외부 연동
+              제작 외
             </p>
             <div className="flex flex-col gap-0">
               <CheckboxItem

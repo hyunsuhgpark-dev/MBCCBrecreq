@@ -32,9 +32,7 @@ import {
   isSameMonth,
   isToday,
   parseISO,
-  isSameWeek,
   eachDayOfInterval,
-  endOfMonth,
 } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
@@ -146,7 +144,7 @@ function getScheduleBorderColor(schedule: Schedule): string {
   return isLit ? pair.bright : pair.dark
 }
 
-const DOW_LABELS = ['일', '월', '화', '수', '목', '금', '토']
+const DOW_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
 const DOW_COLORS = ['#C07070', '#4A4A4A', '#4A4A4A', '#4A4A4A', '#4A4A4A', '#4A4A4A', '#4A7090']
 
 export default function CalendarView({ profile }: CalendarViewProps) {
@@ -158,7 +156,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
 
   // SSR 안전: false/'week'로 시작 → useEffect에서 실제 크기로 업데이트
   const [isDesktop, setIsDesktop] = useState(false)
-  const [viewMode, setViewMode] = useState<'week' | 'month' | 'list'>('week')
+  const [viewMode, setViewMode] = useState<'week' | 'month' | 'list'>('month')
   const [viewDropdownOpen, setViewDropdownOpen] = useState(false)
 
   // 사이드바 표시 여부 (모바일에서 토글)
@@ -243,12 +241,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     const rangeStart = viewMode === 'week'
       ? startOfWeek(currentDate, { locale: ko })
       : viewMode === 'month'
-      ? startOfWeek(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1), { weekStartsOn: 0 })
+      ? rollingStart
       : new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
     const rangeEnd = viewMode === 'week'
       ? endOfWeek(currentDate, { locale: ko })
       : viewMode === 'month'
-      ? endOfWeek(endOfMonth(currentDate), { weekStartsOn: 0 })
+      ? rollingEnd
       : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
 
     const startParam = format(rangeStart, 'yyyy-MM-dd')
@@ -286,12 +284,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     const rangeStart = viewMode === 'week'
       ? startOfWeek(currentDate, { locale: ko })
       : viewMode === 'month'
-      ? startOfWeek(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1), { weekStartsOn: 0 })
+      ? rollingStart
       : new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
     const rangeEnd = viewMode === 'week'
       ? endOfWeek(currentDate, { locale: ko })
       : viewMode === 'month'
-      ? endOfWeek(endOfMonth(currentDate), { weekStartsOn: 0 })
+      ? rollingEnd
       : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
 
     const startParam = format(rangeStart, 'yyyy-MM-dd')
@@ -312,16 +310,47 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   const weekEnd = addDays(weekStart, 13)  // 2주(14일)
   const weekDays = Array.from({ length: 14 }, (_, i) => addDays(weekStart, i))
 
-  const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
-  const monthEnd = endOfMonth(currentDate)
-  const gridStart = startOfWeek(monthStart, { weekStartsOn: 0 })
-  const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 0 })
-  const allGridDays = viewMode === 'month' ? eachDayOfInterval({ start: gridStart, end: gridEnd }) : []
-  // 7일씩 주 단위로 분리
+  // Rolling 5주: currentDate가 속한 주의 1주 전을 시작으로 35일(5행) 고정
+  const rollingStart = startOfWeek(subWeeks(startOfWeek(currentDate, { weekStartsOn: 0 }), 1), { weekStartsOn: 0 })
+  const rollingEnd   = addDays(rollingStart, 34)
+  const allGridDays  = viewMode === 'month' ? eachDayOfInterval({ start: rollingStart, end: rollingEnd }) : []
+  // 7일씩 주 단위로 분리 (항상 5행)
   const weekRows: Date[][] = []
   for (let i = 0; i < allGridDays.length; i += 7) {
     weekRows.push(allGridDays.slice(i, i + 7))
   }
+
+  // 스마트 월 타이틀: 35일 그리드에서 가장 많은 날이 속한 달을 표시
+  const smartMonthLabel = (() => {
+    if (allGridDays.length === 0) return format(currentDate, 'yyyy년 M월', { locale: ko })
+    // 월별 날짜 수 집계
+    const counts = new Map<string, { count: number; sample: Date }>()
+    for (const d of allGridDays) {
+      const key = format(d, 'yyyy-MM')
+      const prev = counts.get(key)
+      counts.set(key, { count: (prev?.count ?? 0) + 1, sample: prev?.sample ?? d })
+    }
+    // 가장 많은 달의 sample 날짜로 표시
+    const dominant = [...counts.values()].sort((a, b) => b.count - a.count)[0]
+    return format(dominant.sample, 'yyyy년 M월', { locale: ko })
+  })()
+
+  // 휠 내비게이션 — native non-passive 리스너로 등록 (React onWheel은 passive라 preventDefault 무시됨)
+  const monthGridRef = useRef<HTMLDivElement>(null)
+  const lastWheelRef = useRef(0)
+  useEffect(() => {
+    const el = monthGridRef.current
+    if (!el || viewMode !== 'month') return
+    function onWheel(e: WheelEvent) {
+      e.preventDefault()
+      const now = Date.now()
+      if (now - lastWheelRef.current < 300) return
+      lastWheelRef.current = now
+      setCurrentDate(prev => e.deltaY > 0 ? addWeeks(prev, 1) : subWeeks(prev, 1))
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [viewMode])
 
   const latestRequestIdRef = useRef(0)
 
@@ -329,10 +358,10 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     const requestId = ++latestRequestIdRef.current
     setLoading(true)
     const rangeStart = viewMode === 'week' ? weekStart
-      : viewMode === 'month' ? startOfWeek(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1), { weekStartsOn: 0 })
+      : viewMode === 'month' ? rollingStart
       : new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
     const rangeEnd = viewMode === 'week' ? weekEnd
-      : viewMode === 'month' ? endOfWeek(endOfMonth(currentDate), { weekStartsOn: 0 })
+      : viewMode === 'month' ? rollingEnd
       : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59)
 
     const { data, error } = await supabase
@@ -472,7 +501,6 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   }
 
   const canCreate = profile.role === 'Producer' || profile.role === 'Admin'
-  const isCurrentWeek = isSameWeek(currentDate, new Date(), { weekStartsOn: 1 })
   const displayedSchedules = applyFilters(schedules)
 
   return (
@@ -533,36 +561,71 @@ export default function CalendarView({ profile }: CalendarViewProps) {
               </button>
             )}
 
-            <button
-              onClick={() => setCurrentDate(viewMode === 'week' ? subWeeks(currentDate, 1) : new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
-              className="w-8 h-8 flex items-center justify-center rounded text-[#4A4A4A] hover:text-[#BEBEBE] hover:bg-white/[0.05] transition-colors shrink-0"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
+            {/* ── 가로보기(month): 오늘 버튼 + 스마트 월 타이틀만, 화살표 없음 ── */}
+            {viewMode === 'month' && (
+              <>
+                <button
+                  onClick={() => setCurrentDate(new Date())}
+                  className="h-9 w-[100px] rounded text-[14px] font-semibold border border-white text-white hover:bg-white/[0.08] transition-colors"
+                >
+                  오늘
+                </button>
+                <span className="text-[20px] font-bold" style={{ color: 'var(--text-primary)' }}>
+                  {smartMonthLabel}
+                </span>
+              </>
+            )}
 
-            <div className="flex items-center justify-center gap-2 min-w-[150px] text-center -translate-x-[5px]">
-              {viewMode === 'week' ? (
-                <span className="text-[18px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>
+            {/* ── 세로보기(week): 오늘 → < > → 날짜 범위 ── */}
+            {viewMode === 'week' && (
+              <>
+                <button
+                  onClick={() => setCurrentDate(new Date())}
+                  className="h-9 w-[100px] rounded text-[14px] font-semibold border border-white text-white hover:bg-white/[0.08] transition-colors"
+                >
+                  오늘
+                </button>
+                <button
+                  onClick={() => setCurrentDate(subWeeks(currentDate, 1))}
+                  className="w-8 h-8 flex items-center justify-center rounded text-[#4A4A4A] hover:text-[#BEBEBE] hover:bg-white/[0.05] transition-colors shrink-0"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => setCurrentDate(addWeeks(currentDate, 1))}
+                  className="w-8 h-8 flex items-center justify-center rounded text-[#4A4A4A] hover:text-[#BEBEBE] hover:bg-white/[0.05] transition-colors shrink-0"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+                <span className="text-[13px] tabular-nums" style={{ color: '#9CA3AF' }}>
                   {format(weekStart, 'M/d', { locale: ko })} – {format(weekEnd, 'M/d', { locale: ko })}
                 </span>
-              ) : (
-                <>
-                  <span className="text-[13px] tabular-nums font-medium" style={{ color: 'var(--text-muted)' }}>
-                    {format(currentDate, 'yyyy')}
-                  </span>
-                  <span className="text-[22px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>
-                    {format(currentDate, 'M월', { locale: ko })}
-                  </span>
-                </>
-              )}
-            </div>
+              </>
+            )}
 
-            <button
-              onClick={() => setCurrentDate(viewMode === 'week' ? addWeeks(currentDate, 1) : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}
-              className="w-8 h-8 flex items-center justify-center rounded text-[#4A4A4A] hover:text-[#BEBEBE] hover:bg-white/[0.05] transition-colors shrink-0"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
+            {/* ── 목록(list): 기존 TODAY + 화살표 ── */}
+            {viewMode === 'list' && (
+              <>
+                <button
+                  onClick={() => setCurrentDate(subWeeks(currentDate, 1))}
+                  className="w-8 h-8 flex items-center justify-center rounded text-[#4A4A4A] hover:text-[#BEBEBE] hover:bg-white/[0.05] transition-colors shrink-0"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => setCurrentDate(new Date())}
+                  className="h-8 px-2.5 rounded text-[11px] font-medium border border-white/[0.12] text-[#4A4A4A] hover:text-[#BEBEBE] hover:bg-white/[0.05] transition-colors"
+                >
+                  TODAY
+                </button>
+                <button
+                  onClick={() => setCurrentDate(addWeeks(currentDate, 1))}
+                  className="w-8 h-8 flex items-center justify-center rounded text-[#4A4A4A] hover:text-[#BEBEBE] hover:bg-white/[0.05] transition-colors shrink-0"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-1">
@@ -570,9 +633,9 @@ export default function CalendarView({ profile }: CalendarViewProps) {
             <div className="relative">
               <button
                 onClick={() => setViewDropdownOpen((o) => !o)}
-                className="flex items-center gap-1.5 h-8 px-2.5 rounded text-[13px] font-medium text-[#4A4A4A] hover:text-[#C0C0C0] hover:bg-white/[0.05] transition-colors"
+                className="flex items-center gap-1.5 h-8 px-2.5 rounded text-[15px] font-bold text-white hover:text-white/80 hover:bg-white/[0.05] transition-colors"
               >
-                <span>VIEW</span>
+                <span>VIEW MODE</span>
                 <ChevronDown
                   className={cn('w-4 h-4 transition-transform', viewDropdownOpen && 'rotate-180')}
                 />
@@ -586,8 +649,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                     style={{ backgroundColor: '#0F0F0F' }}
                   >
                     {([
-                      { mode: 'week'  as const, Icon: CalendarDays, label: 'Weekly' },
-                      { mode: 'month' as const, Icon: LayoutGrid,   label: 'Monthly' },
+                      { mode: 'month' as const, Icon: LayoutGrid,   label: '가로보기' },
+                      { mode: 'week'  as const, Icon: CalendarDays, label: '세로보기' },
                       { mode: 'list'  as const, Icon: LayoutList,   label: 'List' },
                     ]).map(({ mode, Icon, label }) => (
                       <button
@@ -629,15 +692,15 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 const dowLabel = DOW_LABELS[dow]
                 const isWeekend = dow === 0 || dow === 6
                 const dateColor = isWeekend ? DOW_COLORS[dow] : '#585858'
-                const allItems = daySchedules.length + officeItems.length + dayVacations.length
 
                 return (
                   <div
                     key={idx}
                     className="flex border-b border-white/[0.15] last:border-b-0"
                     style={{
-                      minHeight: '128px',
+                      minHeight: '85px',
                       backgroundColor: isTodayDate ? 'rgba(255,255,255,0.02)' : 'transparent',
+                      boxShadow: isTodayDate ? 'inset 0 0 0 1px rgba(235, 222, 175, 0.80)' : 'none',
                     }}
                   >
                     {/* 날짜 사이드바 */}
@@ -652,108 +715,120 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                       <span className="text-[22px] font-semibold tabular-nums leading-none" style={{ color: dateColor }}>
                         {format(date, 'd')}
                       </span>
-                      <span className="text-[11px] font-normal" style={{ color: '#3A3A3A' }}>
-                        ({dowLabel})
+                      <span className="text-[10px] font-medium tracking-wide" style={{ color: '#3A3A3A' }}>
+                        {dowLabel}
                       </span>
-                      {isTodayDate && (
-                        <span className="text-[9px] font-bold mt-1 px-1.5 py-0.5 rounded" style={{ backgroundColor: 'transparent', color: '#383838', border: 'none' }}>
-                          TODAY
-                        </span>
-                      )}
                     </div>
 
                     {/* 일정 목록 */}
                     <div className="flex-1 min-w-0 flex flex-col">
-                      {/* 상단: 일반 + 구글 일정 */}
-                      <div className="flex-1 flex flex-col justify-center">
+                      {/* 상단 정렬: 일반 + 구글 일정 */}
+                      <div className="flex flex-col justify-start gap-1 pt-2">
                         {daySchedules.length === 0 && officeItems.length === 0 ? (
                           dayVacations.length === 0 && (
-                            <div className="px-5 py-6">
+                            <div className="px-5 py-4">
                               <span className="text-[13px]" style={{ color: 'var(--text-muted)' }}>일정 없음</span>
                             </div>
                           )
-                        ) : (
-                          <div className="divide-y divide-white/[0.12]">
-                            {/* 일반 일정 */}
-                            {daySchedules.map((schedule) => {
-                              const cfg = getCfg(schedule.status)
-                              const startDt = parseISO(schedule.broadcast_start)
-                              const noteParts: string[] = []
-                              if (schedule.venue) noteParts.push(schedule.venue)
-                              if (schedule.notes?.trim()) noteParts.push(schedule.notes.trim())
-                              const note = noteParts.join(' · ')
+                        ) : (() => {
+                          // 종일(시간 없음) 먼저, 시간 있는 항목을 나중에 표시
+                          const dateStr = format(date, 'yyyy-MM-dd')
+                          const allDayOffice = officeItems.filter(r => !r.details.entries.find(e => e.date === dateStr)?.time)
+                          const timedOffice  = officeItems.filter(r =>  r.details.entries.find(e => e.date === dateStr)?.time)
 
-                              return (
-                                <Link key={schedule.id} href={`/schedules/${schedule.id}`}>
-                                  <div
-                                    className="flex items-center cursor-pointer border-l-[2px] hover:bg-white/[0.025] transition-colors"
-                                    style={{ borderLeftColor: getScheduleBorderColor(schedule) }}
-                                  >
-                                    <div className="flex-1 min-w-0 px-5 py-4">
-                                      <div className="flex items-baseline gap-3 flex-wrap">
-                                        <span className="text-[13px] tabular-nums font-normal shrink-0 leading-none" style={{ color: 'var(--text-muted)' }}>
-                                          {format(startDt, 'HH:mm')}
-                                        </span>
-                                        <span className="text-[15px] font-medium leading-none" style={{ color: cfg.cardText }}>
-                                          {schedule.program_name}
-                                        </span>
-                                        {schedule.status === 'pending' && (
-                                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-slate-600 text-slate-400">
-                                            대기중
+                          const renderOfficeItem = (record: typeof officeItems[number]) => {
+                            const entry = record.details.entries.find((e) => e.date === dateStr)
+                            return (
+                              <div
+                                key={record.id}
+                                className="flex items-start border-l-[2px] cursor-pointer hover:bg-white/[0.025] transition-colors"
+                                style={{ borderLeftColor: 'rgba(255,255,255,0.55)' }}
+                                onClick={() => setSelectedOfficeRecord(record)}
+                              >
+                                <div className="flex-1 min-w-0 px-5 py-2">
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="text-[14px] font-semibold leading-snug" style={{ color: '#C9A84C' }}>
+                                      {record.details.title}
+                                    </span>
+                                    {(entry?.time || entry?.place) && (
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        {entry?.time && (
+                                          <span className="text-[12px] tabular-nums" style={{ color: 'var(--text-muted)' }}>
+                                            {entry.time}
                                           </span>
                                         )}
-                                        {note && (
-                                          <span className="text-[13px] leading-none" style={{ color: 'var(--text-muted)' }}>
-                                            {note}
-                                          </span>
-                                        )}
-                                        {schedule.is_live && (
-                                          <span className="inline-flex items-center gap-1 bg-red-500 text-white px-1.5 py-0.5 rounded text-[10px] font-bold">
-                                            <span className="w-1 h-1 bg-white rounded-full animate-pulse" />LIVE
+                                        {entry?.place && (
+                                          <span className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
+                                            {entry.place}
                                           </span>
                                         )}
                                       </div>
-                                    </div>
-                                  </div>
-                                </Link>
-                              )
-                            })}
-
-                            {/* 기술사무실/송중계 구글 캘린더 일정 */}
-                            {officeItems.map((record) => {
-                              const entry = record.details.entries.find((e) => e.date === format(date, 'yyyy-MM-dd'))
-                              return (
-                                <div
-                                  key={record.id}
-                                  className="flex items-center border-l-[2px] cursor-pointer hover:bg-white/[0.025] transition-colors"
-                                  style={{ borderLeftColor: '#C9A84C' }}
-                                  onClick={() => setSelectedOfficeRecord(record)}
-                                >
-                                  <div className="flex-1 min-w-0 px-5 py-3">
-                                    <div className="flex items-baseline gap-3 flex-wrap">
-                                      {entry?.time && (
-                                        <span className="text-[13px] tabular-nums font-normal shrink-0 leading-none" style={{ color: '#9CA3AF' }}>
-                                          {entry.time}
-                                        </span>
-                                      )}
-                                      <span className="text-[14px] font-normal leading-none" style={{ color: 'var(--text-primary)' }}>
-                                        {record.details.title}
-                                      </span>
-                                      {entry?.place && (
-                                        <span className="text-[12px] leading-none" style={{ color: '#9CA3AF' }}>
-                                          {entry.place}
-                                        </span>
-                                      )}
-                                      <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(75,85,99,0.2)', color: '#9CA3AF' }}>
-                                        사무실
-                                      </span>
-                                    </div>
+                                    )}
                                   </div>
                                 </div>
-                              )
-                            })}
-                          </div>
-                        )}
+                              </div>
+                            )
+                          }
+
+                          return (
+                            <>
+                              {/* 1순위: 종일 항목 (시간 없는 구글 캘린더) */}
+                              {allDayOffice.map(renderOfficeItem)}
+
+                              {/* 2순위: 시간 있는 일반 제작 일정 */}
+                              {daySchedules.map((schedule) => {
+                                const cfg = getCfg(schedule.status)
+                                const startDt = parseISO(schedule.broadcast_start)
+                                const noteParts: string[] = []
+                                if (schedule.venue) noteParts.push(schedule.venue)
+                                if (schedule.notes?.trim()) noteParts.push(schedule.notes.trim())
+                                const note = noteParts.join(' · ')
+
+                                return (
+                                  <Link key={schedule.id} href={`/schedules/${schedule.id}`}>
+                                    <div
+                                      className="flex items-start cursor-pointer border-l-[2px] hover:bg-white/[0.025] transition-colors"
+                                      style={{ borderLeftColor: getScheduleBorderColor(schedule) }}
+                                    >
+                                      <div className="flex-1 min-w-0 px-5 py-2">
+                                        <div className="flex flex-col gap-0.5">
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="text-[14px] font-semibold leading-snug" style={{ color: cfg.cardText }}>
+                                              {schedule.program_name}
+                                            </span>
+                                            {schedule.status === 'pending' && (
+                                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-slate-600 text-slate-400">
+                                                대기중
+                                              </span>
+                                            )}
+                                            {schedule.is_live && (
+                                              <span className="inline-flex items-center gap-1 bg-red-500 text-white px-1.5 py-0.5 rounded text-[10px] font-bold">
+                                                <span className="w-1 h-1 bg-white rounded-full animate-pulse" />LIVE
+                                              </span>
+                                            )}
+                                          </div>
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="text-[12px] tabular-nums" style={{ color: 'var(--text-muted)' }}>
+                                              {format(startDt, 'HH:mm')}
+                                            </span>
+                                            {note && (
+                                              <span className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
+                                                {note}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </Link>
+                                )
+                              })}
+
+                              {/* 3순위: 시간 있는 구글 캘린더 일정 */}
+                              {timedOffice.map(renderOfficeItem)}
+                            </>
+                          )
+                        })()}
                       </div>
 
                     </div>
@@ -770,7 +845,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                         }}
                       >
                         {dayVacations.map((v) => (
-                          <span key={v.id} className="text-[10px] leading-snug truncate" style={{ color: '#7f8c93' }}>
+                          <span key={v.id} className="text-[10px] leading-snug truncate" style={{ color: '#9CA3AF' }}>
                             {v.half_day ? `${v.name} ${v.half_day}` : v.name}
                           </span>
                         ))}
@@ -783,9 +858,13 @@ export default function CalendarView({ profile }: CalendarViewProps) {
           </div>
         )}
 
-        {/* ── 월간 달력 뷰 ── */}
+        {/* ── 월간 달력 뷰 (가로보기) ── */}
         {viewMode === 'month' && (
-          <div className={cn(isDesktop ? 'flex flex-col flex-1 min-h-0' : '')}>
+          <div
+            ref={monthGridRef}
+            className={cn(isDesktop ? 'flex flex-col flex-1 min-h-0' : '')}
+            style={{ touchAction: 'pan-y' }}
+          >
             {loading ? (
               <div className="p-12 text-center">
                 <div className="w-4 h-4 border border-white/[0.12] border-t-white/30 rounded-full animate-spin mx-auto mb-3" />
@@ -840,21 +919,21 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                 borderRight: idx !== 6 ? '1px solid rgba(255,255,255,0.15)' : 'none',
                                 borderBottom: wIdx < weekRows.length - 1 ? '1px solid rgba(255,255,255,0.15)' : 'none',
                                 boxShadow: isTodayDate ? 'inset 0 0 0 1px rgba(235, 222, 175, 0.80)' : 'none',
-                                cursor: canCreate && isInCurrentMonth ? 'pointer' : 'default',
+                                cursor: canCreate ? 'pointer' : 'default',
                                 paddingBottom: vacZoneH,
                               }}
                               onClick={() => {
-                                if (canCreate && isInCurrentMonth) {
+                                if (canCreate) {
                                   router.push(`/schedules/new?date=${format(day, 'yyyy-MM-dd')}`)
                                 }
                               }}
                             >
                               {/* 날짜 숫자 */}
                               <div
-                                className="text-[11px] tabular-nums font-normal shrink-0"
+                                className={cn('text-[11px] tabular-nums shrink-0', day.getDate() === 1 ? 'font-bold' : 'font-normal')}
                                 style={{
                                   padding: isDesktop ? '6px 8px 3px' : '4px 5px 2px',
-                                  opacity: isInCurrentMonth ? 1 : 0.22,
+                                  opacity: isInCurrentMonth ? 1 : 0.3,
                                   color: isTodayDate
                                     ? 'var(--text-primary)'
                                     : isWeekend
@@ -862,11 +941,11 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                     : '#3A3A3A',
                                 }}
                               >
-                                {format(day, 'd')}
+                                {day.getDate() === 1 ? format(day, 'M/d') : format(day, 'd')}
                               </div>
 
-                              {/* 방송 일정 칩 (상단 영역) */}
-                              <div className="flex-1 min-h-0" style={{ padding: isDesktop ? '0 6px 2px' : '0 3px 2px', display: 'flex', flexDirection: 'column', gap: '2px', opacity: isInCurrentMonth ? 1 : 0.18, overflow: 'visible' }}>
+                              {/* 방송 일정 칩 (상단 영역) — opacity 1 고정 */}
+                              <div className="flex-1 min-h-0" style={{ padding: isDesktop ? '0 6px 2px' : '0 3px 2px', display: 'flex', flexDirection: 'column', gap: '2px', opacity: 1, overflow: 'visible' }}>
                                 {/* 일반 일정 */}
                                 {daySchedules.slice(0, isDesktop ? 4 : 3).map((s) => {
                                   const cfg = getCfg(s.status)
@@ -1005,12 +1084,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                     >
                                       <div
                                         className="flex items-center gap-1 cursor-pointer hover:bg-white/[0.04] transition-colors"
-                                        style={{ borderLeft: '2px solid #C9A84C', padding: '2px 5px' }}
+                                        style={{ borderLeft: '2px solid rgba(255,255,255,0.55)', padding: '2px 5px' }}
                                         onMouseEnter={() => setHoveredScheduleId(`office-${r.id}`)}
                                         onMouseLeave={() => setHoveredScheduleId(null)}
                                         onClick={(e) => { e.stopPropagation(); setSelectedOfficeRecord(r) }}
                                       >
-                                        <span className="truncate text-[11px]" style={{ color: 'var(--text-primary)', fontSize: '11px' }}>
+                                        <span className="truncate text-[11px]" style={{ color: '#C9A84C', fontSize: '11px' }}>
                                           {r.details.title}
                                         </span>
                                       </div>
@@ -1096,8 +1175,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                   top: (laneCount - 1 - lane.lane) * vacBarH + 1,
                                   height: vacBarH - 1,
                                   borderRadius: 2,
-                                  backgroundColor: '#131719',
-                                  color: '#7f8c93',
+                                  backgroundColor: 'rgba(107, 114, 128, 0.10)',
+                                  color: '#9CA3AF',
                                   fontSize: 10,
                                   paddingLeft: 4,
                                   display: 'flex',
@@ -1222,7 +1301,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                     <div
                       key={`${record.id}-${entry.date}`}
                       className="border-l-[2px] overflow-hidden cursor-pointer hover:bg-white/[0.025] transition-colors"
-                      style={{ borderLeftColor: '#C9A84C', backgroundColor: 'transparent' }}
+                      style={{ borderLeftColor: 'rgba(255,255,255,0.55)', backgroundColor: 'transparent' }}
                       onClick={() => setSelectedOfficeRecord(record)}
                     >
                       <div className="p-4 flex items-center gap-4">
@@ -1238,7 +1317,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                         </div>
                         <div className="w-px h-8 shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.10)' }} />
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-medium truncate text-[13px]" style={{ color: 'var(--text-primary)' }}>
+                          <h3 className="font-medium truncate text-[13px]" style={{ color: '#C9A84C' }}>
                             {record.details.title}
                           </h3>
                           {entry.place && (
@@ -1260,7 +1339,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   <div
                     key={v.id}
                     className="border-l-[2px] overflow-hidden transition-colors"
-                    style={{ borderLeftColor: 'rgba(45, 15, 120, 0.7)', backgroundColor: 'transparent' }}
+                    style={{ borderLeftColor: 'rgba(156, 163, 175, 0.35)', backgroundColor: 'transparent' }}
                   >
                     <div className="px-4 py-2 flex items-center gap-4">
                       <div className="shrink-0 w-[64px] text-center">
@@ -1275,7 +1354,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                       </div>
                       <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} />
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-normal truncate text-[13px]" style={{ color: '#ffffff' }}>
+                        <h3 className="font-normal truncate text-[13px]" style={{ color: '#9CA3AF' }}>
                           {vacLabel(v)}
                         </h3>
                       </div>
@@ -1307,7 +1386,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
               <div className="flex items-center gap-2">
                 <span
                   className="w-[3px] h-[18px] rounded-full shrink-0"
-                  style={{ backgroundColor: '#C9A84C' }}
+                  style={{ backgroundColor: 'rgba(255,255,255,0.55)' }}
                 />
                 <h2 className="text-[15px] font-semibold leading-snug" style={{ color: 'var(--text-primary)' }}>
                   {selectedOfficeRecord.details.title}
