@@ -94,16 +94,6 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
 
   const watchLuggage = watch('has_luggage')
 
-  function syncEndDate(startValue: string) {
-    const endValue = watch('broadcast_end')
-    if (!startValue || !endValue) return
-    const startDate = startValue.split('T')[0]
-    const endTime = endValue.split('T')[1]
-    if (!startDate || !endTime) return
-    const synced = `${startDate}T${endTime}`
-    if (synced !== endValue) setValue('broadcast_end', synced)
-  }
-
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
     setLoading(true)
     try {
@@ -201,7 +191,7 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
           </div>
 
           <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
-            <div className={labelCls}>이동 일시</div>
+            <div className={labelCls}>이동 시작</div>
             <div className={cn(valueCls, 'border-l-0')}>
               <Controller
                 control={control}
@@ -209,22 +199,25 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
                 render={({ field }) => (
                   <DateTimePicker
                     value={field.value}
-                    onChange={(v) => { field.onChange(v); syncEndDate(v) }}
+                    onChange={field.onChange}
                     error={!!errors.broadcast_start}
                   />
                 )}
               />
-              <div className="relative mt-2">
-                <span className="block sm:absolute text-sm font-medium text-slate-500 pointer-events-none select-none text-center mb-1 sm:mb-0" style={{ left: 0, width: '130px' }}>~</span>
-                <Controller
-                  control={control}
-                  name="broadcast_end"
-                  render={({ field }) => (
-                    <DateTimePicker value={field.value} onChange={field.onChange} hideDate anchorDate={(watch('broadcast_start') ?? '').split('T')[0]} error={!!errors.broadcast_end} />
-                  )}
-                />
-              </div>
               {errors.broadcast_start && <p className="text-red-500 text-[11px] mt-1">{errors.broadcast_start.message}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
+            <div className={labelCls}>이동 종료</div>
+            <div className={cn(valueCls, 'border-l-0')}>
+              <Controller
+                control={control}
+                name="broadcast_end"
+                render={({ field }) => (
+                  <DateTimePicker value={field.value} onChange={field.onChange} error={!!errors.broadcast_end} />
+                )}
+              />
               {errors.broadcast_end && <p className="text-red-500 text-[11px] mt-1">{errors.broadcast_end.message}</p>}
             </div>
           </div>

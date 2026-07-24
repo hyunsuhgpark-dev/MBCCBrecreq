@@ -28,11 +28,11 @@ import {
   addDays,
   addWeeks,
   subWeeks,
-  isSameDay,
   isSameMonth,
   isToday,
   parseISO,
   eachDayOfInterval,
+  startOfDay,
 } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
@@ -472,7 +472,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   }
 
   function getSchedulesForDay(date: Date) {
-    const daySchedules = schedules.filter((s) => isSameDay(parseISO(s.broadcast_start), date))
+    const day = startOfDay(date)
+    const daySchedules = schedules.filter((s) => {
+      const start = startOfDay(parseISO(s.broadcast_start))
+      const end   = startOfDay(parseISO(s.broadcast_end))
+      return day >= start && day <= end
+    })
     return applyFilters(daySchedules)
   }
 
@@ -521,11 +526,26 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     const halfDayPriority = (hd: string | null) => hd === null ? 0 : hd === '오전' ? 1 : 2
     items.sort((a, b) => halfDayPriority(a.vacation.half_day) - halfDayPriority(b.vacation.half_day))
 
+    // 두 아이템이 시각적으로 겹치는지 판정
+    type LaneItem = { startCol: number; endCol: number; vacation: Vacation }
+    function vacConflict(a: LaneItem, b: LaneItem): boolean {
+      if (a.startCol > b.endCol || b.startCol > a.endCol) return false
+      // 같은 단일 날짜에서 오전↔오후는 셀 내 반씩 차지 → 충돌 없음
+      if (
+        a.startCol === a.endCol &&
+        b.startCol === b.endCol &&
+        a.startCol === b.startCol &&
+        ((a.vacation.half_day === '오전' && b.vacation.half_day === '오후') ||
+         (a.vacation.half_day === '오후' && b.vacation.half_day === '오전'))
+      ) return false
+      return true
+    }
+
     // Greedy 레인 배정
     const lanes: VacationLane[] = []
     for (const item of items) {
       let lane = 0
-      while (lanes.some((l) => l.lane === lane && l.startCol <= item.endCol && l.endCol >= item.startCol)) {
+      while (lanes.some((l) => l.lane === lane && vacConflict(l, item))) {
         lane++
       }
       lanes.push({ ...item, lane })
@@ -890,7 +910,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                         }}
                       >
                         {dayVacations.map((v) => (
-                          <span key={v.id} className="text-[10px] leading-snug truncate" style={{ color: '#9CA3AF' }}>
+                          <span key={v.id} className="text-[10px] leading-snug truncate" style={{ color: '#C4B5FD' }}>
                             {v.half_day ? `${v.name} ${v.half_day}` : v.name}
                           </span>
                         ))}
@@ -996,15 +1016,21 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                   const cfg = getCfg(s.status)
                                   const startDt = parseISO(s.broadcast_start)
                                   const endDt = parseISO(s.broadcast_end)
-                                  const timeLabel = `${format(startDt, 'HH:mm')}~${format(endDt, 'HH:mm')}`
-                                  const isHovered = hoveredScheduleId === s.id
-                                  const isTapped = tappedScheduleId === s.id
+                                  // 멀티데이 여부: 시작·종료 날짜가 다르면 날짜 포함 표시
+                                  const isMultiDay = format(startDt, 'yyyy-MM-dd') !== format(endDt, 'yyyy-MM-dd')
+                                  const timeLabel = isMultiDay
+                                    ? `${format(startDt, 'M/d HH:mm')}~${format(endDt, 'M/d HH:mm')}`
+                                    : `${format(startDt, 'HH:mm')}~${format(endDt, 'HH:mm')}`
+                                  // 셀별 고유 키 — 멀티데이 일정이 여러 셀에 렌더될 때 각 셀만 독립 동작
+                                  const cellKey = `${s.id}-${format(day, 'yyyy-MM-dd')}`
+                                  const isHovered = hoveredScheduleId === cellKey
+                                  const isTapped = tappedScheduleId === cellKey
                                   // 마지막 두 열(토/일)은 툴팁을 왼쪽으로 표시
                                   const isRightEdge = idx >= 5
 
                                   return (
                                     <div
-                                      key={s.id}
+                                      key={cellKey}
                                       className="relative"
                                       onClick={(e) => e.stopPropagation()}
                                     >
@@ -1015,14 +1041,14 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                           borderLeft: isDesktop ? `2px solid ${getScheduleBorderColor(s)}` : 'none',
                                           padding: isDesktop ? '2px 5px' : '2px 4px',
                                         }}
-                                        onMouseEnter={() => isDesktop && setHoveredScheduleId(s.id)}
+                                        onMouseEnter={() => isDesktop && setHoveredScheduleId(cellKey)}
                                         onMouseLeave={() => isDesktop && setHoveredScheduleId(null)}
                                         onClick={(e) => {
                                           e.stopPropagation()
                                           if (isDesktop) {
                                             router.push(`/schedules/${s.id}`)
                                           } else {
-                                            setTappedScheduleId(isTapped ? null : s.id)
+                                            setTappedScheduleId(isTapped ? null : cellKey)
                                           }
                                         }}
                                       >
@@ -1221,7 +1247,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                   height: vacBarH - 1,
                                   borderRadius: 2,
                                   backgroundColor: 'rgba(107, 114, 128, 0.10)',
-                                  color: '#9CA3AF',
+                                  color: '#C4B5FD',
                                   fontSize: 10,
                                   paddingLeft: 4,
                                   display: 'flex',
@@ -1399,7 +1425,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                       </div>
                       <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} />
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-normal truncate text-[13px]" style={{ color: '#9CA3AF' }}>
+                        <h3 className="font-normal truncate text-[13px]" style={{ color: '#C4B5FD' }}>
                           {vacLabel(v)}
                         </h3>
                       </div>
