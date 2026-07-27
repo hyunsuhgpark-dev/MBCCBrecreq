@@ -503,6 +503,52 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     return v.name
   }
 
+  /** 멀티데이 일정 spanning bar 레인 */
+  interface ScheduleLane {
+    schedule: Schedule
+    startCol: number
+    endCol: number
+    lane: number
+  }
+
+  /** 한 주(7일)에서 멀티데이 일정(broadcast_start ≠ broadcast_end 날짜)의 레인 배정 */
+  function getMultiDayScheduleLanes(weekDays: Date[]): ScheduleLane[] {
+    if (weekDays.length === 0) return []
+    const weekStart = format(weekDays[0], 'yyyy-MM-dd')
+    const weekEnd   = format(weekDays[6], 'yyyy-MM-dd')
+
+    const multiDay = schedules.filter(s => {
+      const sd = format(parseISO(s.broadcast_start), 'yyyy-MM-dd')
+      const ed = format(parseISO(s.broadcast_end), 'yyyy-MM-dd')
+      return sd !== ed && sd <= weekEnd && ed >= weekStart
+    })
+    if (multiDay.length === 0) return []
+
+    const filtered = applyFilters(multiDay)
+    if (filtered.length === 0) return []
+
+    const items = filtered.map(s => {
+      const sd = format(parseISO(s.broadcast_start), 'yyyy-MM-dd')
+      const ed = format(parseISO(s.broadcast_end), 'yyyy-MM-dd')
+      const effStart = sd < weekStart ? weekStart : sd
+      const effEnd   = ed > weekEnd   ? weekEnd   : ed
+      const startCol = weekDays.findIndex(d => format(d, 'yyyy-MM-dd') === effStart)
+      const endCol   = weekDays.findIndex(d => format(d, 'yyyy-MM-dd') === effEnd)
+      return { schedule: s, startCol: Math.max(startCol, 0), endCol: Math.max(endCol, 0) }
+    })
+
+    // Greedy 레인 배정
+    const lanes: ScheduleLane[] = []
+    for (const item of items) {
+      let lane = 0
+      while (lanes.some(l => l.lane === lane && l.startCol <= item.endCol && l.endCol >= item.startCol)) {
+        lane++
+      }
+      lanes.push({ ...item, lane })
+    }
+    return lanes
+  }
+
   /** 한 주(7일)에서 보이는 vacation들의 레인(row) 배정 결과 */
   interface VacationLane {
     vacation: Vacation
@@ -978,12 +1024,24 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   const vacBarH = 13   // 바 슬롯 높이 (바 12px + 간격 1px)
                   const vacZoneH = laneCount * vacBarH + (laneCount > 0 ? 2 : 0)
 
+                  // 멀티데이 일정 spanning bars
+                  const schLanes = getMultiDayScheduleLanes(wDays)
+                  const schLaneCount = schLanes.length > 0 ? Math.max(...schLanes.map(l => l.lane)) + 1 : 0
+                  const schBarH = 14   // bar slot height
+                  const schZoneH = schLaneCount * schBarH + (schLaneCount > 0 ? 2 : 0)
+                  // 날짜 숫자 영역 높이 (bar overlay 위치 기준)
+                  const dateNumH = isDesktop ? 24 : 21
+
                   return (
                     <div key={wIdx} className={cn('relative', isDesktop && 'flex-1 min-h-0')}>
                       <div className={cn('grid grid-cols-7', isDesktop && 'h-full')}>
                         {wDays.map((day, idx) => {
                           const globalIdx = wIdx * 7 + idx
-                          const daySchedules = getSchedulesForDay(day)
+                          // 멀티데이 일정은 spanning bar로 표시 → 셀 칩에서 제외
+                          const allDaySchedules = getSchedulesForDay(day)
+                          const daySchedules = allDaySchedules.filter(s =>
+                            format(parseISO(s.broadcast_start), 'yyyy-MM-dd') === format(parseISO(s.broadcast_end), 'yyyy-MM-dd')
+                          )
                           const officeItems = getOfficeSchedulesForDay(day)
                           const isInCurrentMonth = isSameMonth(day, currentDate)
                           const isTodayDate = isToday(day)
@@ -1014,7 +1072,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                 className={cn('text-[11px] tabular-nums shrink-0', day.getDate() === 1 ? 'font-bold' : 'font-normal')}
                                 style={{
                                   padding: isDesktop ? '6px 8px 3px' : '4px 5px 2px',
-                                  opacity: isInCurrentMonth ? 1 : 0.3,
+                                  opacity: 1,
                                   color: isTodayDate
                                     ? 'var(--text-primary)'
                                     : isWeekend
@@ -1024,6 +1082,11 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                               >
                                 {day.getDate() === 1 ? format(day, 'M/d') : format(day, 'd')}
                               </div>
+
+                              {/* 멀티데이 일정 bar 예약 공간 — overlay가 이 영역에 렌더됨 */}
+                              {schZoneH > 0 && (
+                                <div style={{ height: schZoneH + 2, flexShrink: 0 }} />
+                              )}
 
                               {/* 방송 일정 칩 (상단 영역) — opacity 1 고정 */}
                               <div className="flex-1 min-h-0" style={{ padding: isDesktop ? '0 6px 2px' : '0 3px 2px', display: 'flex', flexDirection: 'column', gap: '2px', opacity: 1, overflow: 'visible' }}>
@@ -1235,6 +1298,87 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                           )
                         })}
                       </div>
+
+                      {/* 멀티데이 일정 spanning bar 오버레이 */}
+                      {schZoneH > 0 && (
+                        <div
+                          className="absolute inset-x-0 pointer-events-none"
+                          style={{ top: dateNumH, height: schZoneH }}
+                        >
+                          {schLanes.map((sl) => {
+                            const s = sl.schedule
+                            const cfg = getCfg(s.status)
+                            const startDt = parseISO(s.broadcast_start)
+                            const endDt   = parseISO(s.broadcast_end)
+                            const barKey  = `schbar-${s.id}-${wIdx}`
+                            const isHovered = hoveredScheduleId === barKey
+                            const isRightEdge = sl.endCol >= 5
+
+                            return (
+                              <div
+                                key={barKey}
+                                className="pointer-events-auto"
+                                style={{
+                                  position: 'absolute',
+                                  left: `calc(${(sl.startCol / 7) * 100}% + 1px)`,
+                                  width: `calc(${((sl.endCol - sl.startCol + 1) / 7) * 100}% - 2px)`,
+                                  top: sl.lane * schBarH + 1,
+                                  height: schBarH - 2,
+                                  borderRadius: 3,
+                                  backgroundColor: cfg.cardBg,
+                                  borderLeft: `2px solid ${getScheduleBorderColor(s)}`,
+                                  color: cfg.cardText,
+                                  fontSize: 10,
+                                  paddingLeft: 5,
+                                  paddingRight: 4,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  overflow: 'hidden',
+                                  whiteSpace: 'nowrap',
+                                  cursor: 'pointer',
+                                }}
+                                onMouseEnter={() => isDesktop && setHoveredScheduleId(barKey)}
+                                onMouseLeave={() => isDesktop && setHoveredScheduleId(null)}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  router.push(`/schedules/${s.id}`)
+                                }}
+                              >
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 1 }}>
+                                  {s.program_name}
+                                </span>
+
+                                {/* hover 툴팁 */}
+                                {isDesktop && isHovered && (
+                                  <div
+                                    className="absolute z-50 rounded shadow-xl pointer-events-none"
+                                    style={{
+                                      top: '100%',
+                                      marginTop: 3,
+                                      ...(isRightEdge ? { right: 0 } : { left: 0 }),
+                                      backgroundColor: '#1A1A1A',
+                                      border: '1px solid rgba(255,255,255,0.12)',
+                                      minWidth: 180,
+                                      padding: '6px 10px',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    <div className="text-[11px] font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+                                      {s.program_name}
+                                    </div>
+                                    <div className="text-[11px] tabular-nums" style={{ color: '#9CA3AF' }}>
+                                      {format(startDt, 'M/d HH:mm')}~{format(endDt, 'M/d HH:mm')}
+                                    </div>
+                                    {s.venue && (
+                                      <div className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>{s.venue}</div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
 
                       {/* 휴가 멀티데이 바 오버레이 */}
                       {vacZoneH > 0 && (

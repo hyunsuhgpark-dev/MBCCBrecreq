@@ -233,13 +233,20 @@ export async function notifyAllUsersScheduleSubmitted(params: {
 
   const { data: allProfiles } = await supabase
     .from('profiles')
-    .select('id, fcm_token')
+    .select('id, fcm_token, role')
     .eq('is_approved', true)
     .neq('id', submitterId)
 
   if (!allProfiles?.length) return
 
-  for (const p of allProfiles) {
+  // 스태프 역할은 이미 approval_requested를 별도로 받으므로 제외 (중복 방지)
+  const targetProfiles = allProfiles.filter(
+    p => !(ALL_STAFF_ROLE_VALUES as readonly string[]).includes(p.role ?? '')
+  )
+
+  if (!targetProfiles.length) return
+
+  for (const p of targetProfiles) {
     await saveNotification({
       supabase,
       userId: p.id,
@@ -249,7 +256,7 @@ export async function notifyAllUsersScheduleSubmitted(params: {
     })
   }
 
-  const tokens = allProfiles
+  const tokens = targetProfiles
     .filter((p) => p.fcm_token)
     .map((p) => p.fcm_token as string)
 
