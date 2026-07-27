@@ -221,12 +221,19 @@ export default function CalendarView({ profile }: CalendarViewProps) {
       const saved = localStorage.getItem(LS_FILTER_KEY)
       if (saved) {
         const parsed = JSON.parse(saved) as Partial<SidebarFilters>
-        setFilters((prev) => ({ ...prev, ...parsed }))
+        const role = profile.role
+        // 해당 역할이 볼 수 없는 필터 항목은 강제 false로 초기화
+        const canSeeOffice = role === 'Admin' || role === 'ENG' || role === 'ENG-M'
+        setFilters((prev) => ({
+          ...prev,
+          ...parsed,
+          officeCalendar: canSeeOffice ? (parsed.officeCalendar ?? prev.officeCalendar) : false,
+        }))
       }
     } catch {
       // localStorage 접근 불가 시 기본값 유지
     }
-  }, [])
+  }, [profile.role])
 
   // 필터 변경 시 localStorage 자동 저장
   useEffect(() => {
