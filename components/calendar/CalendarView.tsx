@@ -1308,6 +1308,10 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                           {schLanes.map((sl) => {
                             const s = sl.schedule
                             const cfg = getCfg(s.status)
+                            const borderColor = getScheduleBorderColor(s)
+                            // 바 배경: border 색에 불투명도 추가 (투명이면 바가 안보임)
+                            const barBg = borderColor + '30'
+                            const barText = (s.status === 'pending') ? '#9ca3af' : cfg.cardText
                             const startDt = parseISO(s.broadcast_start)
                             const endDt   = parseISO(s.broadcast_end)
                             const barKey  = `schbar-${s.id}-${wIdx}`
@@ -1325,9 +1329,9 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                   top: sl.lane * schBarH + 1,
                                   height: schBarH - 2,
                                   borderRadius: 3,
-                                  backgroundColor: cfg.cardBg,
-                                  borderLeft: `2px solid ${getScheduleBorderColor(s)}`,
-                                  color: cfg.cardText,
+                                  backgroundColor: barBg,
+                                  borderLeft: `2px solid ${borderColor}`,
+                                  color: barText,
                                   fontSize: 10,
                                   paddingLeft: 5,
                                   paddingRight: 4,
