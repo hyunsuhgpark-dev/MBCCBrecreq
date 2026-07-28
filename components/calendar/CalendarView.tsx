@@ -153,6 +153,9 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [loading, setLoading] = useState(true)
+  // 날짜 이동 Slide 방향 (가로/세로보기만 사용)
+  const [slideDir, setSlideDir] = useState<'next' | 'prev' | null>(null)
+  const isSlidingRef = useRef(false)
 
   // SSR 안전: false/'week'로 시작 → useEffect에서 실제 크기로 업데이트
   const [isDesktop, setIsDesktop] = useState(false)
@@ -351,6 +354,46 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     return format(dominant.sample, 'yyyy년 M월', { locale: ko })
   })()
 
+  // 날짜 이동 — 가로/세로보기는 Slide 방향 설정, List는 즉시 교체
+  const navigateByWeeks = useCallback((delta: number) => {
+    if (isSlidingRef.current) return
+    if (viewMode === 'month' || viewMode === 'week') {
+      isSlidingRef.current = true
+      setSlideDir(delta > 0 ? 'next' : 'prev')
+    }
+    setCurrentDate((prev) => addWeeks(prev, delta))
+  }, [viewMode])
+
+  const navigateToToday = useCallback(() => {
+    if (isSlidingRef.current) return
+    const today = startOfDay(new Date())
+    const cur = startOfDay(currentDate)
+    if (today.getTime() === cur.getTime()) return
+    if (viewMode === 'month' || viewMode === 'week') {
+      isSlidingRef.current = true
+      setSlideDir(today > cur ? 'next' : 'prev')
+    }
+    setCurrentDate(today)
+  }, [currentDate, viewMode])
+
+  const handleSlideEnd = useCallback(() => {
+    isSlidingRef.current = false
+    setSlideDir(null)
+  }, [])
+
+  // reduced-motion 등으로 animationend가 안 올 때 잠금 해제
+  useEffect(() => {
+    if (!slideDir) return
+    const t = window.setTimeout(() => {
+      isSlidingRef.current = false
+      setSlideDir(null)
+    }, 300)
+    return () => window.clearTimeout(t)
+  }, [slideDir])
+
+  const navigateByWeeksRef = useRef(navigateByWeeks)
+  useEffect(() => { navigateByWeeksRef.current = navigateByWeeks }, [navigateByWeeks])
+
   // 휠 내비게이션 — native non-passive 리스너로 등록 (React onWheel은 passive라 preventDefault 무시됨)
   const monthGridRef = useRef<HTMLDivElement>(null)
   const lastWheelRef = useRef(0)
@@ -362,7 +405,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
       const now = Date.now()
       if (now - lastWheelRef.current < 300) return
       lastWheelRef.current = now
-      setCurrentDate(prev => e.deltaY > 0 ? addWeeks(prev, 1) : subWeeks(prev, 1))
+      navigateByWeeksRef.current(e.deltaY > 0 ? 1 : -1)
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
@@ -399,7 +442,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
       // |dx| > |dy| && |dx| > 40px → 가로 스와이프로 판정
       if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
         // 왼쪽 스와이프 → 다음 주, 오른쪽 스와이프 → 이전 주
-        setCurrentDate(prev => dx < 0 ? addWeeks(prev, 1) : subWeeks(prev, 1))
+        navigateByWeeksRef.current(dx < 0 ? 1 : -1)
       }
     }
 
@@ -417,7 +460,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
 
   const fetchSchedules = useCallback(async () => {
     const requestId = ++latestRequestIdRef.current
-    setLoading(true)
+    // 네비게이션 재조회 시 setLoading(true) 하지 않음 → 그리드 블랙아웃 방지
+    // 최초 마운트만 loading=true(초기 state)로 스피너 표시
     const rangeStart = viewMode === 'week' ? weekStart
       : viewMode === 'month' ? rollingStart
       : new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
@@ -692,7 +736,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
             {viewMode === 'month' && (
               <>
                 <button
-                  onClick={() => setCurrentDate(new Date())}
+                  onClick={navigateToToday}
                   className="h-9 w-[100px] rounded text-[14px] font-semibold border border-white text-white hover:bg-white/[0.08] transition-colors"
                 >
                   오늘
@@ -707,19 +751,19 @@ export default function CalendarView({ profile }: CalendarViewProps) {
             {viewMode === 'week' && (
               <>
                 <button
-                  onClick={() => setCurrentDate(new Date())}
+                  onClick={navigateToToday}
                   className="h-9 w-[100px] rounded text-[14px] font-semibold border border-white text-white hover:bg-white/[0.08] transition-colors"
                 >
                   오늘
                 </button>
                 <button
-                  onClick={() => setCurrentDate(subWeeks(currentDate, 1))}
+                  onClick={() => navigateByWeeks(-1)}
                   className="w-8 h-8 flex items-center justify-center rounded text-[#4A4A4A] hover:text-[#BEBEBE] hover:bg-white/[0.05] transition-colors shrink-0"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <button
-                  onClick={() => setCurrentDate(addWeeks(currentDate, 1))}
+                  onClick={() => navigateByWeeks(1)}
                   className="w-8 h-8 flex items-center justify-center rounded text-[#4A4A4A] hover:text-[#BEBEBE] hover:bg-white/[0.05] transition-colors shrink-0"
                 >
                   <ChevronRight className="w-5 h-5" />
@@ -730,11 +774,11 @@ export default function CalendarView({ profile }: CalendarViewProps) {
               </>
             )}
 
-            {/* ── 목록(list): 기존 TODAY + 화살표 ── */}
+            {/* ── 목록(list): 기존 TODAY + 화살표 (Slide 없음) ── */}
             {viewMode === 'list' && (
               <>
                 <button
-                  onClick={() => setCurrentDate(subWeeks(currentDate, 1))}
+                  onClick={() => setCurrentDate((prev) => subWeeks(prev, 1))}
                   className="w-8 h-8 flex items-center justify-center rounded text-[#4A4A4A] hover:text-[#BEBEBE] hover:bg-white/[0.05] transition-colors shrink-0"
                 >
                   <ChevronLeft className="w-5 h-5" />
@@ -746,7 +790,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   TODAY
                 </button>
                 <button
-                  onClick={() => setCurrentDate(addWeeks(currentDate, 1))}
+                  onClick={() => setCurrentDate((prev) => addWeeks(prev, 1))}
                   className="w-8 h-8 flex items-center justify-center rounded text-[#4A4A4A] hover:text-[#BEBEBE] hover:bg-white/[0.05] transition-colors shrink-0"
                 >
                   <ChevronRight className="w-5 h-5" />
@@ -815,7 +859,17 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>불러오는 중...</p>
               </div>
             ) : (
-              <>
+              <div
+                key={format(currentDate, 'yyyy-MM-dd')}
+                className={cn(
+                  'overflow-x-hidden',
+                  slideDir === 'next' && 'cal-slide-next',
+                  slideDir === 'prev' && 'cal-slide-prev',
+                )}
+                onAnimationEnd={(e) => {
+                  if (e.target === e.currentTarget) handleSlideEnd()
+                }}
+              >
               {weekDays.map((date, idx) => {
                 const daySchedules = getSchedulesForDay(date)
                 const officeItems = getOfficeSchedulesForDay(date)
@@ -880,7 +934,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                               >
                                 <div className="flex-1 min-w-0 px-5 py-2">
                                   <div className="flex flex-col gap-0.5">
-                                    <span className="text-[14px] font-semibold leading-snug" style={{ color: '#C9A84C' }}>
+                                    <span className="text-[14px] font-semibold leading-snug" style={{ color: 'rgb(218, 188, 135)' }}>
                                       {record.details.title}
                                     </span>
                                     {(entry?.time || entry?.place) && (
@@ -991,7 +1045,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
               {!isDesktop && (
                 <div aria-hidden="true" style={{ height: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', flexShrink: 0 }} />
               )}
-              </>
+              </div>
             )}
           </div>
         )}
@@ -1027,8 +1081,19 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   ))}
                 </div>
 
-                {/* day grid — week-row 단위 relative 컨테이너 */}
-                <div className={cn(isDesktop ? 'flex flex-col flex-1 min-h-0' : '')}>
+                {/* day grid — week-row 단위 relative 컨테이너 (날짜 이동 시 Slide) */}
+                <div
+                  key={format(currentDate, 'yyyy-MM-dd')}
+                  className={cn(
+                    isDesktop ? 'flex flex-col flex-1 min-h-0' : '',
+                    'overflow-x-hidden',
+                    slideDir === 'next' && 'cal-slide-next',
+                    slideDir === 'prev' && 'cal-slide-prev',
+                  )}
+                  onAnimationEnd={(e) => {
+                    if (e.target === e.currentTarget) handleSlideEnd()
+                  }}
+                >
                 {weekRows.map((wDays, wIdx) => {
                   const lanes = getVacationLanes(wDays)
                   const laneCount = lanes.length > 0 ? Math.max(...lanes.map(l => l.lane)) + 1 : 0
@@ -1250,7 +1315,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                         onMouseLeave={() => setHoveredScheduleId(null)}
                                         onClick={(e) => { e.stopPropagation(); setSelectedOfficeRecord(r) }}
                                       >
-                                        <span className="truncate text-[11px]" style={{ color: '#C9A84C', fontSize: '11px' }}>
+                                        <span className="truncate text-[11px]" style={{ color: 'rgb(218, 188, 135)', fontSize: '11px' }}>
                                           {r.details.title}
                                         </span>
                                       </div>
@@ -1563,7 +1628,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                         </div>
                         <div className="w-px h-8 shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.10)' }} />
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-medium truncate text-[13px]" style={{ color: '#C9A84C' }}>
+                          <h3 className="font-medium truncate text-[13px]" style={{ color: 'rgb(218, 188, 135)' }}>
                             {record.details.title}
                           </h3>
                           {entry.place && (

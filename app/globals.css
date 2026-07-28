@@ -219,3 +219,25 @@ body {
   padding-top: calc(0.5rem + 1px);
   padding-bottom: calc(0.5rem + 1px);
 }
+
+/* ── 캘린더 날짜 이동 Slide 전환 ── */
+@keyframes cal-slide-next {
+  from { transform: translateX(24px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+@keyframes cal-slide-prev {
+  from { transform: translateX(-24px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+.cal-slide-next {
+  animation: cal-slide-next 0.25s ease-out both;
+}
+.cal-slide-prev {
+  animation: cal-slide-prev 0.25s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cal-slide-next,
+  .cal-slide-prev {
+    animation: none;
+  }
+}
