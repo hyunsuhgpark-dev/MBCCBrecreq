@@ -1032,7 +1032,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                         }}
                       >
                         {dayVacations.map((v) => (
-                          <span key={v.id} className="text-[10px] leading-snug truncate" style={{ color: '#C4B5FD' }}>
+                          <span key={v.id} className="text-[10px] leading-snug truncate" style={{ color: '#9B91BC' }}>
                             {v.half_day ? `${v.name} ${v.half_day}` : v.name}
                           </span>
                         ))}
@@ -1487,7 +1487,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                   height: vacBarH - 1,
                                   borderRadius: 2,
                                   backgroundColor: 'rgba(107, 114, 128, 0.10)',
-                                  color: '#C4B5FD',
+                                  color: '#9B91BC',
                                   fontSize: 10,
                                   paddingLeft: 4,
                                   display: 'flex',
@@ -1665,7 +1665,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                       </div>
                       <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} />
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-normal truncate text-[13px]" style={{ color: '#C4B5FD' }}>
+                        <h3 className="font-normal truncate text-[13px]" style={{ color: '#9B91BC' }}>
                           {vacLabel(v)}
                         </h3>
                       </div>
