@@ -807,8 +807,6 @@ export default function CalendarView({ profile }: CalendarViewProps) {
             className="border border-white/[0.15] rounded overflow-hidden overflow-y-auto"
             style={{
               maxHeight: isDesktop ? 'calc(100vh - 160px)' : undefined,
-              // 모바일: 고정 탭바(60px) + safe-area 홈 바를 완전히 벗어나도록 하단 여백 확보
-              paddingBottom: !isDesktop ? 'calc(env(safe-area-inset-bottom, 0px) + 16px)' : undefined,
             }}
           >
             {loading ? (
@@ -817,7 +815,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>불러오는 중...</p>
               </div>
             ) : (
-              weekDays.map((date, idx) => {
+              <>
+              {weekDays.map((date, idx) => {
                 const daySchedules = getSchedulesForDay(date)
                 const officeItems = getOfficeSchedulesForDay(date)
                 const dayVacations = getVacationsForDay(date)
@@ -987,7 +986,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                     )}
                   </div>
                 )
-              })
+              })}
+              {/* 모바일 하단 고정 탭바(~60px) + safe-area 영역 확보 스페이서 */}
+              {!isDesktop && (
+                <div aria-hidden="true" style={{ height: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', flexShrink: 0 }} />
+              )}
+              </>
             )}
           </div>
         )}
