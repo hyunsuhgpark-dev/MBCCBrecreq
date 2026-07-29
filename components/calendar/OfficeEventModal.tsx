@@ -199,24 +199,29 @@ export function OfficeEventModal({
     }
   }
 
-  const inputCls =
-    'w-full h-9 rounded border border-white/[0.12] bg-transparent px-3 text-[13px] text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-white/25'
+  const labelCls = 'text-sm font-medium text-zinc-300'
+  const inputCls = cn(
+    'w-full rounded-lg border border-white/[0.14] bg-white/[0.03]',
+    'px-3.5 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600',
+    'focus:outline-none focus:border-white/30 focus:bg-white/[0.04]',
+    'disabled:opacity-60 disabled:cursor-not-allowed transition-colors'
+  )
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-[440px] border-white/[0.12] p-0 gap-0"
-        style={{ backgroundColor: '#0F0F0F' }}
+        className="w-full sm:max-w-[540px] border-white/[0.12] p-0 gap-0 overflow-hidden rounded-xl"
+        style={{ backgroundColor: '#111111' }}
       >
-        <DialogHeader className="px-5 pt-5 pb-3 border-b border-white/[0.08]">
-          <DialogTitle className="text-[15px] font-semibold text-zinc-100">
+        <DialogHeader className="px-7 pt-7 pb-5 border-b border-white/[0.08]">
+          <DialogTitle className="text-xl font-semibold tracking-tight text-zinc-50 pr-8">
             {canEdit ? (isEdit ? '송출/행정 일정 수정' : '송출/행정 일정 등록') : '송출/행정 일정'}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="px-5 py-4 flex flex-col gap-4">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] text-zinc-500">제목 *</span>
+        <div className="px-7 py-6 flex flex-col gap-5 max-h-[min(70vh,640px)] overflow-y-auto">
+          <label className="flex flex-col gap-2">
+            <span className={labelCls}>제목 *</span>
             <input
               className={inputCls}
               value={title}
@@ -226,15 +231,15 @@ export function OfficeEventModal({
             />
           </label>
 
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] text-zinc-500">하루 종일</span>
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-white/[0.08] bg-white/[0.02] px-4 py-3">
+            <span className={labelCls}>하루 종일</span>
             <Switch checked={allDay} onCheckedChange={setAllDay} disabled={!canEdit} />
           </div>
 
           {allDay ? (
-            <div className="flex flex-col gap-3">
-              <label className="flex flex-col gap-1.5">
-                <span className="text-[11px] text-zinc-500">시작일</span>
+            <div className="flex flex-col gap-5">
+              <label className="flex flex-col gap-2">
+                <span className={labelCls}>시작일</span>
                 <input
                   type="date"
                   className={inputCls}
@@ -243,8 +248,8 @@ export function OfficeEventModal({
                   disabled={!canEdit}
                 />
               </label>
-              <label className="flex flex-col gap-1.5">
-                <span className="text-[11px] text-zinc-500">종료일</span>
+              <label className="flex flex-col gap-2">
+                <span className={labelCls}>종료일</span>
                 <input
                   type="date"
                   className={inputCls}
@@ -255,20 +260,20 @@ export function OfficeEventModal({
               </label>
             </div>
           ) : (
-            <div className={cn('flex flex-col gap-3', !canEdit && 'pointer-events-none opacity-70')}>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[11px] text-zinc-500">시작</span>
-                <DateTimePicker value={startLocal} onChange={setStartLocal} />
+            <div className={cn('flex flex-col gap-5', !canEdit && 'pointer-events-none opacity-70')}>
+              <div className="flex flex-col gap-2">
+                <span className={labelCls}>시작</span>
+                <DateTimePicker value={startLocal} onChange={setStartLocal} comfortable />
               </div>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[11px] text-zinc-500">종료</span>
-                <DateTimePicker value={endLocal} onChange={setEndLocal} />
+              <div className="flex flex-col gap-2">
+                <span className={labelCls}>종료</span>
+                <DateTimePicker value={endLocal} onChange={setEndLocal} comfortable />
               </div>
             </div>
           )}
 
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] text-zinc-500">위치 / 장소</span>
+          <label className="flex flex-col gap-2">
+            <span className={labelCls}>위치 / 장소</span>
             <input
               className={inputCls}
               value={location}
@@ -278,10 +283,10 @@ export function OfficeEventModal({
             />
           </label>
 
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] text-zinc-500">설명 / 메모</span>
+          <label className="flex flex-col gap-2">
+            <span className={labelCls}>설명 / 메모</span>
             <textarea
-              className="w-full min-h-[72px] rounded border border-white/[0.12] bg-transparent px-3 py-2 text-[13px] text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-white/25 resize-y"
+              className={cn(inputCls, 'min-h-[96px] resize-y leading-relaxed')}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               disabled={!canEdit}
@@ -289,18 +294,18 @@ export function OfficeEventModal({
             />
           </label>
 
-          <div className="flex flex-col gap-1">
-            <span className="text-[11px] text-zinc-500">작성자</span>
-            <span className="text-[13px] text-zinc-400">{authorLabel}</span>
+          <div className="flex flex-col gap-2 pt-1">
+            <span className={labelCls}>작성자</span>
+            <span className="text-sm text-zinc-400">{authorLabel}</span>
           </div>
         </div>
 
-        <DialogFooter className="px-5 py-4 border-t border-white/[0.08] flex-row gap-2 sm:justify-between">
+        <DialogFooter className="px-7 py-5 border-t border-white/[0.08] flex-row items-center gap-3 sm:justify-between bg-white/[0.015]">
           {canEdit && isEdit ? (
             <Button
               type="button"
               variant="ghost"
-              className="text-rose-400 hover:text-rose-300"
+              className="h-10 px-4 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10"
               disabled={deleting || saving}
               onClick={handleDelete}
             >
@@ -309,12 +314,22 @@ export function OfficeEventModal({
           ) : (
             <span />
           )}
-          <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <div className="flex items-center gap-3 ml-auto">
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-10 px-5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06]"
+              onClick={() => onOpenChange(false)}
+            >
               {canEdit ? '취소' : '닫기'}
             </Button>
             {canEdit && (
-              <Button type="button" disabled={saving || deleting} onClick={handleSave}>
+              <Button
+                type="button"
+                disabled={saving || deleting}
+                onClick={handleSave}
+                className="h-10 px-5 rounded-lg bg-zinc-100 text-zinc-900 hover:bg-white font-medium"
+              >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : '저장'}
               </Button>
             )}

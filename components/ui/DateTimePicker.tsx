@@ -14,6 +14,8 @@ interface DateTimePickerProps {
    * 종료 시간 입력처럼 "시간만" 바꿀 때도 폼 값이 비지 않도록 합니다.
    */
   anchorDate?: string
+  /** 모달 등에서 여유 있는 입력 높이·간격 */
+  comfortable?: boolean
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)      // 0 ~ 23
@@ -33,7 +35,15 @@ function toIso(date: string, hour: number, minute: number): string {
   return `${date}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
 }
 
-export default function DateTimePicker({ value, onChange, error, className, hideDate, anchorDate }: DateTimePickerProps) {
+export default function DateTimePicker({
+  value,
+  onChange,
+  error,
+  className,
+  hideDate,
+  anchorDate,
+  comfortable,
+}: DateTimePickerProps) {
   const parsed = parseValue(value)
   const [date, setDate] = useState(parsed.date)
   const [hour, setHour] = useState(parsed.hour)
@@ -59,13 +69,21 @@ export default function DateTimePicker({ value, onChange, error, className, hide
   }
 
   const selectCls = cn(
-    'h-11 sm:h-8 rounded border text-base sm:text-sm px-2 sm:px-1 focus:outline-none focus:border-[var(--accent)] cursor-pointer transition-colors',
+    comfortable
+      ? 'h-11 rounded-lg border text-sm px-3 focus:outline-none focus:border-white/30 cursor-pointer transition-colors'
+      : 'h-11 sm:h-8 rounded border text-base sm:text-sm px-2 sm:px-1 focus:outline-none focus:border-[var(--accent)] cursor-pointer transition-colors',
     'bg-[var(--bg-elevated)] text-[var(--text-primary)]',
     error ? 'border-red-400' : 'border-[var(--border-default)]'
   )
 
   return (
-    <div className={cn('flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-1.5 w-full', className)}>
+    <div
+      className={cn(
+        'flex flex-col sm:flex-row sm:items-center w-full',
+        comfortable ? 'gap-2.5 sm:gap-2.5' : 'gap-2 sm:gap-1.5',
+        className
+      )}
+    >
       {/* 날짜 — 고정 너비로 hideDate 시 spacer와 열 맞춤 */}
       {!hideDate ? (
         <input
@@ -73,22 +91,29 @@ export default function DateTimePicker({ value, onChange, error, className, hide
           value={date}
           onChange={(e) => { setDate(e.target.value); emit(e.target.value, hour, minute) }}
           className={cn(
-            'h-11 sm:h-8 w-full sm:w-[130px] shrink-0 rounded border text-base sm:text-sm px-2 focus:outline-none focus:border-[var(--accent)] cursor-pointer transition-colors',
+            comfortable
+              ? 'h-11 w-full sm:w-[148px] shrink-0 rounded-lg border text-sm px-3.5 focus:outline-none focus:border-white/30 cursor-pointer transition-colors'
+              : 'h-11 sm:h-8 w-full sm:w-[130px] shrink-0 rounded border text-base sm:text-sm px-2 focus:outline-none focus:border-[var(--accent)] cursor-pointer transition-colors',
             'bg-[var(--bg-elevated)] text-[var(--text-primary)]',
             error ? 'border-red-400' : 'border-[var(--border-default)]'
           )}
         />
       ) : (
         /* hideDate 모드: 날짜 input과 동일한 너비의 투명 spacer → 시·분 열 정렬 */
-        <div className="hidden sm:block w-[130px] shrink-0" />
+        <div className={cn('hidden sm:block shrink-0', comfortable ? 'w-[148px]' : 'w-[130px]')} />
       )}
 
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-1.5 w-full sm:w-auto">
+      <div
+        className={cn(
+          'grid grid-cols-2 w-full sm:w-auto sm:flex sm:items-center',
+          comfortable ? 'gap-2.5 sm:gap-2.5' : 'gap-2 sm:gap-1.5'
+        )}
+      >
         {/* 시 (0~23) */}
         <select
           value={hour}
           onChange={(e) => { const v = parseInt(e.target.value); setHour(v); emit(date, v, minute) }}
-          className={cn(selectCls, 'w-full sm:w-16')}
+          className={cn(selectCls, comfortable ? 'w-full sm:w-[88px]' : 'w-full sm:w-16')}
         >
           {HOURS.map((h) => (
             <option key={h} value={h}>{String(h).padStart(2, '0')}시</option>
@@ -99,7 +124,7 @@ export default function DateTimePicker({ value, onChange, error, className, hide
         <select
           value={minute}
           onChange={(e) => { const v = parseInt(e.target.value); setMinute(v); emit(date, hour, v) }}
-          className={cn(selectCls, 'w-full sm:w-16')}
+          className={cn(selectCls, comfortable ? 'w-full sm:w-[88px]' : 'w-full sm:w-16')}
         >
           {MINUTES.map((m) => (
             <option key={m} value={m}>{String(m).padStart(2, '0')}분</option>
