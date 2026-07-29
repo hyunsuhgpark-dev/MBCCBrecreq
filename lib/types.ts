@@ -145,6 +145,29 @@ export interface ScheduleRecord {
   }
 }
 
+/** 송출/행정 — Google Calendar 양방향 sync 이벤트 */
+export interface OfficeEvent {
+  id: string
+  google_event_id: string | null
+  title: string
+  description: string | null
+  location: string | null
+  start_at: string | null
+  end_at: string | null
+  all_day: boolean
+  start_date: string | null
+  end_date: string | null
+  created_by: string | null
+  author_name: string
+  author_role: string | null
+  etag: string | null
+  google_updated_at: string | null
+  local_updated_at: string
+  dirty: boolean
+  deleted_at: string | null
+  created_at: string
+}
+
 /** 사내 ERP 휴가 데이터 */
 export interface Vacation {
   id: string

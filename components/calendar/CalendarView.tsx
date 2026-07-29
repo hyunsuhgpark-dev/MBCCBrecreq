@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { Schedule, Profile, ScheduleRecord, Vacation } from '@/lib/types'
+import type { Schedule, Profile, OfficeEvent, Vacation } from '@/lib/types'
+import { OfficeEventModal } from '@/components/calendar/OfficeEventModal'
 import {
   ChevronLeft,
   ChevronRight,
@@ -168,12 +169,16 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   // 사이드바 필터 상태 (localStorage에서 복원, SSR-safe로 기본값 사용)
   const [filters, setFilters] = useState<SidebarFilters>(DEFAULT_SIDEBAR_FILTERS)
 
-  // Google Calendar 기술사무실/송중계 일정
-  const [officeSchedules, setOfficeSchedules] = useState<ScheduleRecord[]>([])
+  // 송출/행정 (office_events ↔ Google Calendar sync)
+  const [officeEvents, setOfficeEvents] = useState<OfficeEvent[]>([])
   const [officeLoading, setOfficeLoading] = useState(false)
   const [officeConfigured, setOfficeConfigured] = useState<boolean | undefined>(undefined)
-  // 구글 캘린더 일정 상세 모달
-  const [selectedOfficeRecord, setSelectedOfficeRecord] = useState<ScheduleRecord | null>(null)
+  const [officeVersion, setOfficeVersion] = useState(0)
+  // 송출/행정 등록·수정 모달
+  const [officeModalOpen, setOfficeModalOpen] = useState(false)
+  const [officeModalDate, setOfficeModalDate] = useState<string | undefined>(undefined)
+  const [officeModalEvent, setOfficeModalEvent] = useState<OfficeEvent | null>(null)
+  const [officeModalCanEdit, setOfficeModalCanEdit] = useState(true)
 
   // 사내 휴가 일정
   const [vacations, setVacations] = useState<Vacation[]>([])
@@ -247,41 +252,46 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     }
   }, [filters])
 
-  // Google Calendar fetch — officeCalendar 체크 또는 날짜 이동 시 재로드
+  // 송출/행정 fetch + Google sync — officeCalendar 체크 / 날짜 이동 / 저장 후 재로드
   useEffect(() => {
     if (!filters.officeCalendar) {
-      setOfficeSchedules([])
+      setOfficeEvents([])
       return
     }
     let cancelled = false
     setOfficeLoading(true)
 
-    // 현재 뷰의 날짜 범위를 파라미터로 전달
-    const rangeStart = viewMode === 'week'
-      ? startOfWeek(currentDate, { locale: ko })
-      : viewMode === 'month'
-      ? rollingStart
-      : new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
-    const rangeEnd = viewMode === 'week'
-      ? endOfWeek(currentDate, { locale: ko })
-      : viewMode === 'month'
-      ? rollingEnd
-      : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+    const weekStartLocal = startOfWeek(currentDate, { weekStartsOn: 1 })
+    const rangeStart =
+      viewMode === 'week'
+        ? weekStartLocal
+        : viewMode === 'month'
+          ? startOfWeek(subWeeks(startOfWeek(currentDate, { weekStartsOn: 0 }), 1), { weekStartsOn: 0 })
+          : new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+    const rangeEnd =
+      viewMode === 'week'
+        ? addDays(weekStartLocal, 13)
+        : viewMode === 'month'
+          ? addDays(
+              startOfWeek(subWeeks(startOfWeek(currentDate, { weekStartsOn: 0 }), 1), { weekStartsOn: 0 }),
+              34
+            )
+          : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
 
     const startParam = format(rangeStart, 'yyyy-MM-dd')
     const endParam = format(rangeEnd, 'yyyy-MM-dd')
 
-    fetch(`/api/google-calendar/office?start=${startParam}&end=${endParam}`)
+    fetch(`/api/office-events?start=${startParam}&end=${endParam}`)
       .then((r) => r.json())
-      .then((data: { records?: ScheduleRecord[]; configured?: boolean }) => {
+      .then((data: { events?: OfficeEvent[]; configured?: boolean }) => {
         if (!cancelled) {
-          setOfficeSchedules(data.records ?? [])
+          setOfficeEvents(data.events ?? [])
           setOfficeConfigured(data.configured ?? false)
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setOfficeSchedules([])
+          setOfficeEvents([])
           setOfficeConfigured(false)
         }
       })
@@ -289,7 +299,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
         if (!cancelled) setOfficeLoading(false)
       })
     return () => { cancelled = true }
-  }, [filters.officeCalendar, currentDate, viewMode])
+  }, [filters.officeCalendar, currentDate, viewMode, officeVersion])
 
   // 휴가 fetch — vacation 체크 또는 날짜 이동 / 업로드 시 재조회
   useEffect(() => {
@@ -541,12 +551,44 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     return applyFilters(daySchedules)
   }
 
-  function getOfficeSchedulesForDay(date: Date): ScheduleRecord[] {
+  function getOfficeEventsForDay(date: Date): OfficeEvent[] {
     if (!filters.officeCalendar) return []
     const ymd = format(date, 'yyyy-MM-dd')
-    return officeSchedules.filter((r) =>
-      r.details.entries.some((e) => e.date === ymd)
-    )
+    return officeEvents.filter((ev) => {
+      const start = ev.start_date ?? (ev.start_at ? format(parseISO(ev.start_at), 'yyyy-MM-dd') : null)
+      const end = ev.end_date ?? (ev.end_at ? format(parseISO(ev.end_at), 'yyyy-MM-dd') : start)
+      if (!start || !end) return false
+      return start <= ymd && ymd <= end
+    })
+  }
+
+  function openOfficeCreate(date: Date) {
+    setOfficeModalEvent(null)
+    setOfficeModalDate(format(date, 'yyyy-MM-dd'))
+    setOfficeModalCanEdit(true)
+    setOfficeModalOpen(true)
+  }
+
+  function openOfficeEvent(ev: OfficeEvent, edit: boolean) {
+    setOfficeModalEvent(ev)
+    setOfficeModalDate(undefined)
+    setOfficeModalCanEdit(edit)
+    setOfficeModalOpen(true)
+  }
+
+  function officeTimeLabel(ev: OfficeEvent, day: Date): string {
+    if (ev.all_day) return '종일'
+    if (!ev.start_at) return ''
+    const ymd = format(day, 'yyyy-MM-dd')
+    const start = parseISO(ev.start_at)
+    const end = ev.end_at ? parseISO(ev.end_at) : start
+    const startDay = format(start, 'yyyy-MM-dd')
+    const endDay = format(end, 'yyyy-MM-dd')
+    if (startDay !== endDay) {
+      return `${format(start, 'M/d HH:mm')}~${format(end, 'M/d HH:mm')}`
+    }
+    if (ymd !== startDay) return format(start, 'HH:mm')
+    return `${format(start, 'HH:mm')}~${format(end, 'HH:mm')}`
   }
 
   /** 휴가자 표시 라벨: 이름만 표시 (반차 텍스트 제거) */
@@ -671,7 +713,9 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     return `${approved}/${schedule.approvals.length}`
   }
 
-  const canCreate = profile.role === 'Producer' || profile.role === 'Admin'
+  // Producer만 빈 셀 → 제작의뢰 / Admin·ENG → 송출/행정 모달
+  const canCreateRecording = profile.role === 'Producer'
+  const canEditOffice = profile.role === 'Admin' || profile.role === 'ENG'
   const displayedSchedules = applyFilters(schedules)
 
   return (
@@ -872,13 +916,14 @@ export default function CalendarView({ profile }: CalendarViewProps) {
               >
               {weekDays.map((date, idx) => {
                 const daySchedules = getSchedulesForDay(date)
-                const officeItems = getOfficeSchedulesForDay(date)
+                const officeItems = getOfficeEventsForDay(date)
                 const dayVacations = getVacationsForDay(date)
                 const dow = date.getDay()
                 const isTodayDate = isToday(date)
                 const dowLabel = DOW_LABELS[dow]
                 const isWeekend = dow === 0 || dow === 6
                 const dateColor = isWeekend ? DOW_COLORS[dow] : '#585858'
+                const dateClickable = canEditOffice || canCreateRecording
 
                 return (
                   <div
@@ -892,11 +937,14 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   >
                     {/* 날짜 사이드바 */}
                     <div
-                      role={canCreate ? 'button' : undefined}
-                      onClick={canCreate ? () => router.push(`/schedules/new?date=${format(date, 'yyyy-MM-dd')}`) : undefined}
+                      role={dateClickable ? 'button' : undefined}
+                      onClick={() => {
+                        if (canEditOffice) openOfficeCreate(date)
+                        else if (canCreateRecording) router.push(`/schedules/new?date=${format(date, 'yyyy-MM-dd')}`)
+                      }}
                       className={cn(
                         'shrink-0 w-[58px] flex flex-col items-center justify-center gap-0.5 border-r border-white/[0.15]',
-                        canCreate && 'cursor-pointer transition-colors hover:bg-white/[0.04]'
+                        dateClickable && 'cursor-pointer transition-colors hover:bg-white/[0.04]'
                       )}
                     >
                       <span className="text-[22px] font-semibold tabular-nums leading-none" style={{ color: dateColor }}>
@@ -918,35 +966,34 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                             </div>
                           )
                         ) : (() => {
-                          // 종일(시간 없음) 먼저, 시간 있는 항목을 나중에 표시
-                          const dateStr = format(date, 'yyyy-MM-dd')
-                          const allDayOffice = officeItems.filter(r => !r.details.entries.find(e => e.date === dateStr)?.time)
-                          const timedOffice  = officeItems.filter(r =>  r.details.entries.find(e => e.date === dateStr)?.time)
+                          // 종일 먼저, 시간 있는 항목 나중
+                          const allDayOffice = officeItems.filter((r) => r.all_day)
+                          const timedOffice = officeItems.filter((r) => !r.all_day)
 
-                          const renderOfficeItem = (record: typeof officeItems[number]) => {
-                            const entry = record.details.entries.find((e) => e.date === dateStr)
+                          const renderOfficeItem = (ev: OfficeEvent) => {
+                            const timeLbl = officeTimeLabel(ev, date)
                             return (
                               <div
-                                key={record.id}
+                                key={ev.id}
                                 className="flex items-start border-l-[2px] cursor-pointer hover:bg-white/[0.025] transition-colors"
                                 style={{ borderLeftColor: 'rgba(255,255,255,0.55)' }}
-                                onClick={() => setSelectedOfficeRecord(record)}
+                                onClick={() => openOfficeEvent(ev, canEditOffice)}
                               >
                                 <div className="flex-1 min-w-0 px-5 py-2">
                                   <div className="flex flex-col gap-0.5">
                                     <span className="text-[14px] font-semibold leading-snug" style={{ color: 'rgb(218, 188, 135)' }}>
-                                      {record.details.title}
+                                      {ev.title}
                                     </span>
-                                    {(entry?.time || entry?.place) && (
+                                    {(timeLbl || ev.location) && (
                                       <div className="flex items-center gap-2 flex-wrap">
-                                        {entry?.time && (
+                                        {timeLbl && (
                                           <span className="text-[12px] tabular-nums" style={{ color: 'var(--text-muted)' }}>
-                                            {entry.time}
+                                            {timeLbl}
                                           </span>
                                         )}
-                                        {entry?.place && (
+                                        {ev.location && (
                                           <span className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
-                                            {entry.place}
+                                            {ev.location}
                                           </span>
                                         )}
                                       </div>
@@ -959,7 +1006,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
 
                           return (
                             <>
-                              {/* 1순위: 종일 항목 (시간 없는 구글 캘린더) */}
+                              {/* 1순위: 종일 항목 */}
                               {allDayOffice.map(renderOfficeItem)}
 
                               {/* 2순위: 시간 있는 일반 제작 일정 */}
@@ -1118,11 +1165,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                           const daySchedules = allDaySchedules.filter(s =>
                             format(parseISO(s.broadcast_start), 'yyyy-MM-dd') === format(parseISO(s.broadcast_end), 'yyyy-MM-dd')
                           )
-                          const officeItems = getOfficeSchedulesForDay(day)
+                          const officeItems = getOfficeEventsForDay(day)
                           const isInCurrentMonth = isSameMonth(day, currentDate)
                           const isTodayDate = isToday(day)
                           const dow = day.getDay()
                           const isWeekend = dow === 0 || dow === 6
+                          const cellClickable = canEditOffice || canCreateRecording
 
                           return (
                             <div
@@ -1134,11 +1182,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                 borderRight: idx !== 6 ? '1px solid rgba(255,255,255,0.15)' : 'none',
                                 borderBottom: wIdx < weekRows.length - 1 ? '1px solid rgba(255,255,255,0.15)' : 'none',
                                 boxShadow: isTodayDate ? 'inset 0 0 0 1px rgba(235, 222, 175, 0.80)' : 'none',
-                                cursor: canCreate ? 'pointer' : 'default',
+                                cursor: cellClickable ? 'pointer' : 'default',
                                 paddingBottom: vacZoneH,
                               }}
                               onClick={() => {
-                                if (canCreate) {
+                                if (canEditOffice) openOfficeCreate(day)
+                                else if (canCreateRecording) {
                                   router.push(`/schedules/new?date=${format(day, 'yyyy-MM-dd')}`)
                                 }
                               }}
@@ -1297,30 +1346,32 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                   )
                                 })}
 
-                                {/* 기술사무실 구글 캘린더 칩 */}
-                                {isDesktop && officeItems.slice(0, 1).map((r) => {
-                                  const entry = r.details.entries.find((e) => e.date === format(day, 'yyyy-MM-dd'))
-                                  const isOfficeHovered = hoveredScheduleId === `office-${r.id}`
+                                {/* 송출/행정 칩 */}
+                                {isDesktop && officeItems.slice(0, 1).map((ev) => {
+                                  const timeLbl = officeTimeLabel(ev, day)
+                                  const isOfficeHovered = hoveredScheduleId === `office-${ev.id}`
                                   const isRightEdgeOffice = idx >= 5
                                   return (
                                     <div
-                                      key={r.id}
+                                      key={ev.id}
                                       className="relative"
                                       onClick={(e) => e.stopPropagation()}
                                     >
                                       <div
                                         className="flex items-center gap-1 cursor-pointer hover:bg-white/[0.04] transition-colors"
                                         style={{ borderLeft: '2px solid rgba(255,255,255,0.55)', padding: '2px 5px' }}
-                                        onMouseEnter={() => setHoveredScheduleId(`office-${r.id}`)}
+                                        onMouseEnter={() => setHoveredScheduleId(`office-${ev.id}`)}
                                         onMouseLeave={() => setHoveredScheduleId(null)}
-                                        onClick={(e) => { e.stopPropagation(); setSelectedOfficeRecord(r) }}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          openOfficeEvent(ev, canEditOffice)
+                                        }}
                                       >
                                         <span className="truncate text-[11px]" style={{ color: 'rgb(218, 188, 135)', fontSize: '11px' }}>
-                                          {r.details.title}
+                                          {ev.title}
                                         </span>
                                       </div>
 
-                                      {/* 호버 툴팁 */}
                                       {isOfficeHovered && (
                                         <div
                                           className="absolute z-50 rounded shadow-xl pointer-events-none"
@@ -1337,20 +1388,20 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                           }}
                                         >
                                           <div className="text-[11px] font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
-                                            {r.details.title}
+                                            {ev.title}
                                           </div>
-                                          {entry?.time && (
+                                          {timeLbl && (
                                             <div className="text-[11px] tabular-nums" style={{ color: '#9CA3AF' }}>
-                                              {entry.time}
+                                              {timeLbl}
                                             </div>
                                           )}
-                                          {entry?.place && (
+                                          {ev.location && (
                                             <div className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
-                                              {entry.place}
+                                              {ev.location}
                                             </div>
                                           )}
                                           <div className="text-[10px] mt-1.5" style={{ color: '#6B7280' }}>
-                                            클릭하여 상세보기
+                                            클릭하여 {canEditOffice ? '수정' : '상세보기'}
                                           </div>
                                         </div>
                                       )}
@@ -1519,11 +1570,11 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 <div className="w-5 h-5 border border-white/[0.12] border-t-white/30 rounded-full animate-spin mx-auto mb-3" />
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>불러오는 중...</p>
               </div>
-            ) : displayedSchedules.length === 0 && officeSchedules.length === 0 && vacations.length === 0 ? (
+            ) : displayedSchedules.length === 0 && officeEvents.length === 0 && vacations.length === 0 ? (
               <div className="p-16 text-center">
                 <CalendarDays className="w-8 h-8 mx-auto mb-3 opacity-20" />
                 <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>이번 달 등록된 일정이 없습니다.</p>
-                {canCreate && (
+                {(canCreateRecording || profile.role === 'Admin') && (
                   <Link href="/schedules/new">
                     <button className="mt-4 h-8 px-4 text-xs font-medium rounded border border-white/[0.15] text-[#6A6A6A] hover:text-[#C0C0C0] hover:bg-white/[0.04] transition-colors">
                       + 첫 의뢰하기
@@ -1601,49 +1652,53 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   )
                 })}
 
-                {/* 구글 캘린더 기술사무실 일정 (목록) */}
+                {/* 송출/행정 일정 (목록) */}
                 {filters.officeCalendar && officeLoading && (
                   <div className="p-4 text-center text-[12px]" style={{ color: 'var(--text-muted)' }}>
-                    사무실 일정 불러오는 중...
+                    송출/행정 일정 불러오는 중...
                   </div>
                 )}
-                {filters.officeCalendar && !officeLoading && officeSchedules.map((record) => (
-                  record.details.entries.map((entry) => (
+                {filters.officeCalendar && !officeLoading && officeEvents.map((ev) => {
+                  const dayStr = ev.start_date ?? (ev.start_at ? format(parseISO(ev.start_at), 'yyyy-MM-dd') : '')
+                  if (!dayStr) return null
+                  const dayDate = parseISO(dayStr)
+                  const timeLbl = officeTimeLabel(ev, dayDate)
+                  return (
                     <div
-                      key={`${record.id}-${entry.date}`}
+                      key={ev.id}
                       className="border-l-[2px] overflow-hidden cursor-pointer hover:bg-white/[0.025] transition-colors"
                       style={{ borderLeftColor: 'rgba(255,255,255,0.55)', backgroundColor: 'transparent' }}
-                      onClick={() => setSelectedOfficeRecord(record)}
+                      onClick={() => openOfficeEvent(ev, canEditOffice)}
                     >
                       <div className="p-4 flex items-center gap-4">
                         <div className="shrink-0 w-[64px] text-center">
                           <div className="text-[11px] tabular-nums whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
-                            {format(parseISO(entry.date), 'M/d', { locale: ko })}({format(parseISO(entry.date), 'EEE', { locale: ko })})
+                            {format(dayDate, 'M/d', { locale: ko })}({format(dayDate, 'EEE', { locale: ko })})
                           </div>
-                          {entry.time && (
+                          {timeLbl && (
                             <div className="text-[13px] font-medium tabular-nums mt-0.5" style={{ color: '#9CA3AF' }}>
-                              {entry.time}
+                              {timeLbl}
                             </div>
                           )}
                         </div>
                         <div className="w-px h-8 shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.10)' }} />
                         <div className="flex-1 min-w-0">
                           <h3 className="font-medium truncate text-[13px]" style={{ color: 'rgb(218, 188, 135)' }}>
-                            {record.details.title}
+                            {ev.title}
                           </h3>
-                          {entry.place && (
+                          {ev.location && (
                             <div className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
-                              {entry.place}
+                              {ev.location}
                             </div>
                           )}
                         </div>
                         <span className="text-[10px] px-1.5 py-0.5 rounded shrink-0" style={{ backgroundColor: 'rgba(75,85,99,0.2)', color: '#9CA3AF' }}>
-                          사무실
+                          송출/행정
                         </span>
                       </div>
                     </div>
-                  ))
-                ))}
+                  )
+                })}
 
                 {/* 휴가 목록 — 퍼플 톤 바 스타일 */}
                 {filters.vacation && vacations.map((v) => (
@@ -1679,84 +1734,15 @@ export default function CalendarView({ profile }: CalendarViewProps) {
 
       </div>
 
-      {/* ── 구글 캘린더 일정 상세 모달 ── */}
-      {selectedOfficeRecord && (
-        <>
-          {/* 배경 오버레이 */}
-          <div
-            className="fixed inset-0 z-50 bg-black/60"
-            onClick={() => setSelectedOfficeRecord(null)}
-          />
-          {/* 모달 박스 */}
-          <div
-            className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px] max-w-[90vw] rounded-lg shadow-2xl"
-            style={{ backgroundColor: '#141414', border: '1px solid rgba(255,255,255,0.12)' }}
-          >
-            {/* 헤더 — pl: 14px로 제목 텍스트가 25px(=14+3+8)에서 시작 */}
-            <div className="flex items-start justify-between gap-3 pr-5" style={{ paddingTop: '13px', paddingBottom: '7px', paddingLeft: '14px' }}>
-              <div className="flex items-center gap-2">
-                <span
-                  className="w-[3px] h-[18px] rounded-full shrink-0"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.55)' }}
-                />
-                <h2 className="text-[15px] font-semibold leading-snug" style={{ color: 'var(--text-primary)' }}>
-                  {selectedOfficeRecord.details.title}
-                </h2>
-              </div>
-              <button
-                onClick={() => setSelectedOfficeRecord(null)}
-                className="shrink-0 w-6 h-6 flex items-center justify-center rounded text-zinc-600 hover:text-zinc-300 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* 구분선 */}
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', margin: '0 20px' }} />
-
-            {/* 날짜·시간 — 위아래 좌우 가운데 정렬, 넉넉한 여백 */}
-            <div
-              className="flex flex-col items-center justify-center text-center"
-              style={{ padding: '28px 20px' }}
-            >
-              {selectedOfficeRecord.details.entries.map((entry, i) => (
-                <div key={i} className="flex flex-col items-center" style={{ gap: '8px' }}>
-                  <div className="flex items-center justify-center gap-2 text-[13px]">
-                    <span style={{ color: '#9CA3AF' }}>{entry.date}</span>
-                    {entry.time && (
-                      <>
-                        <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span>
-                        <span style={{ color: 'var(--text-primary)' }}>{entry.time}</span>
-                      </>
-                    )}
-                  </div>
-                  {entry.place && (
-                    <div className="flex items-center justify-center gap-1.5 text-[12px]" style={{ color: '#9CA3AF' }}>
-                      <MapPin className="w-3 h-3 shrink-0" />
-                      <span>{entry.place}</span>
-                    </div>
-                  )}
-                  {entry.note && (
-                    <div className="text-[12px] leading-relaxed" style={{ color: '#9CA3AF' }}>
-                      {entry.note}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* 구분선 */}
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', margin: '0 20px' }} />
-
-            {/* 출처 — 제목 텍스트 시작열(25px)에 맞춰 왼쪽 정렬 */}
-            <div style={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '25px' }}>
-              <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
-                {selectedOfficeRecord.memo}
-              </span>
-            </div>
-          </div>
-        </>
-      )}
+      <OfficeEventModal
+        open={officeModalOpen}
+        onOpenChange={setOfficeModalOpen}
+        profile={profile}
+        defaultDate={officeModalDate}
+        event={officeModalEvent}
+        canEdit={officeModalCanEdit}
+        onSaved={() => setOfficeVersion((v) => v + 1)}
+      />
 
     </div>
   )
