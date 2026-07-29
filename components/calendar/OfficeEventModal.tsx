@@ -1,8 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import DateTimePicker from '@/components/ui/DateTimePicker'
 import type { OfficeEvent, Profile } from '@/lib/types'
@@ -199,142 +198,167 @@ export function OfficeEventModal({
     }
   }
 
-  const labelCls = 'text-sm font-medium text-zinc-300'
+  const labelCls = 'block text-sm font-medium text-zinc-300'
   const inputCls = cn(
-    'w-full rounded-lg border border-white/[0.14] bg-white/[0.03]',
-    'px-3.5 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600',
-    'focus:outline-none focus:border-white/30 focus:bg-white/[0.04]',
-    'disabled:opacity-60 disabled:cursor-not-allowed transition-colors'
+    'box-border w-full rounded-md border border-white/15 bg-zinc-900/80',
+    'px-3.5 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500',
+    'focus:outline-none focus:border-white/30',
+    'disabled:opacity-60 disabled:cursor-not-allowed'
   )
+  const fieldStyle = { display: 'flex', flexDirection: 'column' as const, gap: 5 }
+  const stackStyle = { display: 'flex', flexDirection: 'column' as const, gap: 14 }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-full sm:max-w-[540px] border-white/[0.12] p-0 gap-0 overflow-hidden rounded-xl"
+        className={cn(
+          '!p-0 flex w-full max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden rounded-xl border border-white/15',
+          'sm:!max-w-[560px]',
+        )}
         style={{ backgroundColor: '#111111' }}
       >
-        <DialogHeader className="px-7 pt-7 pb-5 border-b border-white/[0.08]">
-          <DialogTitle className="text-xl font-semibold tracking-tight text-zinc-50 pr-8">
-            {canEdit ? (isEdit ? '송출/행정 일정 수정' : '송출/행정 일정 등록') : '송출/행정 일정'}
-          </DialogTitle>
-        </DialogHeader>
+        {/* 패딩·간격은 인라인으로 강제 (Tailwind 유틸이 안 먹는 경우 대비) */}
+        <div className="box-border w-full" style={{ padding: '14px 20px 16px' }}>
+          <DialogHeader className="pr-8 text-left" style={{ marginBottom: 14 }}>
+            <DialogTitle className="text-xl font-semibold tracking-tight text-zinc-50">
+              {canEdit ? (isEdit ? '송출/행정 일정 수정' : '송출/행정 일정 등록') : '송출/행정 일정'}
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className="px-7 py-6 flex flex-col gap-5 max-h-[min(70vh,640px)] overflow-y-auto">
-          <label className="flex flex-col gap-2">
-            <span className={labelCls}>제목 *</span>
-            <input
-              className={inputCls}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              disabled={!canEdit}
-              placeholder="일정 제목"
-            />
-          </label>
+          <div
+            className="max-h-[min(65vh,560px)] overflow-y-auto overflow-x-hidden"
+            style={stackStyle}
+          >
+            <div style={fieldStyle}>
+              <label className={labelCls} htmlFor="office-title">제목 *</label>
+              <input
+                id="office-title"
+                className={inputCls}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                disabled={!canEdit}
+                placeholder="일정 제목"
+              />
+            </div>
 
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-white/[0.08] bg-white/[0.02] px-4 py-3">
-            <span className={labelCls}>하루 종일</span>
-            <Switch checked={allDay} onCheckedChange={setAllDay} disabled={!canEdit} />
+            <div
+              className="flex items-center justify-between rounded-md border border-white/10 bg-white/[0.03]"
+              style={{ padding: '7px 8px' }}
+            >
+              <span className="text-sm font-medium text-zinc-300">하루 종일</span>
+              <Switch checked={allDay} onCheckedChange={setAllDay} disabled={!canEdit} />
+            </div>
+
+            {allDay ? (
+              <div style={stackStyle}>
+                <div style={fieldStyle}>
+                  <label className={labelCls} htmlFor="office-start-date">시작일</label>
+                  <input
+                    id="office-start-date"
+                    type="date"
+                    className={inputCls}
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    disabled={!canEdit}
+                  />
+                </div>
+                <div style={fieldStyle}>
+                  <label className={labelCls} htmlFor="office-end-date">종료일</label>
+                  <input
+                    id="office-end-date"
+                    type="date"
+                    className={inputCls}
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    disabled={!canEdit}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div
+                className={cn(!canEdit && 'pointer-events-none opacity-70')}
+                style={stackStyle}
+              >
+                <div style={fieldStyle}>
+                  <span className={labelCls}>시작</span>
+                  <DateTimePicker value={startLocal} onChange={setStartLocal} comfortable />
+                </div>
+                <div style={fieldStyle}>
+                  <span className={labelCls}>종료</span>
+                  <DateTimePicker value={endLocal} onChange={setEndLocal} comfortable />
+                </div>
+              </div>
+            )}
+
+            <div style={fieldStyle}>
+              <label className={labelCls} htmlFor="office-location">위치 / 장소</label>
+              <input
+                id="office-location"
+                className={inputCls}
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                disabled={!canEdit}
+                placeholder="장소"
+              />
+            </div>
+
+            <div style={fieldStyle}>
+              <label className={labelCls} htmlFor="office-desc">설명 / 메모</label>
+              <textarea
+                id="office-desc"
+                className={cn(inputCls, 'min-h-[88px] resize-y leading-relaxed')}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                disabled={!canEdit}
+                placeholder="메모"
+              />
+            </div>
+
+            <div style={fieldStyle}>
+              <span className={labelCls}>작성자</span>
+              <p className="text-sm text-zinc-400">{authorLabel}</p>
+            </div>
           </div>
 
-          {allDay ? (
-            <div className="flex flex-col gap-5">
-              <label className="flex flex-col gap-2">
-                <span className={labelCls}>시작일</span>
-                <input
-                  type="date"
-                  className={inputCls}
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  disabled={!canEdit}
-                />
-              </label>
-              <label className="flex flex-col gap-2">
-                <span className={labelCls}>종료일</span>
-                <input
-                  type="date"
-                  className={inputCls}
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  disabled={!canEdit}
-                />
-              </label>
+          <div
+            className="flex shrink-0 flex-wrap items-center gap-2.5"
+            style={{
+              marginTop: 16,
+              justifyContent: canEdit && isEdit ? 'space-between' : 'flex-end',
+            }}
+          >
+            {canEdit && isEdit ? (
+              <button
+                type="button"
+                disabled={deleting || saving}
+                onClick={handleDelete}
+                className="rounded-lg px-4 py-2 text-sm text-zinc-500 transition-colors hover:bg-white/[0.04] hover:text-rose-400 disabled:opacity-50"
+              >
+                {deleting ? <Loader2 className="inline h-4 w-4 animate-spin" /> : '삭제'}
+              </button>
+            ) : null}
+
+            <div className="ml-auto flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                className="min-h-[38px] min-w-[80px] rounded-lg border border-white/20 bg-transparent px-5 text-sm text-zinc-300 transition-colors hover:border-white/30 hover:bg-white/[0.04] hover:text-zinc-100"
+              >
+                {canEdit ? '취소' : '닫기'}
+              </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  disabled={saving || deleting}
+                  onClick={handleSave}
+                  className="min-h-[38px] min-w-[80px] rounded-lg bg-zinc-100 px-5 text-sm font-medium text-zinc-900 transition-colors hover:bg-white disabled:opacity-50"
+                >
+                  {saving ? <Loader2 className="inline h-4 w-4 animate-spin" /> : '저장'}
+                </button>
+              )}
             </div>
-          ) : (
-            <div className={cn('flex flex-col gap-5', !canEdit && 'pointer-events-none opacity-70')}>
-              <div className="flex flex-col gap-2">
-                <span className={labelCls}>시작</span>
-                <DateTimePicker value={startLocal} onChange={setStartLocal} comfortable />
-              </div>
-              <div className="flex flex-col gap-2">
-                <span className={labelCls}>종료</span>
-                <DateTimePicker value={endLocal} onChange={setEndLocal} comfortable />
-              </div>
-            </div>
-          )}
-
-          <label className="flex flex-col gap-2">
-            <span className={labelCls}>위치 / 장소</span>
-            <input
-              className={inputCls}
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              disabled={!canEdit}
-              placeholder="장소"
-            />
-          </label>
-
-          <label className="flex flex-col gap-2">
-            <span className={labelCls}>설명 / 메모</span>
-            <textarea
-              className={cn(inputCls, 'min-h-[96px] resize-y leading-relaxed')}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              disabled={!canEdit}
-              placeholder="메모"
-            />
-          </label>
-
-          <div className="flex flex-col gap-2 pt-1">
-            <span className={labelCls}>작성자</span>
-            <span className="text-sm text-zinc-400">{authorLabel}</span>
           </div>
         </div>
-
-        <DialogFooter className="px-7 py-5 border-t border-white/[0.08] flex-row items-center gap-3 sm:justify-between bg-white/[0.015]">
-          {canEdit && isEdit ? (
-            <Button
-              type="button"
-              variant="ghost"
-              className="h-10 px-4 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10"
-              disabled={deleting || saving}
-              onClick={handleDelete}
-            >
-              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : '삭제'}
-            </Button>
-          ) : (
-            <span />
-          )}
-          <div className="flex items-center gap-3 ml-auto">
-            <Button
-              type="button"
-              variant="ghost"
-              className="h-10 px-5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06]"
-              onClick={() => onOpenChange(false)}
-            >
-              {canEdit ? '취소' : '닫기'}
-            </Button>
-            {canEdit && (
-              <Button
-                type="button"
-                disabled={saving || deleting}
-                onClick={handleSave}
-                className="h-10 px-5 rounded-lg bg-zinc-100 text-zinc-900 hover:bg-white font-medium"
-              >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : '저장'}
-              </Button>
-            )}
-          </div>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
