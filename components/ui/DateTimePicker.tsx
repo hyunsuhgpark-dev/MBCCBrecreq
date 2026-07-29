@@ -80,7 +80,7 @@ export default function DateTimePicker({
     comfortable
       ? 'h-11 rounded-lg border text-sm px-3 focus:outline-none focus:border-white/30 cursor-pointer transition-colors text-center'
       : 'h-11 sm:h-8 rounded border text-base sm:text-sm px-2 sm:px-1 focus:outline-none focus:border-[var(--accent)] cursor-pointer transition-colors text-center',
-    'bg-[var(--bg-elevated)] text-[var(--text-primary)]',
+    'bg-[var(--bg-surface)] text-[var(--text-primary)]',
     error ? 'border-red-400' : 'border-[var(--border-default)]'
   )
 
@@ -92,7 +92,7 @@ export default function DateTimePicker({
   const dateFaceCls = cn(
     'pointer-events-none absolute inset-0 flex items-center border',
     comfortable ? 'rounded-lg' : 'rounded',
-    'bg-[var(--bg-elevated)] text-[var(--text-primary)]',
+    'bg-[var(--bg-surface)] text-[var(--text-primary)]',
     error ? 'border-red-400' : 'border-[var(--border-default)]'
   )
 
