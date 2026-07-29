@@ -562,9 +562,18 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     })
   }
 
+  /** 캘린더 셀 Date → YYYY-MM-DD (로컬 달력 일자, UTC 변환 없음) */
+  function cellDateToYmd(date: Date): string {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+
   function openOfficeCreate(date: Date) {
+    const ymd = cellDateToYmd(date)
     setOfficeModalEvent(null)
-    setOfficeModalDate(format(date, 'yyyy-MM-dd'))
+    setOfficeModalDate(ymd)
     setOfficeModalCanEdit(true)
     setOfficeModalOpen(true)
   }
@@ -1735,6 +1744,11 @@ export default function CalendarView({ profile }: CalendarViewProps) {
       </div>
 
       <OfficeEventModal
+        key={
+          officeModalEvent?.id
+            ? `edit-${officeModalEvent.id}`
+            : `create-${officeModalDate ?? 'none'}`
+        }
         open={officeModalOpen}
         onOpenChange={setOfficeModalOpen}
         profile={profile}

@@ -50,6 +50,22 @@ function toLocalInput(iso: string | null | undefined): string {
   return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`
 }
 
+/** UTC toISOString 날짜 밀림 방지 — Asia/Seoul 기준 YYYY-MM-DD */
+function todayYmdSeoul(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
+}
+
+function normalizeYmd(value?: string | null): string | null {
+  if (!value) return null
+  const m = value.trim().match(/^(\d{4}-\d{2}-\d{2})/)
+  return m ? m[1] : null
+}
+
 export function OfficeEventModal({
   open,
   onOpenChange,
@@ -73,14 +89,16 @@ export function OfficeEventModal({
 
   useEffect(() => {
     if (!open) return
-    if (event) {
+    if (event?.id) {
       setTitle(event.title)
       setAllDay(event.all_day)
       setLocation(event.location ?? '')
       setDescription(event.description ?? '')
       if (event.all_day) {
-        setStartDate(event.start_date ?? '')
-        setEndDate(event.end_date ?? event.start_date ?? '')
+        const sd = normalizeYmd(event.start_date) ?? ''
+        const ed = normalizeYmd(event.end_date) ?? sd
+        setStartDate(sd)
+        setEndDate(ed)
         setStartLocal('')
         setEndLocal('')
       } else {
@@ -90,7 +108,8 @@ export function OfficeEventModal({
         setEndDate('')
       }
     } else {
-      const d = defaultDate ?? new Date().toISOString().slice(0, 10)
+      // 등록: 클릭한 셀 날짜를 시작/종료 기본값으로 (UTC slice 사용 금지)
+      const d = normalizeYmd(defaultDate) ?? todayYmdSeoul()
       setTitle('')
       setAllDay(false)
       setLocation('')
