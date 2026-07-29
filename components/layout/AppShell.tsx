@@ -117,9 +117,13 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
     router.push('/login')
   }
 
+  const canRequestSchedule = profile.role === 'Producer' || profile.role === 'Admin'
+
   const navItems = [
     { href: '/calendar', icon: Calendar, label: '캘린더' },
-    { href: '/schedules/new', icon: Plus, label: '제작/배차 요청' },
+    ...(canRequestSchedule
+      ? [{ href: '/schedules/new', icon: Plus, label: '제작/배차 요청' }]
+      : []),
     ...(profile.role === 'Admin'
       ? [{ href: '/admin', icon: Settings, label: '관리' }]
       : []),
