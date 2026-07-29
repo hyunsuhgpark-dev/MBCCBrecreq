@@ -172,8 +172,10 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   // 송출/행정 (office_events ↔ Google Calendar sync)
   const [officeEvents, setOfficeEvents] = useState<OfficeEvent[]>([])
   const [officeLoading, setOfficeLoading] = useState(false)
+  const [officeSyncing, setOfficeSyncing] = useState(false)
   const [officeConfigured, setOfficeConfigured] = useState<boolean | undefined>(undefined)
   const [officeVersion, setOfficeVersion] = useState(0)
+  const officeFetchIdRef = useRef(0)
   // 송출/행정 등록·수정 모달
   const [officeModalOpen, setOfficeModalOpen] = useState(false)
   const [officeModalDate, setOfficeModalDate] = useState<string | undefined>(undefined)
@@ -252,15 +254,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     }
   }, [filters])
 
-  // 송출/행정 fetch + Google sync — officeCalendar 체크 / 날짜 이동 / 저장 후 재로드
-  useEffect(() => {
-    if (!filters.officeCalendar) {
-      setOfficeEvents([])
-      return
-    }
-    let cancelled = false
-    setOfficeLoading(true)
-
+  const getOfficeRangeParams = useCallback(() => {
     const weekStartLocal = startOfWeek(currentDate, { weekStartsOn: 1 })
     const rangeStart =
       viewMode === 'week'
@@ -277,29 +271,71 @@ export default function CalendarView({ profile }: CalendarViewProps) {
               34
             )
           : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+    return {
+      startParam: format(rangeStart, 'yyyy-MM-dd'),
+      endParam: format(rangeEnd, 'yyyy-MM-dd'),
+    }
+  }, [currentDate, viewMode])
 
-    const startParam = format(rangeStart, 'yyyy-MM-dd')
-    const endParam = format(rangeEnd, 'yyyy-MM-dd')
+  const fetchOfficeEvents = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!filters.officeCalendar) {
+      setOfficeEvents([])
+      setOfficeLoading(false)
+      setOfficeSyncing(false)
+      return
+    }
+    const fetchId = ++officeFetchIdRef.current
+    const silent = opts?.silent ?? false
+    // 첫 로드만 목록 스피너, 이후(포커스/이동/수동)는 백그라운드 sync
+    if (!silent) setOfficeLoading(true)
+    setOfficeSyncing(true)
 
-    fetch(`/api/office-events?start=${startParam}&end=${endParam}`)
-      .then((r) => r.json())
-      .then((data: { events?: OfficeEvent[]; configured?: boolean }) => {
-        if (!cancelled) {
-          setOfficeEvents(data.events ?? [])
-          setOfficeConfigured(data.configured ?? false)
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setOfficeEvents([])
-          setOfficeConfigured(false)
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setOfficeLoading(false)
-      })
-    return () => { cancelled = true }
-  }, [filters.officeCalendar, currentDate, viewMode, officeVersion])
+    const { startParam, endParam } = getOfficeRangeParams()
+    try {
+      const r = await fetch(`/api/office-events?start=${startParam}&end=${endParam}`)
+      const data = (await r.json()) as { events?: OfficeEvent[]; configured?: boolean }
+      if (fetchId !== officeFetchIdRef.current) return
+      setOfficeEvents(data.events ?? [])
+      setOfficeConfigured(data.configured ?? false)
+    } catch {
+      if (fetchId !== officeFetchIdRef.current) return
+      if (!silent) setOfficeEvents([])
+      setOfficeConfigured(false)
+    } finally {
+      if (fetchId === officeFetchIdRef.current) {
+        setOfficeLoading(false)
+        setOfficeSyncing(false)
+      }
+    }
+  }, [filters.officeCalendar, getOfficeRangeParams])
+
+  // 송출/행정: 체크 ON / 날짜·뷰 이동 / 저장 후(officeVersion) 자동 재조회
+  useEffect(() => {
+    if (!filters.officeCalendar) {
+      setOfficeEvents([])
+      return
+    }
+    void fetchOfficeEvents({ silent: officeEvents.length > 0 })
+    // officeEvents.length는 silent 판단용 — 의도적으로 deps에서 제외
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.officeCalendar, currentDate, viewMode, officeVersion, fetchOfficeEvents])
+
+  // 탭/윈도우 포커스 시 백그라운드 재동기화 (구글에서 수정한 뒤 돌아올 때)
+  useEffect(() => {
+    if (!filters.officeCalendar) return
+
+    function refetchOnFocus() {
+      if (document.visibilityState && document.visibilityState !== 'visible') return
+      void fetchOfficeEvents({ silent: true })
+    }
+
+    window.addEventListener('focus', refetchOnFocus)
+    document.addEventListener('visibilitychange', refetchOnFocus)
+    return () => {
+      window.removeEventListener('focus', refetchOnFocus)
+      document.removeEventListener('visibilitychange', refetchOnFocus)
+    }
+  }, [filters.officeCalendar, fetchOfficeEvents])
 
   // 휴가 fetch — vacation 체크 또는 날짜 이동 / 업로드 시 재조회
   useEffect(() => {
@@ -737,6 +773,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
           onChange={setFilters}
           profile={profile}
           officeConfigured={officeConfigured}
+          officeRefreshing={officeSyncing}
+          onOfficeRefresh={() => void fetchOfficeEvents({ silent: true })}
           onVacationUploaded={() => setVacationVersion((v) => v + 1)}
         />
       )}
@@ -761,6 +799,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 onChange={setFilters}
                 profile={profile}
                 officeConfigured={officeConfigured}
+                officeRefreshing={officeSyncing}
+                onOfficeRefresh={() => void fetchOfficeEvents({ silent: true })}
                 onVacationUploaded={() => setVacationVersion((v) => v + 1)}
               />
             </div>

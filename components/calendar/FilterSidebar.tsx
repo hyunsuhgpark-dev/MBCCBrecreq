@@ -5,7 +5,7 @@ import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import type { Profile } from '@/lib/types'
 import { VacationUploadModal } from '@/components/calendar/VacationUploadModal'
-import { FileSpreadsheet } from 'lucide-react'
+import { FileSpreadsheet, RefreshCw } from 'lucide-react'
 
 export interface SidebarFilters {
   myScheduleOnly: boolean
@@ -41,6 +41,9 @@ interface FilterSidebarProps {
   onChange: (next: SidebarFilters) => void
   profile: Profile
   officeConfigured?: boolean
+  /** 송출/행정 수동 새로고침 */
+  onOfficeRefresh?: () => void
+  officeRefreshing?: boolean
   onVacationUploaded?: () => void
   className?: string
 }
@@ -103,6 +106,8 @@ export default function FilterSidebar({
   onChange,
   profile,
   officeConfigured,
+  onOfficeRefresh,
+  officeRefreshing,
   onVacationUploaded,
   className,
 }: FilterSidebarProps) {
@@ -204,12 +209,34 @@ export default function FilterSidebar({
               제작 외
             </p>
             <div className="flex flex-col gap-0">
-              <CheckboxItem
-                label="송출/행정"
-                checked={filters.officeCalendar}
-                onChange={(v) => set('officeCalendar', v)}
-                accentColor="rgba(255,255,255,0.55)"
-              />
+              <div className="flex items-center gap-0.5 pr-0.5">
+                <div className="flex-1 min-w-0">
+                  <CheckboxItem
+                    label="송출/행정"
+                    checked={filters.officeCalendar}
+                    onChange={(v) => set('officeCalendar', v)}
+                    accentColor="rgba(255,255,255,0.55)"
+                  />
+                </div>
+                {filters.officeCalendar && onOfficeRefresh && (
+                  <button
+                    type="button"
+                    title="송출/행정 새로고침"
+                    aria-label="송출/행정 새로고침"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      if (!officeRefreshing) onOfficeRefresh()
+                    }}
+                    disabled={officeRefreshing}
+                    className="shrink-0 w-7 h-7 flex items-center justify-center rounded text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.04] disabled:opacity-60 transition-colors"
+                  >
+                    <RefreshCw
+                      className={cn('w-3.5 h-3.5', officeRefreshing && 'animate-spin')}
+                    />
+                  </button>
+                )}
+              </div>
               {filters.officeCalendar && officeConfigured === false && (
                 <p className="text-[10px] leading-snug mt-1 px-0.5" style={{ color: '#6B7280' }}>
                   구글 캘린더 환경변수가 설정되지 않았습니다.
