@@ -29,13 +29,13 @@ export default async function NewRecordingPage({
 
   return (
     <AppShell profile={profile}>
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="mb-6">
-          <p className="text-xs font-semibold mb-1" style={{ color: 'var(--accent)' }}>제작 의뢰 · 녹화</p>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">녹화 의뢰서 작성</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>아래 양식을 작성하여 녹화를 의뢰하세요.</p>
+      <div className="flex min-h-[calc(100dvh-3.5rem-5rem)] sm:min-h-[calc(100dvh-3.5rem)] w-full items-center justify-center px-4 py-8">
+        <div className="w-full" style={{ maxWidth: 720 }}>
+          <div className="mb-6 text-center">
+            <p className="text-xs font-semibold mb-1" style={{ color: 'var(--accent)' }}>제작/배차 요청 · 녹화</p>
+          </div>
+          <ScheduleForm prefillDate={prefillDate} />
         </div>
-        <ScheduleForm prefillDate={prefillDate} />
       </div>
     </AppShell>
   )

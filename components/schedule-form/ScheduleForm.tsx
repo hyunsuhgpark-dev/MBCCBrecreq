@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAppBack } from '@/lib/use-app-back'
 import { useForm, type SubmitHandler, Controller } from 'react-hook-form'
@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import DateTimePicker from '@/components/ui/DateTimePicker'
 import { toast } from 'sonner'
-import { Loader2, Send } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Schedule } from '@/lib/types'
 import { useMobileKeyboard } from '@/lib/use-mobile-keyboard'
@@ -171,13 +171,16 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
   )
   const valueCls = cn(
     border,
-    'px-3 py-[2px] md:py-3 bg-[var(--bg-surface)] text-[var(--text-primary)]'
+    'py-[2px] md:py-3 bg-[var(--bg-surface)] text-[var(--text-primary)]'
   )
+  /** 입력칸 왼쪽 여유 (기존 12px + 8px) — Tailwind 미적용 대비 인라인 */
+  const valueStyle: CSSProperties = { paddingLeft: 5, paddingRight: 12 }
   const inputCls = cn(
-    'w-full bg-transparent border-0 border-b rounded-none h-11 md:h-8 text-base md:text-sm px-1',
+    'w-full bg-transparent border-0 border-b rounded-none h-11 md:h-8 text-base md:text-sm',
     'text-[var(--text-primary)] placeholder:text-[var(--text-muted)]',
     'border-[var(--border-default)] focus:outline-none focus:border-[var(--accent)] transition-colors'
   )
+  const inputStyle: CSSProperties = { paddingLeft: 5, paddingRight: 4 }
 
   const resourceItems = [
     { label: '중계차', key: 'use_relay_car' as const, checked: watchRelaycar, activeColor: '#D97706', activeBg: '#2D1E00' },
@@ -187,13 +190,14 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
   ]
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} onFocusCapture={handleFocusCapture} className="max-w-4xl mx-auto">
+    <form onSubmit={handleSubmit(onSubmit)} onFocusCapture={handleFocusCapture} className="w-full">
       {/* 양식 카드 */}
       <div
         className={cn(
-          'rounded-2xl overflow-hidden border shadow-[0_10px_40px_rgba(0,0,0,0.35)]',
+          'rounded-2xl overflow-hidden border shadow-2xl',
           'bg-[var(--bg-surface)] border-[var(--border-default)] text-[var(--text-primary)]'
         )}
+        style={{ marginBottom: 20, boxShadow: 'var(--shadow-float)' }}
       >
 
         {/* ── 제목 헤더 — 모바일에서는 숨김 (상단에 이미 "녹화 의뢰서 작성" 표시됨) ── */}
@@ -233,67 +237,58 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
             <button
               type="button"
               onClick={() => setValue('is_live', !watchLive)}
-              className="px-5 py-2.5 rounded-xl text-[15px] font-bold tracking-wide transition-all border-2"
+              className="rounded-xl text-[15px] font-bold tracking-wide transition-all border-2"
               style={{
+                padding: '6px 14px',
                 backgroundColor: watchLive ? '#2D0A0A' : 'var(--bg-elevated)',
                 borderColor: watchLive ? '#DC2626' : 'var(--border-default)',
                 color: watchLive ? '#F87171' : 'var(--text-muted)',
                 boxShadow: watchLive ? '0 0 10px #DC262633' : 'none',
               }}
             >
-              🔴 생방송
+              생방송
             </button>
           </div>
         </div>
 
-        {/* PC: 기존 70%/30% 레이아웃 + 오류 신고 */}
-        <div className="hidden md:grid grid-cols-[70%_30%] border-b border-[var(--border-default)]">
-          <div
-            className="border-r border-[var(--border-default)] flex flex-col justify-between"
-            style={{ padding: '40px 20px 24px 20px', gap: '16px' }}
-          >
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center' }}>
-              {resourceItems.map(({ label, key, checked, activeColor, activeBg }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setValue(key, !checked)}
-                  className="px-8 min-h-[80px] flex items-center justify-center rounded-xl text-[16px] font-bold tracking-wide transition-all border-2 min-w-[125px] text-center"
-                  style={{
-                    backgroundColor: checked ? activeBg : 'var(--bg-elevated)',
-                    borderColor: checked ? activeColor : 'var(--border-default)',
-                    color: checked ? activeColor : 'var(--text-muted)',
-                    boxShadow: checked ? `0 0 12px ${activeColor}40` : 'none',
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <div className="flex justify-end">
+        {/* PC: 장비 선택 */}
+        <div
+          className="hidden md:flex flex-col border-b border-[var(--border-default)]"
+          style={{ padding: '40px 20px 24px 20px', gap: '16px' }}
+        >
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center' }}>
+            {resourceItems.map(({ label, key, checked, activeColor, activeBg }) => (
               <button
+                key={key}
                 type="button"
-                onClick={() => setValue('is_live', !watchLive)}
-                className="px-5 py-2.5 rounded-xl text-[14px] font-bold tracking-wide transition-all border-2"
+                onClick={() => setValue(key, !checked)}
+                className="px-8 min-h-[80px] flex items-center justify-center rounded-xl text-[16px] font-bold tracking-wide transition-all border-2 min-w-[125px] text-center"
                 style={{
-                  backgroundColor: watchLive ? '#2D0A0A' : 'var(--bg-elevated)',
-                  borderColor: watchLive ? '#DC2626' : 'var(--border-default)',
-                  color: watchLive ? '#F87171' : 'var(--text-muted)',
-                  boxShadow: watchLive ? '0 0 10px #DC262633' : 'none',
+                  backgroundColor: checked ? activeBg : 'var(--bg-elevated)',
+                  borderColor: checked ? activeColor : 'var(--border-default)',
+                  color: checked ? activeColor : 'var(--text-muted)',
+                  boxShadow: checked ? `0 0 12px ${activeColor}40` : 'none',
                 }}
               >
-                🔴 생방송
+                {label}
               </button>
-            </div>
+            ))}
           </div>
-          <div className="flex flex-col">
-            <div className="px-3 py-2 text-xs font-bold text-center tracking-widest" style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
-              프로그램 오류 신고
-            </div>
-            <div className="flex-1 flex flex-col items-center justify-center px-3 py-4 gap-1" style={{ backgroundColor: 'var(--bg-surface)' }}>
-              <p className="text-sm font-bold tracking-wide" style={{ color: 'var(--text-primary)' }}>박현서</p>
-              <p className="text-sm font-medium tracking-wider" style={{ color: 'var(--text-primary)' }}>010-4523-0464</p>
-            </div>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setValue('is_live', !watchLive)}
+              className="rounded-xl text-[14px] font-bold tracking-wide transition-all border-2"
+              style={{
+                padding: '6px 14px',
+                backgroundColor: watchLive ? '#2D0A0A' : 'var(--bg-elevated)',
+                borderColor: watchLive ? '#DC2626' : 'var(--border-default)',
+                color: watchLive ? '#F87171' : 'var(--text-muted)',
+                boxShadow: watchLive ? '0 0 10px #DC262633' : 'none',
+              }}
+            >
+              생방송
+            </button>
           </div>
         </div>
 
@@ -306,12 +301,13 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
               <span className="md:hidden">프로그램명</span>
               <span className="hidden md:inline">프 로 그 램 명</span>
             </div>
-            <div className={cn(valueCls, 'border-t-0 border-b-0')}>
+            <div className={cn(valueCls, 'border-t-0 border-b-0')} style={valueStyle}>
               <input
                 type="text"
                 placeholder="프로그램명 입력"
                 {...register('program_name')}
                 className={cn(inputCls, errors.program_name && 'border-red-400 focus:border-red-400')}
+                style={inputStyle}
               />
               {errors.program_name && (
                 <p className="text-red-500 text-[11px] mt-0.5">{errors.program_name.message}</p>
@@ -321,12 +317,13 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
               <span className="md:hidden">담당PD</span>
               <span className="hidden md:inline">담 당 P D</span>
             </div>
-            <div className={cn(valueCls, 'border-t md:border-t-0 border-b-0 border-r-0 px-2 md:px-3')}>
+            <div className={cn(valueCls, 'border-t md:border-t-0 border-b-0 border-r-0')} style={valueStyle}>
               <input
                 type="text"
                 placeholder="이름"
                 {...register('responsible_pd')}
                 className={cn(inputCls, errors.responsible_pd && 'border-red-400 focus:border-red-400')}
+                style={inputStyle}
               />
             </div>
           </div>
@@ -334,7 +331,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
           {/* 제작 시작 일시 */}
           <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
             <div className={labelCls}>제작 시작</div>
-            <div className={cn(valueCls, 'border-l-0')}>
+            <div className={cn(valueCls, 'border-l-0')} style={valueStyle}>
               <Controller
                 control={control}
                 name="broadcast_start"
@@ -355,7 +352,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
           {/* 제작 종료 일시 */}
           <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
             <div className={labelCls}>제작 종료</div>
-            <div className={cn(valueCls, 'border-l-0')}>
+            <div className={cn(valueCls, 'border-l-0')} style={valueStyle}>
               <Controller
                 control={control}
                 name="broadcast_end"
@@ -377,7 +374,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
           {!watchLive && (
             <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
               <div className={labelCls}>방 송 일 시</div>
-              <div className={cn(valueCls, 'flex items-center gap-2 border-l-0')}>
+              <div className={cn(valueCls, 'flex items-center gap-2 border-l-0')} style={valueStyle}>
                 <Controller
                   control={control}
                   name="broadcast_at"
@@ -392,11 +389,12 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
           {/* 녹화내용 */}
           <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
             <div className={labelCls}>녹 화 내 용</div>
-            <div className={cn(valueCls, 'border-l-0')}>
+            <div className={cn(valueCls, 'border-l-0')} style={valueStyle}>
               <Textarea
                 placeholder="녹화 내용을 입력하세요"
                 {...register('record_content')}
                 className="border-0 rounded-none focus:ring-0 bg-transparent text-sm resize-none min-h-[88px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                style={{ paddingLeft: 5 }}
               />
             </div>
           </div>
@@ -404,12 +402,13 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
           {/* 녹화장소 */}
           <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
             <div className={labelCls}>녹 화 장 소</div>
-            <div className={cn(valueCls, 'flex items-center gap-2 border-l-0')}>
+            <div className={cn(valueCls, 'flex items-center gap-2 border-l-0')} style={valueStyle}>
               <input
                 type="text"
                 placeholder="예: 뉴스 부조정실"
                 {...register('venue')}
                 className={cn(inputCls, 'flex-1 text-sm', errors.venue && 'border-red-400 focus:border-red-400')}
+                style={inputStyle}
               />
             </div>
           </div>
@@ -417,11 +416,12 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
           {/* 특기사항 */}
           <div className="grid grid-cols-[112px_1fr]">
             <div className={cn(labelCls, 'border-b-0')}>특 기 사 항</div>
-            <div className={cn(valueCls, 'border-l-0 border-b-0 border-r-0')}>
+            <div className={cn(valueCls, 'border-l-0 border-b-0 border-r-0')} style={valueStyle}>
               <Textarea
                 placeholder="특기사항 및 비고를 자유롭게 입력하세요"
                 {...register('notes')}
                 className="border-0 rounded-none focus:ring-0 bg-transparent text-sm resize-none min-h-[110px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                style={{ paddingLeft: 5 }}
               />
             </div>
           </div>
@@ -429,43 +429,36 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
       </div>
 
       {/* ── 하단 액션 버튼 ── */}
-      {/* 모바일: 화면 하단 고정 (하단 탭바 위에 위치) */}
+      {/* 모바일: 하단 고정 바(탭바 위). 데스크톱: 투명 배경 + 폼과 간격 */}
       <div
         className={cn(
-          'left-0 right-0 z-30 px-4 border-t',
-          isKeyboardOpen ? 'relative mt-5' : 'fixed bottom-0',
-          'md:static md:relative md:mt-5 md:pb-0 md:bg-transparent md:border-0 md:shadow-none md:px-0',
+          'left-0 right-0 z-30 border-t border-[var(--border-default)] px-4',
+          isKeyboardOpen
+            ? 'relative pb-[env(safe-area-inset-bottom,0px)]'
+            : 'fixed bottom-0 bg-[var(--bg-surface)] pb-[calc(env(safe-area-inset-bottom,0px)+72px)]',
+          'md:static md:border-0 md:bg-transparent md:px-0 md:pb-0 md:shadow-none',
         )}
-        style={{
-          backgroundColor: 'var(--bg-surface)',
-          borderColor: 'var(--border-default)',
-          paddingBottom: isKeyboardOpen
-            ? 'env(safe-area-inset-bottom, 0px)'
-            : 'calc(env(safe-area-inset-bottom, 0px) + 72px)',
-        } as React.CSSProperties}
       >
-        <div className="flex gap-3 py-3 justify-end">
+        <div className="flex justify-end gap-3 py-3 md:py-0">
           <Button
             type="button"
             variant="outline"
             onClick={goBack}
-            className="min-h-11 px-6 border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] transition-all"
+            className="min-h-11 border-[var(--border-default)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-all"
+            style={{ paddingLeft: 40, paddingRight: 40, backgroundColor: 'var(--bg-secondary-btn)' }}
           >
             취소
           </Button>
           <Button
             type="submit"
             disabled={loading}
-            className="min-h-11 px-8 text-white gap-2 font-semibold shadow-md hover:shadow-lg transition-all"
-            style={{ backgroundColor: 'var(--accent)' }}
+            className="min-h-11 font-semibold shadow-md hover:shadow-lg transition-all hover:bg-zinc-200"
+            style={{ backgroundColor: '#FFFFFF', color: '#0A0A0A', paddingLeft: 40, paddingRight: 40 }}
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <>
-                <Send className="w-4 h-4" />
-                {isEdit ? '수정 제출' : '의뢰 등록'}
-              </>
+              isEdit ? '수정 제출' : '의뢰 등록'
             )}
           </Button>
         </div>

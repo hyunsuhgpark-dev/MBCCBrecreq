@@ -151,13 +151,21 @@ export function VacationUploadModal({ open, onOpenChange, onComplete }: Vacation
     onOpenChange(v)
   }
 
-  const inputCls = 'w-full bg-zinc-800 border border-zinc-700 rounded px-2.5 py-1.5 text-[12px] text-neutral-200 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500'
+  const inputCls =
+    'w-full rounded px-2.5 py-1.5 text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none border border-[var(--border-default)] bg-[var(--bg-surface)] focus:border-white/20'
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="bg-zinc-900 border-zinc-700 text-neutral-200 max-w-sm">
+      <DialogContent
+        className="max-w-sm text-[var(--text-primary)] shadow-2xl"
+        style={{
+          backgroundColor: 'var(--bg-elevated)',
+          borderColor: 'var(--border-default)',
+          boxShadow: 'var(--shadow-float)',
+        }}
+      >
         <DialogHeader>
-          <DialogTitle className="text-sm font-medium text-neutral-100 flex items-center gap-2">
+          <DialogTitle className="text-sm font-medium text-[var(--text-primary)] flex items-center gap-2">
             <FileSpreadsheet className="w-4 h-4 text-amber-400" />
             휴가 정보 업로드
           </DialogTitle>
@@ -170,22 +178,22 @@ export function VacationUploadModal({ open, onOpenChange, onComplete }: Vacation
               'border border-dashed rounded-md px-4 py-8 flex flex-col items-center gap-2 cursor-pointer transition-colors',
               dragging
                 ? 'border-amber-500 bg-amber-500/[0.06]'
-                : 'border-zinc-700 hover:border-zinc-500'
+                : 'border-[var(--border-default)] hover:border-white/20'
             )}
             onClick={() => fileInputRef.current?.click()}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <Upload className={cn('w-6 h-6 transition-colors', dragging ? 'text-amber-400' : 'text-zinc-500')} />
+            <Upload className={cn('w-6 h-6 transition-colors', dragging ? 'text-amber-400' : 'text-[var(--text-muted)]')} />
             {file ? (
-              <span className="text-xs text-neutral-300 truncate max-w-full">{file.name}</span>
+              <span className="text-xs text-[var(--text-primary)] truncate max-w-full">{file.name}</span>
             ) : dragging ? (
               <span className="text-xs text-amber-400">여기에 놓으세요</span>
             ) : (
               <>
-                <span className="text-xs text-zinc-400">파일을 여기에 끌어다 놓거나</span>
-                <span className="text-xs text-zinc-600">클릭하여 선택 (.xls / .xlsx)</span>
+                <span className="text-xs text-[var(--text-secondary)]">파일을 여기에 끌어다 놓거나</span>
+                <span className="text-xs text-[var(--text-muted)]">클릭하여 선택 (.xls / .xlsx)</span>
               </>
             )}
             <input
@@ -212,8 +220,8 @@ export function VacationUploadModal({ open, onOpenChange, onComplete }: Vacation
           )}
 
           {/* 수기 입력 섹션 */}
-          <div className="border-t border-zinc-800 pt-4 space-y-2.5">
-            <p className="text-[11px] text-zinc-400 font-medium flex items-center gap-1.5">
+          <div className="border-t border-[var(--border)] pt-4 space-y-2.5">
+            <p className="text-[11px] text-[var(--text-secondary)] font-medium flex items-center gap-1.5">
               <PenLine className="w-3 h-3" />
               휴가 정보 직접 입력
             </p>
@@ -260,7 +268,7 @@ export function VacationUploadModal({ open, onOpenChange, onComplete }: Vacation
             )}
             <Button
               size="sm"
-              className="w-full bg-zinc-700 hover:bg-zinc-600 text-neutral-200 text-xs"
+              className="w-full bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] text-[var(--text-primary)] text-xs"
               disabled={manualLoading}
               onClick={handleManualSave}
             >
@@ -274,7 +282,7 @@ export function VacationUploadModal({ open, onOpenChange, onComplete }: Vacation
           <Button
             variant="ghost"
             size="sm"
-            className="text-zinc-400 hover:text-zinc-200 text-xs"
+            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs"
             onClick={() => handleClose(false)}
           >
             닫기

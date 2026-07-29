@@ -29,15 +29,15 @@ export default async function NewDispatchPage({
 
   return (
     <AppShell profile={profile}>
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="mb-6">
-          <p className="text-xs font-semibold mb-1 text-purple-300">제작 의뢰 · 배차</p>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">배차 의뢰서 작성</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            이동 일정과 목적지를 입력하세요. 영상국 승인 후 차량·기사가 배정됩니다.
-          </p>
+      <div className="flex min-h-[calc(100dvh-3.5rem-5rem)] sm:min-h-[calc(100dvh-3.5rem)] w-full items-center justify-center px-4 py-8">
+        <div className="w-full" style={{ maxWidth: Math.round(896 * 0.9) }}>
+          <div className="mb-6 text-center">
+            <p className="text-xs font-semibold mb-1" style={{ color: '#2A2A2E' }}>
+              제작/배차 요청 · 배차
+            </p>
+          </div>
+          <DispatchForm prefillDate={prefillDate} />
         </div>
-        <DispatchForm prefillDate={prefillDate} />
       </div>
     </AppShell>
   )

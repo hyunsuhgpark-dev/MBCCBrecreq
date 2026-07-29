@@ -80,7 +80,7 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: isDispatch ? `배차의뢰서_${schedule.program_name}` : `녹화의뢰서_${schedule.program_name}`,
+    documentTitle: isDispatch ? `배차신청서_${schedule.program_name}` : `녹화의뢰서_${schedule.program_name}`,
   })
 
   const statusInfo = statusConfig[schedule.status]
@@ -324,10 +324,6 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
             <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
               <div className={labelCls}>탑승 인원</div>
               <div className={valueCls}>{schedule.passenger_count ?? '-'}명</div>
-            </div>
-            <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
-              <div className={labelCls}>짐/장비</div>
-              <div className={valueCls}>{schedule.has_luggage ? '있음' : '없음'}</div>
             </div>
             </>
             )}

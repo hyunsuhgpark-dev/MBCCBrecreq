@@ -31,49 +31,37 @@ export default async function NewRequestPage({
   return (
     <AppShell profile={profile}>
       <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-3.5rem-5rem)] sm:min-h-[calc(100dvh-3.5rem)] w-full px-4 py-8">
-        <div className="max-w-2xl w-full flex flex-col" style={{ gap: '2rem' }}>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)] text-center">제작 의뢰</h1>
-
+        <div className="max-w-2xl w-full">
           <div className="grid gap-4 sm:grid-cols-2">
-          <Link
-            href={`/schedules/new/recording${dateQuery}`}
-            className="rounded-2xl border flex flex-col items-center gap-4 transition-all hover:brightness-110 active:scale-[0.98]"
-            style={{
-              backgroundColor: 'var(--bg-surface)',
-              borderColor: 'var(--border-default)',
-              padding: '32px 24px 24px',
-            }}
-          >
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-white">
-              <Clapperboard className="w-8 h-8 text-black" />
-            </div>
-            <div className="text-center">
+            <Link
+              href={`/schedules/new/recording${dateQuery}`}
+              className="rounded-2xl border flex flex-col items-center gap-4 transition-all hover:brightness-110 active:scale-[0.98]"
+              style={{
+                backgroundColor: 'var(--bg-surface)',
+                borderColor: 'var(--border-default)',
+                padding: '32px 24px',
+              }}
+            >
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-white">
+                <Clapperboard className="w-8 h-8 text-black" />
+              </div>
               <h2 className="text-lg font-bold text-[var(--text-primary)]">녹화 의뢰</h2>
-              <p className="text-xs mt-2 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-                중계차·스튜디오·ENG·AUDIO 등<br />녹화 일정 의뢰
-              </p>
-            </div>
-          </Link>
+            </Link>
 
-          <Link
-            href={`/schedules/new/dispatch${dateQuery}`}
-            className="rounded-2xl border flex flex-col items-center gap-4 transition-all hover:brightness-110 active:scale-[0.98]"
-            style={{
-              backgroundColor: 'var(--bg-surface)',
-              borderColor: 'var(--border-default)',
-              padding: '32px 24px 24px',
-            }}
-          >
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-white">
-              <Car className="w-8 h-8 text-black" />
-            </div>
-            <div className="text-center">
-              <h2 className="text-lg font-bold text-[var(--text-primary)]">배차 의뢰</h2>
-              <p className="text-xs mt-2 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-                차량·기사 배정 요청<br />영상국 승인 후 배정
-              </p>
-            </div>
-          </Link>
+            <Link
+              href={`/schedules/new/dispatch${dateQuery}`}
+              className="rounded-2xl border flex flex-col items-center gap-4 transition-all hover:brightness-110 active:scale-[0.98]"
+              style={{
+                backgroundColor: 'var(--bg-surface)',
+                borderColor: 'var(--border-default)',
+                padding: '32px 24px',
+              }}
+            >
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-white">
+                <Car className="w-8 h-8 text-black" />
+              </div>
+              <h2 className="text-lg font-bold text-[var(--text-primary)]">배차 신청</h2>
+            </Link>
           </div>
         </div>
       </div>

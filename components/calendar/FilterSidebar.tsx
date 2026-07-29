@@ -36,6 +36,11 @@ function canSeeOfficeCalendar(role: Profile['role']): boolean {
   return role === 'Admin' || role === 'ENG' || role === 'ENG-M'
 }
 
+/** 배차 정보 필터를 볼 수 있는 역할 (ENG / ENG-M 제외) */
+function canSeeDispatchFilter(role: Profile['role']): boolean {
+  return role !== 'ENG' && role !== 'ENG-M'
+}
+
 interface FilterSidebarProps {
   filters: SidebarFilters
   onChange: (next: SidebarFilters) => void
@@ -118,6 +123,7 @@ export default function FilterSidebar({
   }
 
   const showOffice = canSeeOfficeCalendar(profile.role)
+  const showDispatch = canSeeDispatchFilter(profile.role)
   const showMyOnly = profile.role === 'Producer' || profile.role === 'Admin'
 
   return (
@@ -127,7 +133,7 @@ export default function FilterSidebar({
         'w-[168px] pb-5 px-3',
         className
       )}
-      style={{ backgroundColor: 'transparent' }}
+      style={{ backgroundColor: 'var(--background)' }}
     >
       {/* 컨트롤바(py-5+h-8+mb-4=68) - 요일헤더(32) = 36px */}
       <div style={{ height: '37px', flexShrink: 0 }} />
@@ -184,21 +190,25 @@ export default function FilterSidebar({
         </div>
       </div>
 
-      {/* 배차 정보 — 모든 역할에게 표시 */}
-      <div className="border-t border-white/[0.06] my-4" />
-      <div>
-        <p className="text-[12px] font-semibold tracking-wide text-zinc-600 mb-3 px-0.5">
-          배차
-        </p>
-        <div className="flex flex-col gap-0">
-          <CheckboxItem
-            label="배차 정보"
-            checked={filters.dispatch}
-            onChange={(v) => set('dispatch', v)}
-            accentColor="#F472B6"
-          />
-        </div>
-      </div>
+      {/* 배차 정보 — ENG / ENG-M 제외 */}
+      {showDispatch && (
+        <>
+          <div className="border-t border-white/[0.06] my-4" />
+          <div>
+            <p className="text-[12px] font-semibold tracking-wide text-zinc-600 mb-3 px-0.5">
+              배차
+            </p>
+            <div className="flex flex-col gap-0">
+              <CheckboxItem
+                label="배차 정보"
+                checked={filters.dispatch}
+                onChange={(v) => set('dispatch', v)}
+                accentColor="#F472B6"
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* 송출/행정 + 휴가 정보 — ENG / ENG-M / Admin 에게만 표시 */}
       {showOffice && (

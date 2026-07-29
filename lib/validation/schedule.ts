@@ -44,7 +44,7 @@ function validateScheduleRange(
     ctx.addIssue({
       code: 'custom',
       path: ['passenger_count'],
-      message: '배차 의뢰의 탑승 인원이 필요합니다',
+      message: '배차 신청의 탑승 인원이 필요합니다',
     })
   }
 }

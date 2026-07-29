@@ -200,11 +200,20 @@ export function OfficeEventModal({
 
   const labelCls = 'block text-sm font-medium text-zinc-300'
   const inputCls = cn(
-    'box-border w-full rounded-md border border-white/15 bg-zinc-900/80',
-    'px-3.5 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500',
-    'focus:outline-none focus:border-white/30',
+    'box-border w-full rounded-md border',
+    'text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]',
+    'focus:outline-none focus:border-white/20',
     'disabled:opacity-60 disabled:cursor-not-allowed'
   )
+  /** Tailwind px 미적용 대비 — 왼쪽 7px 여유 */
+  const inputStyle = {
+    paddingLeft: 7,
+    paddingRight: 12,
+    paddingTop: 10,
+    paddingBottom: 10,
+    backgroundColor: 'var(--bg-surface)',
+    borderColor: 'var(--border-default)',
+  }
   const fieldStyle = { display: 'flex', flexDirection: 'column' as const, gap: 5 }
   const stackStyle = { display: 'flex', flexDirection: 'column' as const, gap: 14 }
 
@@ -212,10 +221,14 @@ export function OfficeEventModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          '!p-0 flex w-full max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden rounded-xl border border-white/15',
+          '!p-0 flex w-full max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden rounded-xl border shadow-2xl',
           'sm:!max-w-[560px]',
         )}
-        style={{ backgroundColor: '#111111' }}
+        style={{
+          backgroundColor: 'var(--bg-elevated)',
+          borderColor: 'var(--border-default)',
+          boxShadow: 'var(--shadow-float)',
+        }}
       >
         {/* 패딩·간격은 인라인으로 강제 (Tailwind 유틸이 안 먹는 경우 대비) */}
         <div className="box-border w-full" style={{ padding: '14px 20px 16px' }}>
@@ -234,6 +247,7 @@ export function OfficeEventModal({
               <input
                 id="office-title"
                 className={inputCls}
+                style={inputStyle}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 disabled={!canEdit}
@@ -242,8 +256,8 @@ export function OfficeEventModal({
             </div>
 
             <div
-              className="flex items-center justify-between rounded-md border border-white/10 bg-white/[0.03]"
-              style={{ padding: '7px 8px' }}
+              className="flex items-center justify-between rounded-md border"
+              style={{ padding: '7px 8px', backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
             >
               <span className="text-sm font-medium text-zinc-300">하루 종일</span>
               <Switch checked={allDay} onCheckedChange={setAllDay} disabled={!canEdit} />
@@ -257,6 +271,7 @@ export function OfficeEventModal({
                     id="office-start-date"
                     type="date"
                     className={inputCls}
+                    style={inputStyle}
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
                     disabled={!canEdit}
@@ -268,6 +283,7 @@ export function OfficeEventModal({
                     id="office-end-date"
                     type="date"
                     className={inputCls}
+                    style={inputStyle}
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
                     disabled={!canEdit}
@@ -295,6 +311,7 @@ export function OfficeEventModal({
               <input
                 id="office-location"
                 className={inputCls}
+                style={inputStyle}
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 disabled={!canEdit}
@@ -307,6 +324,7 @@ export function OfficeEventModal({
               <textarea
                 id="office-desc"
                 className={cn(inputCls, 'min-h-[88px] resize-y leading-relaxed')}
+                style={inputStyle}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={!canEdit}
@@ -342,7 +360,12 @@ export function OfficeEventModal({
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="min-h-[38px] min-w-[80px] rounded-lg border border-white/20 bg-transparent px-5 text-sm text-zinc-300 transition-colors hover:border-white/30 hover:bg-white/[0.04] hover:text-zinc-100"
+                className="min-h-[38px] min-w-[80px] rounded-lg border px-5 text-sm transition-colors hover:brightness-110"
+                style={{
+                  backgroundColor: 'var(--bg-secondary-btn)',
+                  borderColor: 'var(--border-default)',
+                  color: 'var(--text-primary)',
+                }}
               >
                 {canEdit ? '취소' : '닫기'}
               </button>
@@ -351,7 +374,8 @@ export function OfficeEventModal({
                   type="button"
                   disabled={saving || deleting}
                   onClick={handleSave}
-                  className="min-h-[38px] min-w-[80px] rounded-lg bg-zinc-100 px-5 text-sm font-medium text-zinc-900 transition-colors hover:bg-white disabled:opacity-50"
+                  className="min-h-[38px] min-w-[80px] rounded-lg px-5 text-sm font-medium transition-colors hover:bg-zinc-200 disabled:opacity-50"
+                  style={{ backgroundColor: '#FFFFFF', color: '#0A0A0A' }}
                 >
                   {saving ? <Loader2 className="inline h-4 w-4 animate-spin" /> : '저장'}
                 </button>

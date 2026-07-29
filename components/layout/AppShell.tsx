@@ -119,7 +119,7 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
 
   const navItems = [
     { href: '/calendar', icon: Calendar, label: '캘린더' },
-    { href: '/schedules/new', icon: Plus, label: '제작의뢰' },
+    { href: '/schedules/new', icon: Plus, label: '제작/배차 요청' },
     ...(profile.role === 'Admin'
       ? [{ href: '/admin', icon: Settings, label: '관리' }]
       : []),
@@ -131,7 +131,7 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
       {/* 상단 헤더 */}
       <header
         className="sticky top-0 z-40 backdrop-blur-md"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.15)', backgroundColor: 'rgba(10,10,10,0.92)' }}
+        style={{ borderBottom: '1px solid var(--border-default)', backgroundColor: 'rgba(15, 15, 18, 0.92)' }}
       >
         <div className="w-full px-4 sm:px-6 h-12 flex items-center justify-between">
 
@@ -221,7 +221,7 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
       {/* 모바일 하단 탭바 */}
       <nav
         className="fixed bottom-0 left-0 right-0 sm:hidden z-40"
-        style={{ borderTop: '1px solid rgba(255,255,255,0.15)', backgroundColor: 'rgba(10,10,10,0.96)', backdropFilter: 'blur(12px)' }}
+        style={{ borderTop: '1px solid var(--border-default)', backgroundColor: 'rgba(15, 15, 18, 0.96)', backdropFilter: 'blur(12px)' }}
       >
         <div className="flex safe-area-pb">
           {navItems.map((item) => {

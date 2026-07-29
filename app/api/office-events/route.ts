@@ -34,44 +34,49 @@ function overlapsFilter(start: string, end: string) {
 }
 
 export async function GET(request: NextRequest) {
-  const { user, profile } = await getAuthedProfile()
-  if (!user) return NextResponse.json({ error: '인증 필요' }, { status: 401 })
-  if (
-    !profile?.is_approved ||
-    !READ_ROLES.includes(profile.role as (typeof READ_ROLES)[number])
-  ) {
-    return NextResponse.json({ error: '조회 권한이 없습니다' }, { status: 403 })
+  try {
+    const { user, profile } = await getAuthedProfile()
+    if (!user) return NextResponse.json({ error: '인증 필요' }, { status: 401 })
+    if (
+      !profile?.is_approved ||
+      !READ_ROLES.includes(profile.role as (typeof READ_ROLES)[number])
+    ) {
+      return NextResponse.json({ error: '조회 권한이 없습니다' }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const start = searchParams.get('start')
+    const end = searchParams.get('end')
+    if (!start || !end) {
+      return NextResponse.json({ error: 'start, end 필요 (YYYY-MM-DD)' }, { status: 400 })
+    }
+
+    const admin = await createAdminClient()
+    const syncResult = await syncOfficeEventsRange(admin, start, end)
+
+    let query = admin
+      .from('office_events')
+      .select('*')
+      .is('deleted_at', null)
+      .order('start_at', { ascending: true, nullsFirst: false })
+
+    const { start: s, end: e } = overlapsFilter(start, end)
+    query = query.lte('start_date', e).gte('end_date', s)
+
+    const { data, error } = await query
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      events: (data ?? []) as OfficeEvent[],
+      configured: syncResult.configured || isOfficeCalendarSyncConfigured(),
+      syncError: syncResult.error ?? null,
+    })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return NextResponse.json({ error: msg, events: [], configured: false, syncError: msg }, { status: 500 })
   }
-
-  const { searchParams } = new URL(request.url)
-  const start = searchParams.get('start')
-  const end = searchParams.get('end')
-  if (!start || !end) {
-    return NextResponse.json({ error: 'start, end 필요 (YYYY-MM-DD)' }, { status: 400 })
-  }
-
-  const admin = await createAdminClient()
-  const syncResult = await syncOfficeEventsRange(admin, start, end)
-
-  let query = admin
-    .from('office_events')
-    .select('*')
-    .is('deleted_at', null)
-    .order('start_at', { ascending: true, nullsFirst: false })
-
-  const { start: s, end: e } = overlapsFilter(start, end)
-  query = query.lte('start_date', e).gte('end_date', s)
-
-  const { data, error } = await query
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json({
-    events: (data ?? []) as OfficeEvent[],
-    configured: syncResult.configured || isOfficeCalendarSyncConfigured(),
-    syncError: syncResult.error ?? null,
-  })
 }
 
 export async function POST(request: NextRequest) {

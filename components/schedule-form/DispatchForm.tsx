@@ -10,10 +10,15 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import DateTimePicker from '@/components/ui/DateTimePicker'
 import { toast } from 'sonner'
-import { Loader2, Send } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Schedule } from '@/lib/types'
 import { useMobileKeyboard } from '@/lib/use-mobile-keyboard'
+
+/** 배차 신청서 스케일: 가로 0.9 / 세로 1.2 (기존 max-w-4xl=896 기준) */
+const FORM_MAX_W = Math.round(896 * 0.9) // 806
+const SX = 0.9
+const SY = 1.2
 
 const schema = z.object({
   program_name: z.string().min(1, '프로그램명을 입력하세요'),
@@ -22,7 +27,6 @@ const schema = z.object({
   broadcast_end: z.string().min(1, '이동 종료 시간을 입력하세요'),
   venue: z.string().min(1, '목적지를 입력하세요'),
   passenger_count: z.coerce.number().int().min(1, '탑승 인원을 입력하세요'),
-  has_luggage: z.boolean().default(false),
   notes: z.string().optional().default(''),
 }).refine(
   (data) => new Date(data.broadcast_end) > new Date(data.broadcast_start),
@@ -65,8 +69,6 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
   const {
     register,
     handleSubmit,
-    watch,
-    setValue,
     control,
     formState: { errors },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -87,12 +89,9 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
       ),
       venue: initialData?.venue ?? '',
       passenger_count: initialData?.passenger_count ?? 1,
-      has_luggage: initialData?.has_luggage ?? false,
       notes: initialData?.notes ?? '',
     },
   })
-
-  const watchLuggage = watch('has_luggage')
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
     setLoading(true)
@@ -116,7 +115,7 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
         record_content: '',
         notes: values.notes,
         passenger_count: values.passenger_count,
-        has_luggage: values.has_luggage,
+        has_luggage: false,
       }
 
       const url = isEdit ? `/api/schedules/${scheduleId}` : '/api/schedules'
@@ -136,7 +135,7 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
       const data = await res.json()
       const targetId = isEdit ? scheduleId : data.id
 
-      toast.success(isEdit ? '배차 의뢰가 수정되었습니다.' : '배차 의뢰서가 등록되었습니다.')
+      toast.success(isEdit ? '배차 신청이 수정되었습니다.' : '배차 신청서가 등록되었습니다.')
       router.push(`/schedules/${targetId}`)
       router.refresh()
     } catch (err: unknown) {
@@ -146,53 +145,93 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
     }
   }
 
+  const labelW = Math.round(112 * SX) // 101
+  const rowPadY = Math.round(12 * SY) // 14
+  const rowPadX = Math.round(12 * SX) // 11
+  const inputH = Math.round(32 * SY) // 38 — 행 높이만 키움
+  const headerPadY = Math.round(20 * SY) // 24
+  const notesMinH = Math.round(110 * SY) // 132
+
   const border = 'border border-[var(--border-default)]'
   const labelCls = cn(
     border,
-    'bg-[var(--bg-elevated)] px-2 md:px-3 py-[2px] md:py-3 font-bold text-[var(--text-secondary)] text-sm text-center flex items-center justify-center tracking-wider select-none'
+    'bg-[var(--bg-elevated)] px-1 font-bold text-sm text-[var(--text-secondary)] text-center flex items-center justify-center tracking-wider select-none whitespace-nowrap'
   )
   const valueCls = cn(
     border,
-    'px-3 py-[2px] md:py-3 bg-[var(--bg-surface)] text-[var(--text-primary)]'
+    'bg-[var(--bg-surface)] text-[var(--text-primary)]'
   )
   const inputCls = cn(
-    'w-full bg-transparent border-0 border-b rounded-none h-11 md:h-8 text-base md:text-sm px-1',
-    'text-[var(--text-primary)] placeholder:text-[var(--text-muted)]',
-    'border-[var(--border-default)] focus:outline-none focus:border-purple-400 transition-colors'
+    'w-full bg-transparent border-0 rounded-none px-1',
+    'text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]',
+    'focus:outline-none transition-colors'
   )
+  const cellPad = { padding: `${rowPadY}px ${rowPadX}px` }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} onFocusCapture={handleFocusCapture} className="max-w-4xl mx-auto">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      onFocusCapture={handleFocusCapture}
+      className="w-full mx-auto"
+      style={{ maxWidth: FORM_MAX_W }}
+    >
       <div
         className={cn(
-          'rounded-2xl overflow-hidden border shadow-[0_10px_40px_rgba(0,0,0,0.35)]',
+          'rounded-2xl overflow-hidden border shadow-2xl',
           'bg-[var(--bg-surface)] border-[var(--border-default)] text-[var(--text-primary)]'
         )}
+        style={{ marginBottom: 20, boxShadow: 'var(--shadow-float)' }}
       >
-        <div className="hidden md:block relative py-5 text-center overflow-hidden" style={{ backgroundColor: 'var(--bg-elevated)' }}>
+        <div
+          className="hidden md:block relative text-center overflow-hidden"
+          style={{ backgroundColor: 'var(--bg-elevated)', paddingTop: headerPadY, paddingBottom: headerPadY }}
+        >
           <div className="absolute inset-0 opacity-[0.08] bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.22)_0px,rgba(255,255,255,0.22)_1px,transparent_1px,transparent_8px)]" />
-          <h1 className="relative text-2xl font-bold tracking-[0.5em] text-purple-200">
-            배 차 의 뢰 서
+          <h1 className="relative text-2xl font-bold tracking-[0.5em]" style={{ color: 'var(--text-primary)' }}>
+            배 차 신 청 서
           </h1>
           <div className="absolute bottom-0 left-0 right-0 h-px" style={{ backgroundColor: 'var(--border-default)' }} />
         </div>
 
         <div>
-          <div className="grid grid-cols-[78px_1fr] md:grid-cols-[112px_1fr_72px_152px] border-b border-[var(--border-default)]">
-            <div className={cn(labelCls, 'whitespace-nowrap text-[11px] md:text-sm px-1')}>프로그램명</div>
-            <div className={cn(valueCls, 'border-t-0 border-b-0')}>
-              <input type="text" placeholder="프로그램명 입력" {...register('program_name')} className={cn(inputCls, errors.program_name && 'border-red-400')} />
-              {errors.program_name && <p className="text-red-500 text-[11px] mt-0.5">{errors.program_name.message}</p>}
+          {/* 프로그램명 + 담당PD — 좌측 라벨 열을 이동 시작과 동일 폭으로 */}
+          <div
+            className="grid border-b border-[var(--border-default)]"
+            style={{
+              gridTemplateColumns: `${labelW}px minmax(0,1fr) 72px ${Math.round(152 * SX) + 60}px`,
+            }}
+          >
+            <div className={labelCls} style={cellPad}>프로그램명</div>
+            <div className={cn(valueCls, 'border-t-0 border-b-0 min-w-0')} style={cellPad}>
+              <input
+                type="text"
+                placeholder="프로그램명 입력"
+                {...register('program_name')}
+                className={cn(inputCls, errors.program_name && 'outline outline-1 outline-red-400')}
+                style={{ height: inputH }}
+              />
+              {errors.program_name && (
+                <p className="text-red-500 text-[11px] mt-0.5">{errors.program_name.message}</p>
+              )}
             </div>
-            <div className={cn(labelCls, 'text-[11px] md:text-xs border-t md:border-t-0 border-b-0 px-1')}>담당PD</div>
-            <div className={cn(valueCls, 'border-t md:border-t-0 border-b-0 border-r-0 px-2 md:px-3')}>
-              <input type="text" placeholder="이름" {...register('responsible_pd')} className={cn(inputCls, errors.responsible_pd && 'border-red-400')} />
+            <div className={labelCls} style={cellPad}>담당PD</div>
+            <div className={cn(valueCls, 'border-r-0 min-w-0')} style={cellPad}>
+              <input
+                type="text"
+                placeholder="이름"
+                {...register('responsible_pd')}
+                className={cn(inputCls, errors.responsible_pd && 'outline outline-1 outline-red-400')}
+                style={{ height: inputH }}
+              />
             </div>
           </div>
 
-          <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
-            <div className={labelCls}>이동 시작</div>
-            <div className={cn(valueCls, 'border-l-0')}>
+          <div
+            className="grid border-b border-[var(--border-default)]"
+            style={{ gridTemplateColumns: `${labelW}px 1fr` }}
+          >
+            <div className={labelCls} style={cellPad}>이동 시작</div>
+            <div className={cn(valueCls, 'border-l-0')} style={cellPad}>
               <Controller
                 control={control}
                 name="broadcast_start"
@@ -201,6 +240,7 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
                     value={field.value}
                     onChange={field.onChange}
                     error={!!errors.broadcast_start}
+                    comfortable
                   />
                 )}
               />
@@ -208,62 +248,69 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
             </div>
           </div>
 
-          <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
-            <div className={labelCls}>이동 종료</div>
-            <div className={cn(valueCls, 'border-l-0')}>
+          <div
+            className="grid border-b border-[var(--border-default)]"
+            style={{ gridTemplateColumns: `${labelW}px 1fr` }}
+          >
+            <div className={labelCls} style={cellPad}>이동 종료</div>
+            <div className={cn(valueCls, 'border-l-0')} style={cellPad}>
               <Controller
                 control={control}
                 name="broadcast_end"
                 render={({ field }) => (
-                  <DateTimePicker value={field.value} onChange={field.onChange} error={!!errors.broadcast_end} />
+                  <DateTimePicker value={field.value} onChange={field.onChange} error={!!errors.broadcast_end} comfortable />
                 )}
               />
               {errors.broadcast_end && <p className="text-red-500 text-[11px] mt-1">{errors.broadcast_end.message}</p>}
             </div>
           </div>
 
-          <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
-            <div className={labelCls}>목 적 지</div>
-            <div className={cn(valueCls, 'border-l-0')}>
-              <input type="text" placeholder="예: 서울 MBC 본관" {...register('venue')} className={cn(inputCls, errors.venue && 'border-red-400')} />
+          <div
+            className="grid border-b border-[var(--border-default)]"
+            style={{ gridTemplateColumns: `${labelW}px 1fr` }}
+          >
+            <div className={labelCls} style={cellPad}>목 적 지</div>
+            <div className={cn(valueCls, 'border-l-0')} style={cellPad}>
+              <input
+                type="text"
+                placeholder="예: 서울 MBC 본관"
+                {...register('venue')}
+                className={cn(inputCls, errors.venue && 'outline outline-1 outline-red-400')}
+                style={{ height: inputH }}
+              />
               {errors.venue && <p className="text-red-500 text-[11px] mt-0.5">{errors.venue.message}</p>}
             </div>
           </div>
 
-          <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
-            <div className={labelCls}>탑승 인원</div>
-            <div className={cn(valueCls, 'border-l-0 flex items-center gap-3')}>
-              <input type="number" min={1} {...register('passenger_count')} className={cn(inputCls, 'max-w-[80px]', errors.passenger_count && 'border-red-400')} />
+          <div
+            className="grid border-b border-[var(--border-default)]"
+            style={{ gridTemplateColumns: `${labelW}px 1fr` }}
+          >
+            <div className={labelCls} style={cellPad}>탑승 인원</div>
+            <div className={cn(valueCls, 'border-l-0 flex items-center gap-3')} style={cellPad}>
+              <input
+                type="number"
+                min={1}
+                {...register('passenger_count')}
+                className={cn(inputCls, errors.passenger_count && 'outline outline-1 outline-red-400')}
+                style={{ height: inputH, maxWidth: 72, marginLeft: 16 }}
+              />
               <span className="text-sm" style={{ color: 'var(--text-muted)' }}>명</span>
               {errors.passenger_count && <p className="text-red-500 text-[11px]">{errors.passenger_count.message}</p>}
             </div>
           </div>
 
-          <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
-            <div className={labelCls}>짐/장비</div>
-            <div className={cn(valueCls, 'border-l-0')}>
-              <button
-                type="button"
-                onClick={() => setValue('has_luggage', !watchLuggage)}
-                className="px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all"
-                style={{
-                  backgroundColor: watchLuggage ? '#1C0A2D' : 'var(--bg-elevated)',
-                  borderColor: watchLuggage ? '#A855F7' : 'var(--border-default)',
-                  color: watchLuggage ? '#C084FC' : 'var(--text-muted)',
-                }}
-              >
-                {watchLuggage ? '있음' : '없음'}
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-[112px_1fr]">
-            <div className={cn(labelCls, 'border-b-0')}>특기사항</div>
-            <div className={cn(valueCls, 'border-l-0 border-b-0 border-r-0')}>
+          <div
+            className="grid"
+            style={{ gridTemplateColumns: `${labelW}px 1fr` }}
+          >
+            <div className={cn(labelCls, 'border-b-0')} style={cellPad}>특기사항</div>
+            <div className={cn(valueCls, 'border-l-0 border-b-0 border-r-0')} style={cellPad}>
               <Textarea
                 placeholder="특기사항을 입력하세요..."
                 {...register('notes')}
-                className="border-0 rounded-none focus:ring-0 bg-transparent text-sm resize-none min-h-[110px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                className="border-0 rounded-none focus:ring-0 bg-transparent resize-none text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                style={{ minHeight: notesMinH }}
               />
             </div>
           </div>
@@ -272,24 +319,30 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
 
       <div
         className={cn(
-          'left-0 right-0 z-30 px-4 border-t',
-          isKeyboardOpen ? 'relative mt-5' : 'fixed bottom-0',
-          'md:static md:relative md:mt-5 md:pb-0 md:bg-transparent md:border-0 md:shadow-none md:px-0',
+          'left-0 right-0 z-30 border-t border-[var(--border-default)] px-4',
+          isKeyboardOpen
+            ? 'relative pb-[env(safe-area-inset-bottom,0px)]'
+            : 'fixed bottom-0 bg-[var(--bg-surface)] pb-[calc(env(safe-area-inset-bottom,0px)+72px)]',
+          'md:static md:border-0 md:bg-transparent md:px-0 md:pb-0 md:shadow-none',
         )}
-        style={{
-          backgroundColor: 'var(--bg-surface)',
-          borderColor: 'var(--border-default)',
-          paddingBottom: isKeyboardOpen
-            ? 'env(safe-area-inset-bottom, 0px)'
-            : 'calc(env(safe-area-inset-bottom, 0px) + 72px)',
-        } as React.CSSProperties}
       >
-        <div className="flex gap-3 py-3 justify-end">
-          <Button type="button" variant="outline" onClick={goBack} className="min-h-11 px-6 border-[var(--border-default)] text-[var(--text-secondary)]">
+        <div className="flex justify-end gap-3 py-3 md:py-0">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={goBack}
+            className="min-h-11 text-sm border-[var(--border-default)] text-[var(--text-primary)]"
+            style={{ paddingLeft: 40, paddingRight: 40, backgroundColor: 'var(--bg-secondary-btn)' }}
+          >
             취소
           </Button>
-          <Button type="submit" disabled={loading} className="min-h-11 px-8 text-white gap-2 font-semibold" style={{ backgroundColor: '#7C3AED' }}>
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" />{isEdit ? '수정 제출' : '의뢰 등록'}</>}
+          <Button
+            type="submit"
+            disabled={loading}
+            className="min-h-11 text-sm font-semibold shadow-md hover:shadow-lg transition-all hover:bg-zinc-200"
+            style={{ backgroundColor: '#FFFFFF', color: '#0A0A0A', paddingLeft: 40, paddingRight: 40 }}
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (isEdit ? '수정 제출' : '배차 신청')}
           </Button>
         </div>
       </div>

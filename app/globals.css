@@ -40,60 +40,70 @@
   font-display: swap;
 }
 
-/* ── Monochrome Premium Dark 테마 CSS 변수 ── */
+/* ── Dark Mode Elevation Palette ──
+ * L0 background  rgb(15,15,18)
+ * L1 card/cell   rgb(24,24,28)
+ * L2 modal/pop   rgb(32,32,38)
+ * Hover/active   rgb(42,42,50)
+ */
 :root {
-  /* Surfaces — near-black monotone */
-  --bg-body:     #0A0A0A;
-  --bg-surface:  #0F0F0F;
-  --bg-elevated: #171717;
-  --bg-hover:    #1C1C1C;
+  /* Surfaces */
+  --bg-body:     rgb(15, 15, 18);
+  --bg-surface:  rgb(24, 24, 28);   /* L1 — cards, calendar cells */
+  --bg-elevated: rgb(32, 32, 38);   /* L2 — modals, popovers, sidebar */
+  --bg-hover:    rgb(42, 42, 50);   /* hover / active */
+  --bg-secondary-btn: rgb(40, 40, 48); /* cancel / secondary buttons */
 
-  /* Borders — visible but not harsh */
-  --border-subtle:  rgba(255,255,255,0.10);
-  --border-default: rgba(255,255,255,0.15);
-  --border-strong:  rgba(255,255,255,0.22);
+  /* Borders & dividers — soft, low contrast */
+  --border-subtle:  rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.08);
+  --border-strong:  rgba(255, 255, 255, 0.14);
+  --border-solid:   rgb(45, 45, 52);
 
   /* Text */
   --text-primary:   #EBEBEB;
-  --text-secondary: #808080;
-  --text-muted:     #525252;
+  --text-secondary: #A1A1AA;
+  --text-muted:     #71717A;
 
-  /* Status — 유일한 컬러 포인트 (상태 표시용) */
-  --color-conflict:        #F59E0B;
-  --color-conflict-bg:     transparent;
-  --color-conflict-border: #92400E;
-  --color-pending:         #525252;
-  --color-pending-bg:      transparent;
-  --color-pending-border:  #3A3A3A;
-  --color-confirmed:       #10B981;
-  --color-confirmed-bg:    transparent;
+  /* Status */
+  --color-conflict:         #F59E0B;
+  --color-conflict-bg:      transparent;
+  --color-conflict-border:  #92400E;
+  --color-pending:          #71717A;
+  --color-pending-bg:       transparent;
+  --color-pending-border:   rgb(45, 45, 52);
+  --color-confirmed:        #10B981;
+  --color-confirmed-bg:     transparent;
   --color-confirmed-border: #065F46;
-  --color-rejected:        #F87171;
-  --color-rejected-bg:     transparent;
-  --color-rejected-border: #7F1D1D;
+  --color-rejected:         #F87171;
+  --color-rejected-bg:      transparent;
+  --color-rejected-border:  #7F1D1D;
 
-  /* shadcn/ui 토큰 — 모노크롬 팔레트 */
-  --background:            #0A0A0A;
+  /* Elevation shadow for floating surfaces */
+  --shadow-float: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
+
+  /* shadcn / app tokens */
+  --background:            rgb(15, 15, 18);
   --foreground:            #EBEBEB;
-  --card:                  #0F0F0F;
+  --card:                  rgb(24, 24, 28);
   --card-foreground:       #EBEBEB;
-  --popover:               #161616;
+  --popover:               rgb(32, 32, 38);
   --popover-foreground:    #EBEBEB;
-  --primary:               #EBEBEB;
-  --primary-foreground:    #0A0A0A;
-  --secondary:             #171717;
-  --secondary-foreground:  #A3A3A3;
-  --muted:                 #171717;
-  --muted-foreground:      #737373;
-  --accent:                #171717;
-  --accent-dark:           #1C1C1C;
-  --accent-foreground:     #EBEBEB;
+  --primary:               #3B82F6;
+  --primary-foreground:    #FFFFFF;
+  --secondary:             rgb(40, 40, 48);
+  --secondary-foreground:  #EBEBEB;
+  --muted:                 rgb(32, 32, 38);
+  --muted-foreground:      #A1A1AA;
+  --accent:                #3B82F6;
+  --accent-dark:           #2563EB;
+  --accent-foreground:     #FFFFFF;
   --destructive:           #DC2626;
   --destructive-foreground: #EBEBEB;
-  --border:                rgba(255,255,255,0.15);
-  --input:                 rgba(255,255,255,0.08);
-  --ring:                  rgba(255,255,255,0.2);
-  --radius:                0.375rem;
+  --border:                rgba(255, 255, 255, 0.08);
+  --input:                 rgba(255, 255, 255, 0.08);
+  --ring:                  rgba(59, 130, 246, 0.45);
+  --radius:                0.5rem;
 }
 
 /* ── Tailwind v4 @theme inline — CSS 변수를 Tailwind 유틸리티로 노출 ── */
@@ -117,6 +127,10 @@
   --color-border:             var(--border);
   --color-input:              var(--input);
   --color-ring:               var(--ring);
+  --color-bg-body:            var(--bg-body);
+  --color-bg-surface:         var(--bg-surface);
+  --color-bg-elevated:        var(--bg-elevated);
+  --color-bg-hover:           var(--bg-hover);
   --radius-sm:  calc(var(--radius) - 2px);
   --radius-md:  var(--radius);
   --radius-lg:  calc(var(--radius) + 2px);
@@ -170,6 +184,22 @@ html, body {
 body {
   background-color: var(--background);
   color: var(--foreground);
+}
+
+/* date input 내부 연도-월-일 가운데 정렬 (Chrome/WebKit) */
+.date-input-center {
+  text-align: center;
+}
+.date-input-center::-webkit-datetime-edit {
+  width: 100%;
+  text-align: center;
+}
+.date-input-center::-webkit-datetime-edit-fields-wrapper {
+  display: flex;
+  justify-content: center;
+}
+.date-input-center::-webkit-calendar-picker-indicator {
+  margin-left: 0;
 }
 
 /* ── LIVE 인디케이터 ── */

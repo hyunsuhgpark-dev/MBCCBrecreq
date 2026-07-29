@@ -73,7 +73,7 @@ export async function notifyStaffApprovalRequested(params: {
   const { supabase, scheduleId, programName, scheduleResources } = params
   const isDispatch = scheduleResources?.request_type === 'dispatch'
   const message = isDispatch
-    ? `'${programName}' 배차 의뢰의 승인 요청이 들어왔습니다.`
+    ? `'${programName}' 배차 신청의 승인 요청이 들어왔습니다.`
     : notificationMessages.approval_requested(programName)
 
   const { data: staffProfiles, error } = await supabase
@@ -228,8 +228,8 @@ export async function notifyAllUsersScheduleSubmitted(params: {
     hour: '2-digit', minute: '2-digit', hour12: false,
   }).format(new Date(broadcastStart)).replace(' ', ' ').replace(/-/g, '/').replace('T', ' ')
 
-  const label = requestType === 'dispatch' ? '배차' : '녹화'
-  const message = `${submitterName}님이 ${kstDateTime}에 '${programName}' ${label} 의뢰 요청했습니다.`
+  const label = requestType === 'dispatch' ? '배차 신청' : '녹화 의뢰'
+  const message = `${submitterName}님이 ${kstDateTime}에 '${programName}' ${label} 요청했습니다.`
 
   const { data: allProfiles } = await supabase
     .from('profiles')
@@ -264,7 +264,7 @@ export async function notifyAllUsersScheduleSubmitted(params: {
     await sendPushNotification({
       tokens,
       type: 'schedule_submitted',
-      title: requestType === 'dispatch' ? '새 배차 의뢰' : '새 녹화 의뢰',
+      title: requestType === 'dispatch' ? '새 배차 신청' : '새 녹화 의뢰',
       body: message,
       scheduleId,
     })

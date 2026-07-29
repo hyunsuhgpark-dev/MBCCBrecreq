@@ -40,21 +40,23 @@ export default async function EditSchedulePage({
 
   return (
     <AppShell profile={profile}>
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="mb-6">
-          <p className="text-xs font-semibold mb-1" style={{ color: isDispatch ? '#C084FC' : 'var(--accent)' }}>
-            제작 의뢰 · {isDispatch ? '배차' : '녹화'}
-          </p>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-            {isDispatch ? '배차 의뢰서 수정' : '녹화 의뢰서 수정'}
-          </h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>수정 후 제출하면 승인 절차가 초기화됩니다.</p>
+      <div className="flex min-h-[calc(100dvh-3.5rem-5rem)] sm:min-h-[calc(100dvh-3.5rem)] w-full items-center justify-center px-4 py-8">
+        <div className="w-full" style={{ maxWidth: isDispatch ? Math.round(896 * 0.9) : 720 }}>
+          <div className="mb-6 text-center">
+            <p className="text-xs font-semibold mb-1" style={{ color: isDispatch ? '#2A2A2E' : 'var(--accent)' }}>
+              제작/배차 요청 · {isDispatch ? '배차' : '녹화'}
+            </p>
+            {isDispatch ? null : (
+              <h1 className="text-2xl font-bold text-[var(--text-primary)]">녹화 의뢰서 수정</h1>
+            )}
+            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>수정 후 제출하면 승인 절차가 초기화됩니다.</p>
+          </div>
+          {isDispatch ? (
+            <DispatchForm initialData={schedule} scheduleId={id} />
+          ) : (
+            <ScheduleForm initialData={schedule} scheduleId={id} />
+          )}
         </div>
-        {isDispatch ? (
-          <DispatchForm initialData={schedule} scheduleId={id} />
-        ) : (
-          <ScheduleForm initialData={schedule} scheduleId={id} />
-        )}
       </div>
     </AppShell>
   )

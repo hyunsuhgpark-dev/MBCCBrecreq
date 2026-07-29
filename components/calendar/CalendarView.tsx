@@ -37,6 +37,7 @@ import {
 } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import Link from 'next/link'
 import FilterSidebar, {
   type SidebarFilters,
@@ -176,6 +177,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   const [officeConfigured, setOfficeConfigured] = useState<boolean | undefined>(undefined)
   const [officeVersion, setOfficeVersion] = useState(0)
   const officeFetchIdRef = useRef(0)
+  const lastOfficeSyncErrorRef = useRef<string | null>(null)
   // 송출/행정 등록·수정 모달
   const [officeModalOpen, setOfficeModalOpen] = useState(false)
   const [officeModalDate, setOfficeModalDate] = useState<string | undefined>(undefined)
@@ -234,10 +236,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
         const role = profile.role
         // 해당 역할이 볼 수 없는 필터 항목은 강제 false로 초기화
         const canSeeOffice = role === 'Admin' || role === 'ENG' || role === 'ENG-M'
+        const canSeeDispatch = role !== 'ENG' && role !== 'ENG-M'
         setFilters((prev) => ({
           ...prev,
           ...parsed,
           officeCalendar: canSeeOffice ? (parsed.officeCalendar ?? prev.officeCalendar) : false,
+          dispatch: canSeeDispatch ? (parsed.dispatch ?? prev.dispatch) : false,
         }))
       }
     } catch {
@@ -293,10 +297,32 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     const { startParam, endParam } = getOfficeRangeParams()
     try {
       const r = await fetch(`/api/office-events?start=${startParam}&end=${endParam}`)
-      const data = (await r.json()) as { events?: OfficeEvent[]; configured?: boolean }
+      const data = (await r.json().catch(() => ({}))) as {
+        events?: OfficeEvent[]
+        configured?: boolean
+        syncError?: string | null
+        error?: string
+      }
       if (fetchId !== officeFetchIdRef.current) return
+      if (!r.ok) {
+        if (!silent) setOfficeEvents([])
+        setOfficeConfigured(false)
+        if (data.error && lastOfficeSyncErrorRef.current !== data.error) {
+          lastOfficeSyncErrorRef.current = data.error
+          toast.error(data.error)
+        }
+        return
+      }
       setOfficeEvents(data.events ?? [])
       setOfficeConfigured(data.configured ?? false)
+      if (data.syncError) {
+        if (lastOfficeSyncErrorRef.current !== data.syncError) {
+          lastOfficeSyncErrorRef.current = data.syncError
+          toast.warning(`Google 동기화: ${data.syncError}`)
+        }
+      } else {
+        lastOfficeSyncErrorRef.current = null
+      }
     } catch {
       if (fetchId !== officeFetchIdRef.current) return
       if (!silent) setOfficeEvents([])
@@ -320,18 +346,23 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.officeCalendar, currentDate, viewMode, officeVersion, fetchOfficeEvents])
 
-  // 탭/윈도우 포커스 시 백그라운드 재동기화 (구글에서 수정한 뒤 돌아올 때)
+  // 탭/윈도우 포커스 시 백그라운드 재동기화 (focus+visibility 중복 호출 방지)
   useEffect(() => {
     if (!filters.officeCalendar) return
 
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
     function refetchOnFocus() {
       if (document.visibilityState && document.visibilityState !== 'visible') return
-      void fetchOfficeEvents({ silent: true })
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        void fetchOfficeEvents({ silent: true })
+      }, 400)
     }
 
     window.addEventListener('focus', refetchOnFocus)
     document.addEventListener('visibilitychange', refetchOnFocus)
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
       window.removeEventListener('focus', refetchOnFocus)
       document.removeEventListener('visibilitychange', refetchOnFocus)
     }
@@ -555,14 +586,18 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     return list.filter((s) => {
       const isOwn = s.created_by === profile.id
 
+      // 배차 — ENG / ENG-M 은 본인 일정 포함 전부 숨김
+      if (s.request_type === 'dispatch') {
+        if (profile.role === 'ENG' || profile.role === 'ENG-M') return false
+        if (isOwn) return true
+        return filters.dispatch
+      }
+
       // 내 일정만 보기: 내 것이 아니면 숨김
       if (filters.myScheduleOnly && !isOwn) return false
 
       // 내가 신청한 일정은 필터 무관하게 항상 표시 (본인 확인 보장)
       if (isOwn) return true
-
-      // 배차 (dispatch) 타입 — 다른 사람 것
-      if (s.request_type === 'dispatch') return filters.dispatch
 
       // 녹화 타입 — 장비 플래그 확인
       const hasNoResource = !s.use_relay_car && !s.use_studio && !s.use_eng && !s.use_audio
@@ -787,7 +822,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
             onClick={() => setSidebarOpen(false)}
           />
           <div className="fixed left-0 top-0 bottom-0 z-40" style={{ top: '56px' }}>
-            <div className="relative h-full" style={{ backgroundColor: '#0A0A0A', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
+            <div className="relative h-full" style={{ backgroundColor: 'var(--background)', borderRight: '1px solid var(--border-default)' }}>
               <button
                 onClick={() => setSidebarOpen(false)}
                 className="absolute top-3 right-3 w-6 h-6 flex items-center justify-center text-zinc-600 hover:text-zinc-400 transition-colors"
@@ -910,7 +945,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   <div className="fixed inset-0 z-10" onClick={() => setViewDropdownOpen(false)} />
                   <div
                     className="absolute right-0 top-full mt-1 z-20 rounded-md border border-white/[0.15] overflow-hidden shadow-xl min-w-[120px]"
-                    style={{ backgroundColor: '#0F0F0F' }}
+                    style={{ backgroundColor: 'var(--bg-surface)' }}
                   >
                     {([
                       { mode: 'month' as const, Icon: LayoutGrid,   label: '가로보기' },
@@ -1124,7 +1159,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                           width: 88,
                           padding: '6px 8px',
                           borderLeftColor: 'rgba(255,255,255,0.06)',
-                          backgroundColor: '#0E1012',
+                          backgroundColor: 'var(--bg-surface)',
                         }}
                       >
                         {dayVacations.map((v) => (
@@ -1335,7 +1370,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                             ...(isRightEdge
                                               ? { right: '100%', marginRight: 4 }
                                               : { left: '100%', marginLeft: 4 }),
-                                            backgroundColor: '#1A1A1A',
+                                            backgroundColor: 'var(--bg-elevated)',
                                             border: '1px solid rgba(255,255,255,0.12)',
                                             minWidth: 160,
                                             padding: '6px 10px',
@@ -1364,7 +1399,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                             top: '100%',
                                             left: 0,
                                             marginTop: 2,
-                                            backgroundColor: '#1A1A1A',
+                                            backgroundColor: 'var(--bg-elevated)',
                                             border: '1px solid rgba(255,255,255,0.15)',
                                             minWidth: 160,
                                             padding: '8px 12px',
@@ -1429,7 +1464,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                             ...(isRightEdgeOffice
                                               ? { right: '100%', marginRight: 4 }
                                               : { left: '100%', marginLeft: 4 }),
-                                            backgroundColor: '#1A1A1A',
+                                            backgroundColor: 'var(--bg-elevated)',
                                             border: '1px solid rgba(255,255,255,0.12)',
                                             minWidth: 160,
                                             padding: '6px 10px',
@@ -1536,7 +1571,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                       top: '100%',
                                       marginTop: 3,
                                       ...(isRightEdge ? { right: 0 } : { left: 0 }),
-                                      backgroundColor: '#1A1A1A',
+                                      backgroundColor: 'var(--bg-elevated)',
                                       border: '1px solid rgba(255,255,255,0.12)',
                                       minWidth: 180,
                                       padding: '6px 10px',

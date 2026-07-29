@@ -34,7 +34,7 @@ export async function POST(
 
   if (!schedule) return NextResponse.json({ error: '일정 없음' }, { status: 404 })
   if (schedule.request_type !== 'dispatch') {
-    return NextResponse.json({ error: '배차 의뢰만 배정할 수 있습니다' }, { status: 400 })
+    return NextResponse.json({ error: '배차 신청만 배정할 수 있습니다' }, { status: 400 })
   }
   if (schedule.status !== 'assigned') {
     return NextResponse.json({ error: '배정 대기 상태가 아닙니다' }, { status: 400 })
