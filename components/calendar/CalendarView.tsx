@@ -27,6 +27,7 @@ import {
   startOfWeek,
   endOfWeek,
   addDays,
+  subDays,
   addWeeks,
   subWeeks,
   isSameMonth,
@@ -178,6 +179,11 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   const [officeVersion, setOfficeVersion] = useState(0)
   const officeFetchIdRef = useRef(0)
   const lastOfficeSyncErrorRef = useRef<string | null>(null)
+  /** 필터 ON 직후 1회만 Google sync (이후 주 이동은 DB 읽기) */
+  const officeNeedsInitialSyncRef = useRef(true)
+  const lastOfficeVersionRef = useRef(0)
+  /** 패딩된 조회 범위 — 가시 구간이 이 안이면 네트워크 스킵 */
+  const officeCacheRangeRef = useRef<{ start: string; end: string } | null>(null)
   // 송출/행정 등록·수정 모달
   const [officeModalOpen, setOfficeModalOpen] = useState(false)
   const [officeModalDate, setOfficeModalDate] = useState<string | undefined>(undefined)
@@ -258,6 +264,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     }
   }, [filters])
 
+  /** 현재 뷰에 보이는 날짜 범위 */
   const getOfficeRangeParams = useCallback(() => {
     const weekStartLocal = startOfWeek(currentDate, { weekStartsOn: 1 })
     const rangeStart =
@@ -281,22 +288,62 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     }
   }, [currentDate, viewMode])
 
-  const fetchOfficeEvents = useCallback(async (opts?: { silent?: boolean }) => {
+  /** 인접 주 이동용으로 가시 구간 ±21일 패딩 */
+  const getOfficeFetchWindow = useCallback(() => {
+    const { startParam, endParam } = getOfficeRangeParams()
+    const pad = 21
+    return {
+      startParam: format(subDays(parseISO(startParam), pad), 'yyyy-MM-dd'),
+      endParam: format(addDays(parseISO(endParam), pad), 'yyyy-MM-dd'),
+      visibleStart: startParam,
+      visibleEnd: endParam,
+    }
+  }, [getOfficeRangeParams])
+
+  const fetchOfficeEvents = useCallback(async (opts?: {
+    silent?: boolean
+    /** true면 Google sync 포함. 주 이동은 false */
+    sync?: boolean
+    /** 캐시 무시하고 DB(또는 sync) 재조회 — 저장 후·수동 새로고침 */
+    force?: boolean
+  }) => {
     if (!filters.officeCalendar) {
       setOfficeEvents([])
       setOfficeLoading(false)
       setOfficeSyncing(false)
+      officeCacheRangeRef.current = null
       return
     }
-    const fetchId = ++officeFetchIdRef.current
-    const silent = opts?.silent ?? false
-    // 첫 로드만 목록 스피너, 이후(포커스/이동/수동)는 백그라운드 sync
-    if (!silent) setOfficeLoading(true)
-    setOfficeSyncing(true)
 
-    const { startParam, endParam } = getOfficeRangeParams()
+    const silent = opts?.silent ?? false
+    const doSync = opts?.sync ?? false
+    const force = opts?.force ?? false
+    const window = getOfficeFetchWindow()
+    const cache = officeCacheRangeRef.current
+
+    // 가시 구간이 이미 로드된 패딩 범위 안이면 네트워크 생략 (sync/force 제외)
+    if (
+      !doSync &&
+      !force &&
+      cache &&
+      window.visibleStart >= cache.start &&
+      window.visibleEnd <= cache.end
+    ) {
+      return
+    }
+
+    const fetchId = ++officeFetchIdRef.current
+    if (!silent) setOfficeLoading(true)
+    // 스피너는 Google sync 중일 때만 (DB 읽기만은 가볍게)
+    if (doSync) setOfficeSyncing(true)
+
     try {
-      const r = await fetch(`/api/office-events?start=${startParam}&end=${endParam}`)
+      const qs = new URLSearchParams({
+        start: window.startParam,
+        end: window.endParam,
+        sync: doSync ? '1' : '0',
+      })
+      const r = await fetch(`/api/office-events?${qs}`)
       const data = (await r.json().catch(() => ({}))) as {
         events?: OfficeEvent[]
         configured?: boolean
@@ -307,6 +354,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
       if (!r.ok) {
         if (!silent) setOfficeEvents([])
         setOfficeConfigured(false)
+        officeCacheRangeRef.current = null
         if (data.error && lastOfficeSyncErrorRef.current !== data.error) {
           lastOfficeSyncErrorRef.current = data.error
           toast.error(data.error)
@@ -315,38 +363,52 @@ export default function CalendarView({ profile }: CalendarViewProps) {
       }
       setOfficeEvents(data.events ?? [])
       setOfficeConfigured(data.configured ?? false)
-      if (data.syncError) {
+      officeCacheRangeRef.current = { start: window.startParam, end: window.endParam }
+      if (doSync && data.syncError) {
         if (lastOfficeSyncErrorRef.current !== data.syncError) {
           lastOfficeSyncErrorRef.current = data.syncError
           toast.warning(`Google 동기화: ${data.syncError}`)
         }
-      } else {
+      } else if (doSync) {
         lastOfficeSyncErrorRef.current = null
       }
     } catch {
       if (fetchId !== officeFetchIdRef.current) return
       if (!silent) setOfficeEvents([])
       setOfficeConfigured(false)
+      officeCacheRangeRef.current = null
     } finally {
       if (fetchId === officeFetchIdRef.current) {
         setOfficeLoading(false)
         setOfficeSyncing(false)
       }
     }
-  }, [filters.officeCalendar, getOfficeRangeParams])
+  }, [filters.officeCalendar, getOfficeFetchWindow])
 
-  // 송출/행정: 체크 ON / 날짜·뷰 이동 / 저장 후(officeVersion) 자동 재조회
+  // 송출/행정: 체크 ON(최초 sync) / 날짜·뷰 이동(DB 읽기·캐시) / 저장 후(force 읽기)
   useEffect(() => {
     if (!filters.officeCalendar) {
       setOfficeEvents([])
+      officeNeedsInitialSyncRef.current = true
+      officeCacheRangeRef.current = null
+      lastOfficeVersionRef.current = officeVersion
       return
     }
-    void fetchOfficeEvents({ silent: officeEvents.length > 0 })
-    // officeEvents.length는 silent 판단용 — 의도적으로 deps에서 제외
+    const isInitial = officeNeedsInitialSyncRef.current
+    if (isInitial) officeNeedsInitialSyncRef.current = false
+
+    const versionBumped = officeVersion !== lastOfficeVersionRef.current
+    lastOfficeVersionRef.current = officeVersion
+
+    void fetchOfficeEvents({
+      silent: !isInitial,
+      sync: isInitial,
+      force: versionBumped && !isInitial,
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.officeCalendar, currentDate, viewMode, officeVersion, fetchOfficeEvents])
 
-  // 탭/윈도우 포커스 시 백그라운드 재동기화 (focus+visibility 중복 호출 방지)
+  // 탭/윈도우 포커스 시 Google 재동기화 (focus+visibility 디바운스)
   useEffect(() => {
     if (!filters.officeCalendar) return
 
@@ -355,7 +417,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
       if (document.visibilityState && document.visibilityState !== 'visible') return
       if (debounceTimer) clearTimeout(debounceTimer)
       debounceTimer = setTimeout(() => {
-        void fetchOfficeEvents({ silent: true })
+        void fetchOfficeEvents({ silent: true, sync: true, force: true })
       }, 400)
     }
 
@@ -809,7 +871,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
           profile={profile}
           officeConfigured={officeConfigured}
           officeRefreshing={officeSyncing}
-          onOfficeRefresh={() => void fetchOfficeEvents({ silent: true })}
+          onOfficeRefresh={() => void fetchOfficeEvents({ silent: true, sync: true, force: true })}
           onVacationUploaded={() => setVacationVersion((v) => v + 1)}
         />
       )}
@@ -835,7 +897,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 profile={profile}
                 officeConfigured={officeConfigured}
                 officeRefreshing={officeSyncing}
-                onOfficeRefresh={() => void fetchOfficeEvents({ silent: true })}
+                onOfficeRefresh={() => void fetchOfficeEvents({ silent: true, sync: true, force: true })}
                 onVacationUploaded={() => setVacationVersion((v) => v + 1)}
               />
             </div>

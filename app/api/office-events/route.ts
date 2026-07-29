@@ -47,12 +47,17 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const start = searchParams.get('start')
     const end = searchParams.get('end')
+    // sync=1|true 일 때만 Google 양방향 sync. 주/월 이동 등 읽기는 기본(미지정·0)으로 DB만 조회.
+    const syncParam = searchParams.get('sync')
+    const doSync = syncParam === '1' || syncParam === 'true'
     if (!start || !end) {
       return NextResponse.json({ error: 'start, end 필요 (YYYY-MM-DD)' }, { status: 400 })
     }
 
     const admin = await createAdminClient()
-    const syncResult = await syncOfficeEventsRange(admin, start, end)
+    const syncResult = doSync
+      ? await syncOfficeEventsRange(admin, start, end)
+      : { configured: isOfficeCalendarSyncConfigured(), error: undefined as string | undefined }
 
     let query = admin
       .from('office_events')
@@ -72,6 +77,7 @@ export async function GET(request: NextRequest) {
       events: (data ?? []) as OfficeEvent[],
       configured: syncResult.configured || isOfficeCalendarSyncConfigured(),
       syncError: syncResult.error ?? null,
+      synced: doSync,
     })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
