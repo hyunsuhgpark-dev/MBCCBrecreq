@@ -206,7 +206,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
   const inputCls = cn(
     'w-full bg-transparent border-0 border-b rounded-none h-11 md:h-8 text-base md:text-sm',
     'text-[var(--text-primary)] placeholder:text-[var(--text-muted)]',
-    'border-[var(--border-default)] focus:outline-none focus:border-[var(--accent)] transition-colors'
+    'border-[var(--border-default)] focus:outline-none focus:border-white/20 transition-colors'
   )
   const inputStyle: CSSProperties = { paddingLeft: 5, paddingRight: 4 }
 
@@ -484,16 +484,15 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
             type="button"
             variant="outline"
             onClick={goBack}
-            className="min-h-11 border-[var(--border-default)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-all"
-            style={{ paddingLeft: 40, paddingRight: 40, backgroundColor: 'var(--bg-secondary-btn)' }}
+            className="h-11 min-h-11 w-[7.5rem] border-[var(--border-default)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-all"
+            style={{ backgroundColor: 'var(--bg-secondary-btn)' }}
           >
             취소
           </Button>
           <Button
             type="submit"
             disabled={loading}
-            className="min-h-11 font-semibold shadow-md hover:shadow-lg transition-all hover:bg-zinc-200"
-            style={{ backgroundColor: '#FFFFFF', color: '#0A0A0A', paddingLeft: 40, paddingRight: 40 }}
+            className="h-11 min-h-11 w-[7.5rem] font-semibold transition-all bg-white text-[#0A0A0A] hover:bg-zinc-200"
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />

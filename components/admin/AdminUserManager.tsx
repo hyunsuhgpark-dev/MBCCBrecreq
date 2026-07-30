@@ -148,8 +148,7 @@ export default function AdminUserManager({ users: initialUsers, currentUserId }:
                           isApproved: true,
                         })
                       }
-                      className="text-white gap-1.5 min-h-9"
-                      style={{ backgroundColor: 'var(--accent)' }}
+                      className="gap-1.5 min-h-9 bg-white text-[#0A0A0A] hover:bg-zinc-200"
                     >
                       {loadingId === user.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -204,7 +203,7 @@ export default function AdminUserManager({ users: initialUsers, currentUserId }:
                     <td className="py-[25px] font-medium text-[var(--text-primary)]" style={{ paddingLeft: '40px', paddingRight: '16px' }}>
                       {user.full_name || '이름 없음'}
                       {user.id === currentUserId && (
-                        <span className="ml-1.5 text-[10px] px-1 py-0.5 rounded bg-white/5 border border-white/10 text-[var(--accent)]">나</span>
+                        <span className="ml-1.5 text-[10px] px-1 py-0.5 rounded bg-white/5 border border-white/10 text-[var(--text-secondary)]">나</span>
                       )}
                     </td>
                     <td className="px-4 py-[25px] text-[var(--text-secondary)]">{user.email}</td>

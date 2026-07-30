@@ -82,27 +82,27 @@
   /* Elevation shadow for floating surfaces */
   --shadow-float: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
 
-  /* shadcn / app tokens */
+  /* shadcn / app tokens — 모노크롬: primary CTA = 흰 배경 / 검정 글자 */
   --background:            rgb(15, 15, 18);
   --foreground:            #EBEBEB;
   --card:                  rgb(24, 24, 28);
   --card-foreground:       #EBEBEB;
   --popover:               rgb(32, 32, 38);
   --popover-foreground:    #EBEBEB;
-  --primary:               #3B82F6;
-  --primary-foreground:    #FFFFFF;
+  --primary:               #FFFFFF;
+  --primary-foreground:    #0A0A0A;
   --secondary:             rgb(40, 40, 48);
   --secondary-foreground:  #EBEBEB;
   --muted:                 rgb(32, 32, 38);
   --muted-foreground:      #A1A1AA;
-  --accent:                #3B82F6;
-  --accent-dark:           #2563EB;
-  --accent-foreground:     #FFFFFF;
+  --accent:                #FFFFFF;
+  --accent-dark:           #E4E4E7; /* primary CTA hover */
+  --accent-foreground:     #0A0A0A;
   --destructive:           #DC2626;
   --destructive-foreground: #EBEBEB;
   --border:                rgba(255, 255, 255, 0.08);
   --input:                 rgba(255, 255, 255, 0.08);
-  --ring:                  rgba(59, 130, 246, 0.45);
+  --ring:                  rgba(255, 255, 255, 0.28);
   --radius:                0.5rem;
 }
 

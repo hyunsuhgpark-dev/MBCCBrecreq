@@ -374,8 +374,7 @@ export function OfficeEventModal({
                   type="button"
                   disabled={saving || deleting}
                   onClick={handleSave}
-                  className="min-h-[38px] min-w-[80px] rounded-lg px-5 text-sm font-medium transition-colors hover:bg-zinc-200 disabled:opacity-50"
-                  style={{ backgroundColor: '#FFFFFF', color: '#0A0A0A' }}
+                  className="min-h-[38px] min-w-[80px] rounded-lg px-5 text-sm font-medium transition-colors bg-white text-[#0A0A0A] hover:bg-zinc-200 disabled:opacity-50"
                 >
                   {saving ? <Loader2 className="inline h-4 w-4 animate-spin" /> : '저장'}
                 </button>

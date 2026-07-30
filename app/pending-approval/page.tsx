@@ -23,7 +23,7 @@ export default function PendingApprovalPage() {
         style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
       >
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 border" style={{ backgroundColor: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}>
-          <Tv className="w-8 h-8" style={{ color: 'var(--accent)' }} />
+          <Tv className="w-8 h-8" style={{ color: 'var(--text-secondary)' }} />
         </div>
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-4 border" style={{ backgroundColor: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}>
           <Clock className="w-6 h-6 text-amber-300" />

@@ -149,8 +149,7 @@ export default function AssignmentForm({ scheduleId, onComplete }: AssignmentFor
       <Button
         onClick={handleSubmit}
         disabled={loading}
-        className="w-full min-h-14 text-white font-bold text-base gap-2 rounded-xl"
-        style={{ backgroundColor: '#7C3AED' }}
+        className="w-full min-h-14 font-bold text-base gap-2 rounded-xl bg-white text-[#0A0A0A] hover:bg-zinc-200 disabled:opacity-50"
       >
         {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Plus className="w-5 h-5" />배정 완료</>}
       </Button>

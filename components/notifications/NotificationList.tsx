@@ -18,7 +18,7 @@ const typeConfig = {
   approval_requested: { icon: Bell, color: 'text-slate-300', bg: 'bg-white/5 border-white/10' },
   approved: { icon: CheckCircle2, color: 'text-emerald-300', bg: 'bg-emerald-950/25 border-emerald-800' },
   rejected: { icon: XCircle, color: 'text-rose-300', bg: 'bg-rose-950/25 border-rose-800' },
-  confirmed: { icon: Zap, color: 'text-[var(--accent)]', bg: 'bg-white/5 border-white/10' },
+  confirmed: { icon: Zap, color: 'text-[var(--text-primary)]', bg: 'bg-white/5 border-white/10' },
   assignment_requested: { icon: Car, color: 'text-purple-300', bg: 'bg-purple-950/25 border-purple-800' },
   assignment_completed: { icon: CheckCircle2, color: 'text-emerald-300', bg: 'bg-emerald-950/25 border-emerald-800' },
   user_signup_requested: { icon: UserPlus, color: 'text-orange-300', bg: 'bg-orange-950/25 border-orange-800' },
@@ -89,7 +89,7 @@ export default function NotificationList({ notifications }: NotificationListProp
                 {format(parseISO(notif.created_at), 'M월 d일(EEE) HH:mm', { locale: ko })}
               </p>
               {isClickable && (
-                <p className="text-[11px] mt-1.5 font-medium" style={{ color: 'var(--accent)' }}>
+                <p className="text-[11px] mt-1.5 font-medium" style={{ color: 'var(--text-secondary)' }}>
                   {notif.type === 'user_signup_requested' ? '회원 관리 →' : '의뢰서 보기 →'}
                 </p>
               )}

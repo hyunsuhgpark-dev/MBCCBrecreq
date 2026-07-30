@@ -287,7 +287,7 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
             <Button
               onClick={() => router.push(`/schedules/${schedule.id}/edit`)}
               variant="outline"
-              className="w-full min-h-12 font-semibold gap-2 rounded-xl border-[var(--border-default)] text-[var(--text-secondary)]"
+                  className="w-full min-h-12 font-semibold gap-2 rounded-xl border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]"
             >
               <Pencil className="w-4 h-4" />
               일정 수정하기
@@ -387,7 +387,7 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
                   onClick={() => router.push(`/schedules/${schedule.id}/edit`)}
                   variant="outline"
                   disabled={loading}
-                  className="min-h-10 text-sm font-semibold gap-1.5 rounded-xl border-[var(--border-default)] text-[var(--text-secondary)]"
+                  className="min-h-10 text-sm font-semibold gap-1.5 rounded-xl border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                   일정 수정
@@ -447,8 +447,7 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
             </div>
             <Button
               onClick={() => router.push(`/schedules/${schedule.id}/edit`)}
-              className="w-full min-h-14 text-white font-bold text-base gap-2 rounded-xl"
-              style={{ backgroundColor: 'var(--accent)' }}
+              className="w-full min-h-14 font-bold text-base gap-2 rounded-xl bg-white text-[#0A0A0A] hover:bg-zinc-200 disabled:opacity-50"
             >
               내용 수정 후 재등록
             </Button>
@@ -494,7 +493,7 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
                   className={cn(
                     'min-h-14 font-bold text-base gap-2 rounded-xl',
                     alreadyDecided && myApproval?.status === 'approved'
-                      ? 'bg-green-500 text-white cursor-not-allowed'
+                      ? 'bg-emerald-600 text-white cursor-not-allowed'
                       : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                   )}
                 >
@@ -531,8 +530,7 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
               <Button
                 onClick={handleForceApprove}
                 disabled={loading}
-                className="w-full min-h-14 font-bold text-base rounded-xl mt-3 text-white hover:brightness-110 disabled:opacity-50"
-                style={{ backgroundColor: 'rgb(95, 146, 176)' }}
+                className="w-full min-h-14 font-bold text-base rounded-xl mt-3 bg-white text-[#0A0A0A] hover:bg-zinc-200 disabled:opacity-50"
               >
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
                 강제 승인 (관리자)

@@ -25,12 +25,14 @@ export default async function AdminPage() {
 
   return (
     <AppShell profile={profile}>
-      <div className="max-w-5xl mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">사용자 관리</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>가입 승인 및 역할 지정을 관리합니다.</p>
+      <div className="flex min-h-[calc(100dvh-3.5rem-5rem)] sm:min-h-[calc(100dvh-3.5rem)] w-full items-center justify-center px-4 py-8">
+        <div className="w-full max-w-5xl">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-[var(--text-primary)]">사용자 관리</h1>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>가입 승인 및 역할 지정을 관리합니다.</p>
+          </div>
+          <AdminUserManager users={users ?? []} currentUserId={user.id} />
         </div>
-        <AdminUserManager users={users ?? []} currentUserId={user.id} />
       </div>
     </AppShell>
   )

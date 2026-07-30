@@ -129,7 +129,8 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
   )
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
+    <div className="flex min-h-[calc(100dvh-3.5rem-5rem)] sm:min-h-[calc(100dvh-3.5rem)] w-full items-center justify-center px-4 py-8">
+      <div className="w-full max-w-4xl">
 
       {/* ── 상단 상태 바 ── */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3 no-print">
@@ -151,7 +152,7 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
             className="h-11 w-11 border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] touch-manipulation"
             aria-label="PDF 출력"
           >
-            <Printer className="w-8 h-8" />
+            <Printer className="w-5 h-5" />
           </Button>
 
           {canEdit && (
@@ -162,7 +163,7 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
                 className="h-11 w-11 border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] touch-manipulation"
                 aria-label="수정"
               >
-                <Edit className="w-8 h-8" />
+                <Edit className="w-5 h-5" />
               </Button>
             </Link>
           )}
@@ -175,7 +176,7 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
               className="h-11 w-11 border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-rose-400 hover:border-rose-800/50 touch-manipulation"
               aria-label="삭제"
             >
-              <Trash2 className="w-8 h-8" />
+              <Trash2 className="w-5 h-5" />
             </Button>
           )}
         </div>
@@ -423,6 +424,7 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
           profile={profile}
           onUpdate={() => setRefreshKey((k) => k + 1)}
         />
+      </div>
       </div>
     </div>
   )

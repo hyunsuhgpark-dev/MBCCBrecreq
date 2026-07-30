@@ -144,7 +144,7 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
             <button
               type="button"
               onClick={goBack}
-              className="sm:hidden flex items-center gap-1 shrink-0 p-1.5 -ml-1 mr-1 rounded transition-colors"
+              className="sm:hidden flex items-center gap-1 shrink-0 p-1.5 -ml-1 mr-1 rounded transition-colors hover:bg-white/[0.06]"
               style={{ color: '#A3A3A3' }}
               aria-label="이전 화면"
             >
@@ -161,14 +161,14 @@ export default function AppShell({ children, profile, unreadCount = 0 }: AppShel
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'flex items-center gap-0 px-3 py-1.5 rounded text-[13px] transition-colors whitespace-nowrap',
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded text-[13px] transition-colors whitespace-nowrap',
                     isActive
                       ? 'font-semibold'
                       : 'hover:bg-white/[0.06]'
                   )}
                   style={{ color: isActive ? '#EBEBEB' : '#A3A3A3' }}
                 >
-                  <item.icon className="w-3.5 h-3.5 mr-[3px]" />
+                  <item.icon className="w-3.5 h-3.5" />
                   {item.label}
                 </Link>
               )

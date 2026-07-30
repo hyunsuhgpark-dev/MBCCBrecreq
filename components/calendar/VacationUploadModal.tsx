@@ -268,11 +268,12 @@ export function VacationUploadModal({ open, onOpenChange, onComplete }: Vacation
             )}
             <Button
               size="sm"
-              className="w-full bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] text-[var(--text-primary)] text-xs"
+              variant="secondary"
+              className="w-full text-xs"
               disabled={manualLoading}
               onClick={handleManualSave}
             >
-              {manualLoading ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+              {manualLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
               저장
             </Button>
           </div>
@@ -289,11 +290,11 @@ export function VacationUploadModal({ open, onOpenChange, onComplete }: Vacation
           </Button>
           <Button
             size="sm"
-            className="bg-amber-600 hover:bg-amber-500 text-white text-xs disabled:opacity-50"
+            className="text-xs bg-white text-[#0A0A0A] hover:bg-zinc-200 disabled:opacity-50"
             disabled={!file || loading}
             onClick={handleUpload}
           >
-            {loading ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
             엑셀 업로드
           </Button>
         </DialogFooter>

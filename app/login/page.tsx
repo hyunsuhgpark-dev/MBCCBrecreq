@@ -48,17 +48,14 @@ export default function LoginPage() {
       className="min-h-screen flex items-center justify-center relative overflow-hidden"
       style={{ backgroundColor: 'var(--bg-body)' }}
     >
-      {/* 배경 미묘한 그라디언트 */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(74,158,232,0.07) 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,255,255,0.04) 0%, transparent 70%)',
         }}
       />
 
       <div className="relative z-10 w-full max-w-[360px] mx-4">
-
-        {/* 로고 */}
         <div className="text-center mb-8">
           <h1
             className="text-[22px] font-bold tracking-tight"
@@ -68,7 +65,6 @@ export default function LoginPage() {
           </h1>
         </div>
 
-        {/* 카드 */}
         <div
           className="rounded-2xl border"
           style={{
@@ -77,7 +73,6 @@ export default function LoginPage() {
             padding: '31px 28px',
           }}
         >
-          {/* 탭 */}
           <div
             className="flex rounded-xl p-1 mb-6"
             style={{ backgroundColor: 'var(--bg-body)' }}
@@ -87,8 +82,9 @@ export default function LoginPage() {
               return (
                 <button
                   key={label}
+                  type="button"
                   onClick={() => setIsLogin(i === 0)}
-                  className="flex-1 text-sm font-semibold rounded-lg transition-all"
+                  className="flex-1 text-sm font-semibold rounded-lg transition-all hover:brightness-110"
                   style={{
                     paddingTop: '11px',
                     paddingBottom: '11px',
@@ -165,8 +161,9 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md transition-colors hover:bg-white/[0.06]"
                   style={{ color: 'var(--text-muted)' }}
+                  aria-label={showPw ? '비밀번호 숨기기' : '비밀번호 보기'}
                 >
                   {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -176,8 +173,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-11 text-sm font-bold rounded-xl transition-all text-white"
-              style={{ backgroundColor: loading ? 'var(--accent-dark)' : 'var(--accent)', marginTop: '24px' }}
+              className="w-full h-11 text-sm font-bold rounded-xl transition-all bg-white text-[#0A0A0A] hover:bg-zinc-200 disabled:opacity-50 mt-6"
             >
               {loading
                 ? <Loader2 className="w-4 h-4 animate-spin mx-auto" />
@@ -192,7 +188,6 @@ export default function LoginPage() {
             </p>
           )}
         </div>
-
       </div>
     </div>
   )

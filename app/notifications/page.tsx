@@ -32,9 +32,11 @@ export default async function NotificationsPage() {
 
   return (
     <AppShell profile={profile} unreadCount={0}>
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        <h1 className="text-xl font-bold text-[var(--text-primary)] mb-4">알림</h1>
-        <NotificationList notifications={notifications ?? []} />
+      <div className="flex min-h-[calc(100dvh-3.5rem-5rem)] sm:min-h-[calc(100dvh-3.5rem)] w-full items-center justify-center px-4 py-8">
+        <div className="w-full max-w-2xl">
+          <h1 className="text-xl font-bold text-[var(--text-primary)] mb-4">알림</h1>
+          <NotificationList notifications={notifications ?? []} />
+        </div>
       </div>
     </AppShell>
   )

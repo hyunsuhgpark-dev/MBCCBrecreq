@@ -137,7 +137,8 @@ export default async function MyPage() {
   /* ── 렌더 ─────────────────────────────────────────────── */
   return (
     <AppShell profile={profile} unreadCount={unreadCount ?? 0}>
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
+      <div className="flex min-h-[calc(100dvh-3.5rem-5rem)] sm:min-h-[calc(100dvh-3.5rem)] w-full items-center justify-center px-4 py-8">
+        <div className="w-full max-w-2xl space-y-5">
 
         {/* ── 프로필 카드 ─────────────────────────────── */}
         <div
@@ -147,7 +148,7 @@ export default async function MyPage() {
           {/* 아바타 */}
           <div
             className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold shrink-0 select-none"
-            style={{ backgroundColor: 'var(--accent)', color: '#fff', opacity: 0.92 }}
+            style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }}
           >
             {initials(profile.full_name ?? '?')}
           </div>
@@ -281,6 +282,7 @@ export default async function MyPage() {
           )}
         </div>
 
+      </div>
       </div>
     </AppShell>
   )
