@@ -61,6 +61,33 @@ function defaultEndTime(start?: string, end?: string | null, prefillDate?: strin
   return ''
 }
 
+/** 제작 시작 날짜가 바뀌면 종료 날짜를 같은 날로 맞추고, 종료≤시작이면 +1시간 */
+function syncEndDateToStart(startIso: string, endIso: string): string {
+  const startDate = startIso.slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return endIso
+
+  const endTimeRaw = endIso.includes('T') ? endIso.split('T')[1]?.slice(0, 5) ?? '' : ''
+  const endTime = /^\d{2}:\d{2}$/.test(endTimeRaw) ? endTimeRaw : '18:00'
+  let next = `${startDate}T${endTime}`
+
+  if (!endIso || new Date(next) <= new Date(startIso)) {
+    const startTime = (startIso.split('T')[1] ?? '09:00').slice(0, 5)
+    const [hs, ms] = startTime.split(':').map((x) => parseInt(x, 10))
+    let h = (Number.isFinite(hs) ? hs : 9) + 1
+    let m = Number.isFinite(ms) ? Math.round(ms / 5) * 5 : 0
+    if (m >= 60) {
+      h += 1
+      m = 0
+    }
+    if (h > 23) {
+      h = 23
+      m = 55
+    }
+    next = `${startDate}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+  }
+  return next
+}
+
 export default function ScheduleForm({ initialData, scheduleId, prefillDate }: ScheduleFormProps) {
   const router = useRouter()
   const goBack = useAppBack('/calendar')
@@ -73,6 +100,7 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
     handleSubmit,
     watch,
     setValue,
+    getValues,
     control,
     formState: { errors },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -338,7 +366,19 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
                 render={({ field }) => (
                   <DateTimePicker
                     value={field.value}
-                    onChange={field.onChange}
+                    onChange={(next) => {
+                      const prevDate = field.value?.slice(0, 10) ?? ''
+                      const nextDate = next.slice(0, 10)
+                      field.onChange(next)
+                      // 제작 시작 날짜가 바뀌면 제작 종료 날짜도 같은 날로 맞춤 (시간은 유지)
+                      if (nextDate && nextDate !== prevDate) {
+                        setValue(
+                          'broadcast_end',
+                          syncEndDateToStart(next, getValues('broadcast_end')),
+                          { shouldDirty: true, shouldValidate: true }
+                        )
+                      }
+                    }}
                     error={!!errors.broadcast_start}
                   />
                 )}

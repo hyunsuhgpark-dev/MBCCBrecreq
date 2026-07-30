@@ -157,9 +157,9 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
           {canEdit && (
             <Link href={`/schedules/${schedule.id}/edit`}>
               <Button
+                variant="outline"
                 size="icon"
-                className="h-11 w-11 text-white shadow-sm touch-manipulation"
-                style={{ backgroundColor: 'var(--accent)' }}
+                className="h-11 w-11 border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] touch-manipulation"
                 aria-label="수정"
               >
                 <Edit className="w-8 h-8" />
@@ -172,7 +172,7 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
               size="icon"
               variant="outline"
               onClick={() => setShowDeleteDialog(true)}
-              className="h-11 w-11 border-rose-900/40 text-rose-300 hover:bg-rose-950/20 hover:border-rose-800 touch-manipulation"
+              className="h-11 w-11 border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-rose-400 hover:border-rose-800/50 touch-manipulation"
               aria-label="삭제"
             >
               <Trash2 className="w-8 h-8" />

@@ -86,7 +86,8 @@ export default function DateTimePicker({
 
   const dateBoxCls = cn(
     'relative shrink-0',
-    comfortable ? 'h-11 w-full sm:w-[148px]' : 'h-11 sm:h-8 w-full sm:w-[130px]'
+    // YYYY-MM-DD(10자) + 달력 아이콘이 겹치지 않도록 최소 너비 확보
+    comfortable ? 'h-11 w-full sm:w-[156px]' : 'h-11 sm:h-8 w-full sm:w-[148px]'
   )
 
   const dateFaceCls = cn(
@@ -108,14 +109,14 @@ export default function DateTimePicker({
         <div className={dateBoxCls}>
           <div className={dateFaceCls} aria-hidden>
             <span
-              className="absolute inset-0 flex items-center justify-center text-sm px-6 truncate"
-              style={{ color: '#EBEBEB' }}
+              className="absolute inset-0 flex items-center text-sm truncate pr-8"
+              style={{ color: '#EBEBEB', paddingLeft: 7 }}
             >
               {formatDateLabel(date)}
             </span>
             <Calendar
-              className="absolute right-2 top-1/2 -translate-y-1/2 shrink-0"
-              style={{ width: 16, height: 16, color: '#A3A3A3' }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 shrink-0 pointer-events-none"
+              style={{ width: 14, height: 14, color: '#A3A3A3' }}
             />
           </div>
           <input
@@ -127,7 +128,7 @@ export default function DateTimePicker({
           />
         </div>
       ) : (
-        <div className={cn('hidden sm:block shrink-0', comfortable ? 'w-[148px]' : 'w-[130px]')} />
+        <div className={cn('hidden sm:block shrink-0', comfortable ? 'w-[156px]' : 'w-[148px]')} />
       )}
 
       <div

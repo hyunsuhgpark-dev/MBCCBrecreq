@@ -19,7 +19,6 @@ import {
   CheckCircle2,
   XCircle,
   MessageSquare,
-  Zap,
   AlertTriangle,
   Loader2,
   ThumbsUp,
@@ -393,15 +392,15 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
                   <Pencil className="w-3.5 h-3.5" />
                   일정 수정
                 </Button>
-                <Button
-                  onClick={() => setShowWithdrawDialog(true)}
-                  variant="outline"
-                  disabled={loading}
-                  className="min-h-10 text-sm font-semibold gap-1.5 rounded-xl border-rose-800 text-rose-300 hover:bg-rose-950/20"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  의뢰 철회
-                </Button>
+              <Button
+                onClick={() => setShowWithdrawDialog(true)}
+                variant="outline"
+                disabled={loading}
+                  className="min-h-10 text-sm font-semibold gap-1.5 rounded-xl border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-rose-400"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                의뢰 철회
+              </Button>
               </div>
             </div>
           </div>
@@ -417,7 +416,7 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
               <Button
                 onClick={() => router.push(`/schedules/${schedule.id}/edit`)}
                 variant="outline"
-                className="min-h-12 font-semibold gap-2 rounded-xl border-[var(--border-default)] text-[var(--text-secondary)]"
+                className="min-h-12 font-semibold gap-2 rounded-xl border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]"
               >
                 <Pencil className="w-4 h-4" />
                 수정하기
@@ -425,7 +424,7 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
               <Button
                 onClick={() => setShowWithdrawDialog(true)}
                 variant="outline"
-                className="min-h-12 font-semibold gap-2 rounded-xl border-rose-800 text-rose-300 hover:bg-rose-950/20"
+                className="min-h-12 font-semibold gap-2 rounded-xl border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-rose-400"
               >
                 <Trash2 className="w-4 h-4" />
                 의뢰 철회
@@ -532,10 +531,10 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
               <Button
                 onClick={handleForceApprove}
                 disabled={loading}
-                className="w-full min-h-14 text-white font-bold text-base gap-2 rounded-xl mt-3"
-                style={{ backgroundColor: 'var(--accent)' }}
+                className="w-full min-h-14 font-bold text-base rounded-xl mt-3 text-white hover:brightness-110 disabled:opacity-50"
+                style={{ backgroundColor: 'rgb(95, 146, 176)' }}
               >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
                 강제 승인 (관리자)
               </Button>
             )}
