@@ -647,19 +647,22 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   function applyFilters(list: Schedule[]): Schedule[] {
     return list.filter((s) => {
       const isOwn = s.created_by === profile.id
+      // PD만 본인 일정을 리소스/배차 필터와 무관하게 유지 (실무 확인용).
+      // Admin 등 다른 역할은 사이드바 체크를 그대로 적용해야 함.
+      const alwaysShowOwn = isOwn && profile.role === 'Producer'
 
       // 배차 — ENG / ENG-M 은 본인 일정 포함 전부 숨김
       if (s.request_type === 'dispatch') {
         if (profile.role === 'ENG' || profile.role === 'ENG-M') return false
-        if (isOwn) return true
+        if (filters.myScheduleOnly && !isOwn) return false
+        if (alwaysShowOwn) return true
         return filters.dispatch
       }
 
       // 내 일정만 보기: 내 것이 아니면 숨김
       if (filters.myScheduleOnly && !isOwn) return false
 
-      // 내가 신청한 일정은 필터 무관하게 항상 표시 (본인 확인 보장)
-      if (isOwn) return true
+      if (alwaysShowOwn) return true
 
       // 녹화 타입 — 장비 플래그 확인
       const hasNoResource = !s.use_relay_car && !s.use_studio && !s.use_eng && !s.use_audio
@@ -1317,6 +1320,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                           const dow = day.getDay()
                           const isWeekend = dow === 0 || dow === 6
                           const cellClickable = canEditOffice || canCreateRecording
+                          // 멀티데이 바가 이 칸을 지날 때만 상단 예약 — 안 지나는 날(예: 3·8일)은 칩이 내려가지 않음
+                          const cellSchZoneH = schLanes.some(
+                            (sl) => idx >= sl.startCol && idx <= sl.endCol
+                          )
+                            ? schZoneH
+                            : 0
 
                           return (
                             <div
@@ -1354,9 +1363,9 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                 {day.getDate() === 1 ? format(day, 'M/d') : format(day, 'd')}
                               </div>
 
-                              {/* 멀티데이 일정 bar 예약 공간 — overlay가 이 영역에 렌더됨 */}
-                              {schZoneH > 0 && (
-                                <div style={{ height: schZoneH + 2, flexShrink: 0 }} />
+                              {/* 멀티데이 일정 bar 예약 공간 — 이 칸을 지나는 바가 있을 때만 */}
+                              {cellSchZoneH > 0 && (
+                                <div style={{ height: cellSchZoneH + 2, flexShrink: 0 }} />
                               )}
 
                               {/* 방송 일정 칩 (상단 영역) — opacity 1 고정 */}

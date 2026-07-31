@@ -62,16 +62,18 @@ interface CheckboxItemProps {
 
 function CheckboxItem({ label, checked, onChange, accentColor }: CheckboxItemProps) {
   return (
-    <label
-      className="flex items-center gap-3 cursor-pointer group px-0.5 rounded hover:bg-white/[0.03] transition-colors select-none"
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className="flex w-full items-center gap-3 cursor-pointer group px-0.5 rounded hover:bg-white/[0.03] transition-colors select-none text-left"
       style={{ paddingTop: '5px', paddingBottom: '5px' }}
     >
       <div
-        onClick={() => onChange(!checked)}
         className={cn(
           'w-[15px] h-[15px] shrink-0 rounded-[3px] border flex items-center justify-center transition-colors',
           checked ? 'border-zinc-500 bg-zinc-600' : 'border-zinc-700 bg-transparent'
         )}
+        aria-hidden
       >
         {checked && (
           <svg
@@ -102,7 +104,7 @@ function CheckboxItem({ label, checked, onChange, accentColor }: CheckboxItemPro
       >
         {label}
       </span>
-    </label>
+    </button>
   )
 }
 
