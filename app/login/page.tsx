@@ -173,7 +173,8 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-11 text-sm font-bold rounded-xl transition-all bg-white text-[#0A0A0A] hover:bg-zinc-200 disabled:opacity-50 mt-6"
+              className="w-full h-11 text-sm font-bold rounded-xl transition-all bg-white text-[#0A0A0A] hover:bg-zinc-200 disabled:opacity-50"
+              style={{ marginTop: '2rem' }}
             >
               {loading
                 ? <Loader2 className="w-4 h-4 animate-spin mx-auto" />
