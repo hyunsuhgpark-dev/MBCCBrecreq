@@ -78,14 +78,17 @@ export async function POST(request: NextRequest) {
   }
 
   const approval_number = `manual-${Date.now()}`
+  const half = half_day || null
+  const sync_key = `${approval_number}|${start_date}|${end_date}|${half ?? ''}`
   const adminClient = getAdminClient()
   const { error } = await adminClient.from('vacations').insert({
+    sync_key,
     approval_number,
     name: name.trim(),
     vacation_type: '수기입력',
     start_date,
     end_date,
-    half_day: half_day || null,
+    half_day: half,
   })
 
   if (error) {

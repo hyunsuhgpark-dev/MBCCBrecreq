@@ -171,6 +171,8 @@ export interface OfficeEvent {
 /** 사내 ERP 휴가 데이터 */
 export interface Vacation {
   id: string
+  /** approval_number|start|end|half_day — 동일 결재번호의 일자별 행 구분 */
+  sync_key?: string
   approval_number: string
   name: string
   vacation_type: string
