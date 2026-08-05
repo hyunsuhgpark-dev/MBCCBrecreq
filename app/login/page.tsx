@@ -3,13 +3,13 @@
 export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavRouter } from '@/lib/use-nav-router'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
-  const router = useRouter()
+  const router = useNavRouter()
   const supabase = createClient()
   const [isLogin, setIsLogin] = useState(true)
   const [loading, setLoading] = useState(false)

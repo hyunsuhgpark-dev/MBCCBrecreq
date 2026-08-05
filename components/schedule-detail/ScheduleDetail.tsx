@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavRouter } from '@/lib/use-nav-router'
 import { useReactToPrint } from 'react-to-print'
 import type { Schedule, Profile } from '@/lib/types'
 import { format, parseISO } from 'date-fns'
@@ -70,7 +70,7 @@ const resourceChips = [
 ]
 
 export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProps) {
-  const router = useRouter()
+  const router = useNavRouter()
   const printRef = useRef<HTMLDivElement>(null)
   const [, setRefreshKey] = useState(0)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)

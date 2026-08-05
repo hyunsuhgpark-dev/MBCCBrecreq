@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
+import { useNavRouter } from '@/lib/use-nav-router'
 import { createClient } from '@/lib/supabase/client'
 import { Calendar, Plus, Settings, Bell, LogOut, User, ChevronLeft } from 'lucide-react'
 import type { Profile } from '@/lib/types'
@@ -33,7 +34,7 @@ const roleLabels: Record<string, string> = {
 
 export default function AppShell({ children, profile, unreadCount = 0 }: AppShellProps) {
   const pathname = usePathname()
-  const router = useRouter()
+  const router = useNavRouter()
   const goBack = useAppBack('/calendar')
   const supabase = createClient()
   const [localUnread, setLocalUnread] = useState(unreadCount)

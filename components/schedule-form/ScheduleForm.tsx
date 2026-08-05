@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, type CSSProperties } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavRouter } from '@/lib/use-nav-router'
 import { useAppBack } from '@/lib/use-app-back'
 import { useForm, type SubmitHandler, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -89,7 +89,7 @@ function syncEndDateToStart(startIso: string, endIso: string): string {
 }
 
 export default function ScheduleForm({ initialData, scheduleId, prefillDate }: ScheduleFormProps) {
-  const router = useRouter()
+  const router = useNavRouter()
   const goBack = useAppBack('/calendar')
   const [loading, setLoading] = useState(false)
   const { isKeyboardOpen, handleFocusCapture } = useMobileKeyboard()

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavRouter } from '@/lib/use-nav-router'
 import { isStaffOfficeRole, isStaffSubControlRole, isDispatchRequest } from '@/lib/roles'
 import AssignmentForm from '@/components/action-bar/AssignmentForm'
 import type { Schedule, Profile } from '@/lib/types'
@@ -36,7 +36,7 @@ interface ActionBarProps {
 }
 
 export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProps) {
-  const router = useRouter()
+  const router = useNavRouter()
   const [loading, setLoading] = useState(false)
   const [showRejectDialog, setShowRejectDialog] = useState(false)
   const [rejectReason, setRejectReason] = useState('')

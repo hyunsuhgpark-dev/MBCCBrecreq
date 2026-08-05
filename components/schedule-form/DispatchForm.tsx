@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavRouter } from '@/lib/use-nav-router'
 import { useAppBack } from '@/lib/use-app-back'
 import { useForm, type SubmitHandler, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -60,7 +60,7 @@ function defaultEndTime(start?: string, end?: string | null, prefillDate?: strin
 }
 
 export default function DispatchForm({ initialData, scheduleId, prefillDate }: DispatchFormProps) {
-  const router = useRouter()
+  const router = useNavRouter()
   const goBack = useAppBack('/schedules/new')
   const [loading, setLoading] = useState(false)
   const { isKeyboardOpen, handleFocusCapture } = useMobileKeyboard()

@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useNavRouter } from '@/lib/use-nav-router'
 import type { Notification } from '@/lib/types'
 import { format, parseISO } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -31,7 +31,7 @@ function getScheduleId(notif: Notification): string | null {
 }
 
 export default function NotificationList({ notifications }: NotificationListProps) {
-  const router = useRouter()
+  const router = useNavRouter()
 
   if (notifications.length === 0) {
     return (

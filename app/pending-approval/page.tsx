@@ -3,12 +3,12 @@
 export const dynamic = 'force-dynamic'
 
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useNavRouter } from '@/lib/use-nav-router'
 import { Clock, LogOut, Tv } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function PendingApprovalPage() {
-  const router = useRouter()
+  const router = useNavRouter()
   const supabase = createClient()
 
   async function handleLogout() {

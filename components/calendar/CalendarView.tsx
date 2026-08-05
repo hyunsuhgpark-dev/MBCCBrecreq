@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavRouter } from '@/lib/use-nav-router'
 import { createClient } from '@/lib/supabase/client'
 import type { Schedule, Profile, OfficeEvent, Vacation } from '@/lib/types'
 import { OfficeEventModal } from '@/components/calendar/OfficeEventModal'
@@ -151,7 +151,7 @@ const DOW_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
 const DOW_COLORS = ['#C07070', '#4A4A4A', '#4A4A4A', '#4A4A4A', '#4A4A4A', '#4A4A4A', '#4A7090']
 
 export default function CalendarView({ profile }: CalendarViewProps) {
-  const router = useRouter()
+  const router = useNavRouter()
   const [supabase] = useState(() => createClient())
   const [currentDate, setCurrentDate] = useState(new Date())
   const [schedules, setSchedules] = useState<Schedule[]>([])

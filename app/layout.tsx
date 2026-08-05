@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next'
+import { Suspense } from 'react'
 import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
+import NavigationProgress from '@/components/layout/NavigationProgress'
 
 export const metadata: Metadata = {
   title: 'MBC충북 제작 일정',
@@ -33,6 +35,9 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
       </head>
       <body>
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         {children}
         <Toaster position="top-right" richColors />
       </body>

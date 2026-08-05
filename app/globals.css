@@ -265,6 +265,32 @@ body {
 .cal-slide-prev {
   animation: cal-slide-prev 0.25s ease-out both;
 }
+/* ── 네비게이션 로딩 바 ── */
+@keyframes nav-progress-slide {
+  0% { background-position: 100% 0; opacity: 0.55; }
+  50% { opacity: 1; }
+  100% { background-position: -100% 0; opacity: 0.55; }
+}
+.nav-progress-bar-inner {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    #ffffff 14%,
+    #e4e4e7 50%,
+    #ffffff 86%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: nav-progress-slide 1.1s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-progress-bar-inner {
+    animation: none;
+    opacity: 0.85;
+    background: #ffffff;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cal-slide-next,
   .cal-slide-prev {
