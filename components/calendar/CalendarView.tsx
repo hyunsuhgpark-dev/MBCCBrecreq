@@ -128,8 +128,14 @@ const RESOURCE_COLORS = {
   default:  { bright: '#9CA3AF', dark: '#374151' },
 } as const
 
-/** 일정의 왼쪽 색상 바 계산 — 장비×상태 조합 */
-function getScheduleBorderColor(schedule: Schedule): string {
+/**
+ * 일정의 왼쪽 색상 바 계산 — 장비×상태 조합.
+ * ENG(취재)+AUDIO 복수일 때:
+ * - 기술국(ENG/ENG-M): AUDIO(노랑) — ENG 필터 OFF 시에도 “우리 일”로 보이게
+ * - CAM/CAM-M: ENG(파랑)
+ * (역할명 ENG=기술국 vs 장비 ENG=취재 혼동 주의)
+ */
+function getScheduleBorderColor(schedule: Schedule, viewerRole?: string | null): string {
   const s = schedule.status
   if (s === 'conflict')  return '#D97706'
   if (s === 'rejected')  return '#BE185D'
@@ -137,12 +143,25 @@ function getScheduleBorderColor(schedule: Schedule): string {
   const isLit = s === 'confirmed' || s === 'assigned'
   let pair: { bright: string; dark: string }
 
-  if (schedule.request_type === 'dispatch') pair = RESOURCE_COLORS.dispatch
-  else if (schedule.use_relay_car) pair = RESOURCE_COLORS.relayCar
-  else if (schedule.use_studio)    pair = RESOURCE_COLORS.studio
-  else if (schedule.use_eng)       pair = RESOURCE_COLORS.eng
-  else if (schedule.use_audio)     pair = RESOURCE_COLORS.audio
-  else pair = RESOURCE_COLORS.default
+  if (schedule.request_type === 'dispatch') {
+    pair = RESOURCE_COLORS.dispatch
+  } else if (schedule.use_relay_car) {
+    pair = RESOURCE_COLORS.relayCar
+  } else if (schedule.use_studio) {
+    pair = RESOURCE_COLORS.studio
+  } else if (schedule.use_eng && schedule.use_audio) {
+    const isTech =
+      viewerRole === 'ENG' || viewerRole === 'ENG-M' || viewerRole === 'Staff_Office'
+    const isCam =
+      viewerRole === 'CAM' || viewerRole === 'CAM-M' || viewerRole === 'Staff_SubControl'
+    pair = isTech ? RESOURCE_COLORS.audio : isCam ? RESOURCE_COLORS.eng : RESOURCE_COLORS.eng
+  } else if (schedule.use_eng) {
+    pair = RESOURCE_COLORS.eng
+  } else if (schedule.use_audio) {
+    pair = RESOURCE_COLORS.audio
+  } else {
+    pair = RESOURCE_COLORS.default
+  }
 
   return isLit ? pair.bright : pair.dark
 }
@@ -1171,7 +1190,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                   <Link key={schedule.id} href={`/schedules/${schedule.id}`}>
                                     <div
                                       className="flex items-start cursor-pointer border-l-[2px] hover:bg-white/[0.025] transition-colors"
-                                      style={{ borderLeftColor: getScheduleBorderColor(schedule) }}
+                                      style={{ borderLeftColor: getScheduleBorderColor(schedule, profile.role) }}
                                     >
                                       <div className="flex-1 min-w-0 px-5 py-2">
                                         <div className="flex flex-col gap-0.5">
@@ -1397,7 +1416,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                         className={cn('cursor-pointer transition-colors hover:bg-white/[0.04]', isDesktop && 'flex items-center gap-1')}
                                         style={{
                                           backgroundColor: cfg.cardBg,
-                                          borderLeft: isDesktop ? `2px solid ${getScheduleBorderColor(s)}` : 'none',
+                                          borderLeft: isDesktop ? `2px solid ${getScheduleBorderColor(s, profile.role)}` : 'none',
                                           padding: isDesktop ? '2px 5px' : '2px 4px',
                                         }}
                                         onMouseEnter={() => isDesktop && setHoveredScheduleId(cellKey)}
@@ -1590,7 +1609,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                           {schLanes.map((sl) => {
                             const s = sl.schedule
                             const cfg = getCfg(s.status)
-                            const borderColor = getScheduleBorderColor(s)
+                            const borderColor = getScheduleBorderColor(s, profile.role)
                             // 바 배경: border 색에 불투명도 추가 (투명이면 바가 안보임)
                             const barBg = borderColor + '30'
                             const barText = (s.status === 'pending') ? '#9ca3af' : cfg.cardText
@@ -1754,7 +1773,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                     <Link key={schedule.id} href={`/schedules/${schedule.id}`}>
                       <div
                         className="group border-l-[2px] transition-colors hover:bg-white/[0.025] overflow-hidden"
-                        style={{ backgroundColor: 'transparent', borderLeftColor: getScheduleBorderColor(schedule) }}
+                        style={{ backgroundColor: 'transparent', borderLeftColor: getScheduleBorderColor(schedule, profile.role) }}
                       >
                         <div className="p-4 flex items-center gap-4">
                           <div className="shrink-0 w-14 text-center">
