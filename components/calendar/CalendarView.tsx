@@ -119,42 +119,38 @@ function getCfg(status: string) {
   return statusConfig[(status as StatusKey) in statusConfig ? (status as StatusKey) : 'pending']
 }
 
+type ResourceFilterKey = 'relayCar' | 'studio' | 'eng' | 'audio' | 'dispatch'
+
 /**
- * 일정의 왼쪽 색상 바 계산 — 장비×상태 조합.
+ * 칩·필터가 같은 분류를 쓰도록.
  * ENG(취재)+AUDIO 복수일 때:
- * - 기술국(ENG/ENG-M): AUDIO(빨강) — ENG 필터 OFF 시에도 “우리 일”로 보이게
- * - CAM/CAM-M: ENG(파랑)
+ * - 기술국(ENG/ENG-M): AUDIO — ENG 필터 OFF 시에도 “우리 일”로 보이게
+ * - PD/CAM 등: ENG
  * (역할명 ENG=기술국 vs 장비 ENG=취재 혼동 주의)
  */
-function getScheduleBorderColor(schedule: Schedule, viewerRole?: string | null): string {
-  if (schedule.status === 'rejected') return '#BE185D'
-
-  let pair: { bright: string; dark: string }
-
+function getScheduleResourceKey(schedule: Schedule, viewerRole?: string | null): ResourceFilterKey | null {
   if (schedule.request_type === 'dispatch') {
     const techSeesAsRelay =
       schedule.notify_tech &&
       (viewerRole === 'ENG' || viewerRole === 'ENG-M' || viewerRole === 'Staff_Office')
-    pair = techSeesAsRelay ? RESOURCE_COLORS.relayCar : RESOURCE_COLORS.dispatch
-  } else if (schedule.use_relay_car) {
-    pair = RESOURCE_COLORS.relayCar
-  } else if (schedule.use_studio) {
-    pair = RESOURCE_COLORS.studio
-  } else if (schedule.use_eng && schedule.use_audio) {
+    return techSeesAsRelay ? 'relayCar' : 'dispatch'
+  }
+  if (schedule.use_relay_car) return 'relayCar'
+  if (schedule.use_studio) return 'studio'
+  if (schedule.use_eng && schedule.use_audio) {
     const isTech =
       viewerRole === 'ENG' || viewerRole === 'ENG-M' || viewerRole === 'Staff_Office'
-    const isCam =
-      viewerRole === 'CAM' || viewerRole === 'CAM-M' || viewerRole === 'Staff_SubControl'
-    pair = isTech ? RESOURCE_COLORS.audio : isCam ? RESOURCE_COLORS.eng : RESOURCE_COLORS.eng
-  } else if (schedule.use_eng) {
-    pair = RESOURCE_COLORS.eng
-  } else if (schedule.use_audio) {
-    pair = RESOURCE_COLORS.audio
-  } else {
-    pair = RESOURCE_COLORS.default
+    return isTech ? 'audio' : 'eng'
   }
+  if (schedule.use_eng) return 'eng'
+  if (schedule.use_audio) return 'audio'
+  return null
+}
 
-  return pair.bright
+function getScheduleBorderColor(schedule: Schedule, viewerRole?: string | null): string {
+  if (schedule.status === 'rejected') return '#BE185D'
+  const key = getScheduleResourceKey(schedule, viewerRole)
+  return (key ? RESOURCE_COLORS[key] : RESOURCE_COLORS.default).bright
 }
 
 const DOW_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
@@ -658,12 +654,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   function applyFilters(list: Schedule[]): Schedule[] {
     return list.filter((s) => {
       const isOwn = s.created_by === profile.id
-      // PD만 본인 일정을 리소스/배차 필터와 무관하게 유지 (실무 확인용).
-      // Admin 등 다른 역할은 사이드바 체크를 그대로 적용해야 함.
-      const alwaysShowOwn = isOwn && profile.role === 'Producer'
 
       // 배차 — 기술국은 숨김. 단, 기술국 알림(사전답사 등)은 중계차 필터로 표시
-      // PD도 배차는 「배차 정보」 체크로만 표시 (본인 일정이라도 해제 시 숨김)
       if (s.request_type === 'dispatch') {
         if (profile.role === 'ENG' || profile.role === 'ENG-M') {
           return Boolean(s.notify_tech) && filters.relayCar
@@ -672,21 +664,11 @@ export default function CalendarView({ profile }: CalendarViewProps) {
         return filters.dispatch
       }
 
-      // 내 일정만 보기: 내 것이 아니면 숨김
       if (filters.myScheduleOnly && !isOwn) return false
 
-      if (alwaysShowOwn) return true
-
-      // 녹화 타입 — 장비 플래그 확인
-      const hasNoResource = !s.use_relay_car && !s.use_studio && !s.use_eng && !s.use_audio
-      if (hasNoResource) return true
-
-      if (s.use_relay_car && filters.relayCar) return true
-      if (s.use_studio && filters.studio) return true
-      if (s.use_eng && filters.eng) return true
-      if (s.use_audio && filters.audio) return true
-
-      return false
+      const resourceKey = getScheduleResourceKey(s, profile.role)
+      if (!resourceKey) return true
+      return filters[resourceKey]
     })
   }
 
