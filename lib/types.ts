@@ -67,6 +67,7 @@ export interface Schedule {
   assignment_notes: string | null
   assigned_at: string | null
   assigned_by: string | null
+  has_conflict?: boolean
   created_at: string
   updated_at: string
   // joined
@@ -116,12 +117,25 @@ export interface ConflictCheckInput {
   useEng: boolean
   useAudio: boolean
   excludeScheduleId?: string
+  requestType?: RequestType
+}
+
+export interface OverlapEvent {
+  id: string
+  program_name: string
+  responsible_pd: string
+  broadcast_start: string
+  broadcast_end: string
+  venue: string
+  request_type: RequestType
+  conflict_type: ConflictType
 }
 
 export interface ConflictResult {
   hasConflict: boolean
   conflictingScheduleIds: string[]
   conflictType: ConflictType | null
+  overlaps: OverlapEvent[]
 }
 
 export interface ScheduleRecordEntry {

@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils'
 import { isDispatchRequest } from '@/lib/roles'
 import Link from 'next/link'
 import ActionBar from '@/components/action-bar/ActionBar'
+import PdCallButton from '@/components/schedule-detail/PdCallButton'
 
 interface ScheduleDetailProps {
   schedule: Schedule
@@ -34,11 +35,6 @@ const statusConfig = {
   assigned:  { label: '배정 대기', color: 'text-purple-300 bg-purple-950/35 border-purple-800', icon: Car },
   confirmed: { label: '확정',     color: 'text-emerald-300 bg-emerald-950/35 border-emerald-800', icon: CheckCircle2 },
   rejected:  { label: '반려',     color: 'text-rose-300 bg-rose-950/35 border-rose-800',      icon: XCircle },
-}
-
-const partLabels: Record<string, string> = {
-  office: '기술국',
-  sub_control: '영상국',
 }
 
 function fmt(dt: string | null | undefined, withDay = true) {
@@ -56,12 +52,6 @@ function fmtRange(start: string, end: string) {
   return `${fmt(start)} ~ ${fmt(end)}`
 }
 
-function approvalStatusLabel(approval: NonNullable<Schedule['approvals']>[number]) {
-  if (approval.status === 'approved') return '승인'
-  if (approval.status === 'rejected') return '반려'
-  return '대기'
-}
-
 const resourceChips = [
   { label: '중계차', key: 'use_relay_car' as const, color: '#FCD34D', bg: 'rgba(217,119,6,0.18)', border: 'rgba(217,119,6,0.45)' },
   { label: '스튜디오', key: 'use_studio' as const, color: '#93C5FD', bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.4)' },
@@ -75,6 +65,7 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
   const [, setRefreshKey] = useState(0)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [conflictCleared, setConflictCleared] = useState(false)
 
   const isDispatch = isDispatchRequest(schedule)
 
@@ -83,23 +74,16 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
     documentTitle: isDispatch ? `배차신청서_${schedule.program_name}` : `녹화의뢰서_${schedule.program_name}`,
   })
 
-  const statusInfo = statusConfig[schedule.status]
+  const statusInfo = schedule.has_conflict && !conflictCleared
+    ? { label: '겹침', color: 'text-amber-300 bg-amber-950/40 border-amber-800', icon: AlertTriangle }
+    : statusConfig[schedule.status] ?? statusConfig.confirmed
   const StatusIcon = statusInfo.icon
 
-  const officeApproval     = schedule.approvals?.find((a) => a.part === 'office')
-  const subControlApproval = schedule.approvals?.find((a) => a.part === 'sub_control')
-  const approvedCount      = schedule.approvals?.filter((a) => a.status === 'approved').length ?? 0
-  const totalApprovals     = schedule.approvals?.length ?? 2
-
-  // assigned 상태에서는 배정 진행 중이므로 PD의 수정/삭제를 막음 (Admin은 비상 처리 허용)
-  const isAssigned = schedule.status === 'assigned'
   const canEdit =
-    profile.role === 'Admin' ||
-    (schedule.created_by === profile.id && !isAssigned)
+    profile.role === 'Admin' || schedule.created_by === profile.id
 
   const canDelete =
-    profile.role === 'Admin' ||
-    (schedule.created_by === profile.id && !isAssigned)
+    profile.role === 'Admin' || schedule.created_by === profile.id
 
   const requestedResources = resourceChips.filter((r) => schedule[r.key])
 
@@ -129,8 +113,8 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
   )
 
   return (
-    <div className="flex min-h-[calc(100dvh-3.5rem-5rem)] sm:min-h-[calc(100dvh-3.5rem)] w-full items-center justify-center px-4 py-8">
-      <div className="w-full max-w-4xl">
+    <div className="flex min-h-[calc(100dvh-3.5rem-5rem)] sm:min-h-[calc(100dvh-3.5rem)] w-full justify-center px-4 py-8 pb-28 sm:pb-10">
+      <div className="w-full max-w-4xl my-auto">
 
       {/* ── 상단 상태 바 ── */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3 no-print">
@@ -139,9 +123,6 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
             <StatusIcon className="w-6 h-6 mr-1.5" />
             {statusInfo.label}
           </Badge>
-          {schedule.status === 'pending' && (
-            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>승인 {approvedCount}/{totalApprovals}</span>
-          )}
         </div>
 
         <div className="flex gap-2">
@@ -271,7 +252,9 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
                 )}
               </div>
               <div className={cn(labelCls, 'text-xs')}>담 당 P D</div>
-              <div className={cn(valueCls, 'border-r-0')}>{schedule.responsible_pd}</div>
+              <div className={cn(valueCls, 'border-r-0')}>
+                <PdCallButton name={schedule.responsible_pd} />
+              </div>
             </div>
 
             {/* 제작/이동 일시 */}
@@ -340,7 +323,7 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
         </div>
 
         {/* 배정 정보 (배차 확정 후) */}
-        {isDispatch && schedule.status === 'confirmed' && schedule.assignment_vehicles && schedule.assignment_vehicles.length > 0 && (
+        {isDispatch && schedule.assignment_vehicles && schedule.assignment_vehicles.length > 0 && (
           <div className="mt-4 border rounded-xl p-4 shadow-sm print:mt-3" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}>
             <h3 className="font-bold text-sm mb-3 tracking-wide text-purple-200">차량 배정 정보</h3>
             <div className="space-y-3">
@@ -361,60 +344,6 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
           </div>
         )}
 
-        {/* 승인 현황 — 부서별 좌(라벨)/우(상태·시각) 분할 */}
-        <div className={cn('mt-4 grid gap-3 print:mt-3', isDispatch ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2')}>
-          {(isDispatch ? [subControlApproval] : [officeApproval, subControlApproval]).map((approval, i) => {
-            if (!approval) return null
-            const isApproved = approval.status === 'approved'
-            const isRejected = approval.status === 'rejected'
-            return (
-              <div
-                key={i}
-                className={cn(
-                  'grid grid-cols-2 border rounded-xl overflow-hidden',
-                  isApproved && 'border-emerald-800',
-                  isRejected && 'border-rose-800',
-                  !isApproved && !isRejected && 'border-[var(--border-default)]',
-                )}
-              >
-                <div
-                  className="schedule-detail-cell px-3 text-sm font-bold text-center tracking-wide flex items-center justify-center border-r border-[var(--border-default)]"
-                  style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)' }}
-                >
-                  {partLabels[approval.part] ?? approval.part}
-                </div>
-                <div
-                  className={cn(
-                    'schedule-detail-cell px-3 text-sm font-semibold text-center flex items-center justify-center gap-1.5',
-                    isApproved && 'bg-emerald-950/25',
-                    isRejected && 'bg-rose-950/25',
-                    !isApproved && !isRejected && 'bg-[var(--bg-surface)]',
-                  )}
-                >
-                  <span
-                    className={cn(
-                      isApproved && 'text-emerald-300',
-                      isRejected && 'text-rose-300',
-                      !isApproved && !isRejected && 'text-[var(--text-muted)]',
-                    )}
-                  >
-                    {approvalStatusLabel(approval)}
-                  </span>
-                  {approval.decided_at && (
-                    <span style={{ color: 'var(--text-muted)' }}>
-                      {format(parseISO(approval.decided_at), 'M/d HH:mm', { locale: ko })}
-                    </span>
-                  )}
-                </div>
-                {isRejected && approval.reject_reason && (
-                  <div className="col-span-2 px-3 py-2 text-xs text-rose-300 border-t border-[var(--border-default)] bg-rose-950/20">
-                    반려 사유: {approval.reject_reason}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
       </div>
 
       {/* 액션 바 */}
@@ -422,7 +351,11 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
         <ActionBar
           schedule={schedule}
           profile={profile}
-          onUpdate={() => setRefreshKey((k) => k + 1)}
+          onUpdate={() => {
+            setConflictCleared(true)
+            setRefreshKey((k) => k + 1)
+            router.refresh()
+          }}
         />
       </div>
       </div>

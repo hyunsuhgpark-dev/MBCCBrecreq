@@ -36,8 +36,8 @@ export async function POST(
   if (schedule.request_type !== 'dispatch') {
     return NextResponse.json({ error: '배차 신청만 배정할 수 있습니다' }, { status: 400 })
   }
-  if (schedule.status !== 'assigned') {
-    return NextResponse.json({ error: '배정 대기 상태가 아닙니다' }, { status: 400 })
+  if (schedule.status !== 'confirmed' && schedule.status !== 'assigned') {
+    return NextResponse.json({ error: '확정된 배차만 차량을 배정할 수 있습니다' }, { status: 400 })
   }
 
   const parsed = assignmentRequestSchema.safeParse(await request.json())
@@ -55,7 +55,6 @@ export async function POST(
   const { data: updated, error } = await adminClient
     .from('schedules')
     .update({
-      status: 'confirmed',
       assignment_vehicles: body.assignment_vehicles,
       assignment_director_accompany: body.assignment_director_accompany,
       assignment_notes: body.assignment_notes ?? null,
@@ -63,7 +62,7 @@ export async function POST(
       assigned_by: user.id,
     })
     .eq('id', id)
-    .eq('status', 'assigned')  // 상태 잠금: 이미 처리된 경우 업데이트 안 됨
+    .in('status', ['confirmed', 'assigned'])
     .select('id')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })

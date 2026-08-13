@@ -29,8 +29,8 @@ export default async function NewRecordingPage({
 
   return (
     <AppShell profile={profile}>
-      <div className="flex min-h-[calc(100dvh-3.5rem-5rem)] sm:min-h-[calc(100dvh-3.5rem)] w-full items-center justify-center px-4 py-8">
-        <div className="w-full" style={{ maxWidth: 720 }}>
+      <div className="flex min-h-[calc(100dvh-3.5rem-5rem)] sm:min-h-[calc(100dvh-3.5rem)] w-full justify-center px-4 py-8 pb-28 sm:pb-10">
+        <div className="w-full my-auto" style={{ maxWidth: 720 }}>
           <div className="mb-6 text-center">
             <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>제작/배차 요청 · 녹화</p>
           </div>

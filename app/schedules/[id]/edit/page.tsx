@@ -32,16 +32,13 @@ export default async function EditSchedulePage({
 
   const isOwner = schedule.created_by === user.id
   if (!isOwner && profile.role !== 'Admin') redirect(`/schedules/${id}`)
-  if (schedule.status === 'assigned' && profile.role !== 'Admin') {
-    redirect(`/schedules/${id}`)
-  }
 
   const isDispatch = schedule.request_type === 'dispatch'
 
   return (
     <AppShell profile={profile}>
-      <div className="flex min-h-[calc(100dvh-3.5rem-5rem)] sm:min-h-[calc(100dvh-3.5rem)] w-full items-center justify-center px-4 py-8">
-        <div className="w-full" style={{ maxWidth: isDispatch ? Math.round(896 * 0.9) : 720 }}>
+      <div className="flex min-h-[calc(100dvh-3.5rem-5rem)] sm:min-h-[calc(100dvh-3.5rem)] w-full justify-center px-4 py-8 pb-28 sm:pb-10">
+        <div className="w-full my-auto" style={{ maxWidth: isDispatch ? Math.round(896 * 0.9) : 720 }}>
           <div className="mb-6 text-center">
             <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>
               제작/배차 요청 · {isDispatch ? '배차' : '녹화'}
@@ -49,7 +46,7 @@ export default async function EditSchedulePage({
             {isDispatch ? null : (
               <h1 className="text-2xl font-bold text-[var(--text-primary)]">녹화 의뢰서 수정</h1>
             )}
-            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>수정 후 제출하면 승인 절차가 초기화됩니다.</p>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>수정하면 캘린더에 바로 반영됩니다.</p>
           </div>
           {isDispatch ? (
             <DispatchForm initialData={schedule} scheduleId={id} />

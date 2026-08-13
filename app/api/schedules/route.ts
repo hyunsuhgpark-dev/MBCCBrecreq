@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { detectConflicts } from '@/lib/conflict-engine'
-import { sendPushNotification, saveNotification, notificationMessages, notifyStaffApprovalRequested, notifyAllUsersScheduleSubmitted } from '@/services/notification'
-import { getRequiredApprovalParts } from '@/lib/roles'
+import { sendPushNotification, saveNotification, notificationMessages, notifyAllUsersScheduleSubmitted } from '@/services/notification'
+import { dispatchWebhook } from '@/services/webhook'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createScheduleSchema } from '@/lib/validation/schedule'
 
@@ -26,7 +26,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '제작진과 관리자만 의뢰를 생성할 수 있습니다' }, { status: 403 })
   }
 
-  const parsed = createScheduleSchema.safeParse(await request.json())
+  const raw = await request.json() as Record<string, unknown>
+  const force = raw.force === true
+  const { force: _force, ...rest } = raw
+
+  const parsed = createScheduleSchema.safeParse(rest)
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues[0]?.message ?? '입력값을 확인해주세요' },
@@ -37,23 +41,18 @@ export async function POST(request: NextRequest) {
   const body = parsed.data
   const isDispatch = body.request_type === 'dispatch'
 
-  const broadcastStart = body.broadcast_start
-  const broadcastEnd = body.broadcast_end
-
-  // 배차 의뢰는 자원 충돌 검사 생략 (중계차·스튜디오 미사용)
   let conflictResult
   try {
-    conflictResult = isDispatch
-      ? { hasConflict: false, conflictingScheduleIds: [], conflictType: null }
-      : await detectConflicts({
-          broadcastStart,
-          broadcastEnd,
-          venue: body.venue,
-          useRelayCar: body.use_relay_car,
-          useStudio: body.use_studio,
-          useEng: body.use_eng,
-          useAudio: body.use_audio,
-        })
+    conflictResult = await detectConflicts({
+      broadcastStart: body.broadcast_start,
+      broadcastEnd: body.broadcast_end,
+      venue: body.venue,
+      useRelayCar: body.use_relay_car,
+      useStudio: body.use_studio,
+      useEng: body.use_eng,
+      useAudio: body.use_audio,
+      requestType: isDispatch ? 'dispatch' : 'recording',
+    })
   } catch (error) {
     console.error('일정 생성 충돌 검사 실패:', error)
     return NextResponse.json(
@@ -62,24 +61,21 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const initialStatus = conflictResult.hasConflict ? 'conflict' : 'pending'
-
-  const requiredParts = getRequiredApprovalParts({
-    request_type: body.request_type,
-    use_relay_car: body.use_relay_car,
-    use_studio: body.use_studio,
-    use_eng: body.use_eng,
-    use_audio: body.use_audio,
-  })
+  if (conflictResult.hasConflict && !force) {
+    return NextResponse.json(
+      { error: 'SCHEDULE_OVERLAP', conflicts: conflictResult.overlaps },
+      { status: 409 },
+    )
+  }
 
   const adminClient = await createAdminClient()
   const { data: created, error: createError } = await adminClient.rpc('create_schedule_request', {
     p_created_by: user.id,
     p_payload: body,
-    p_status: initialStatus,
-    p_required_parts: requiredParts,
-    p_conflicting_ids: conflictResult.conflictingScheduleIds,
-    p_conflict_type: conflictResult.conflictType,
+    p_status: 'confirmed',
+    p_required_parts: [],
+    p_conflicting_ids: force ? conflictResult.conflictingScheduleIds : [],
+    p_conflict_type: force ? conflictResult.conflictType : null,
   })
 
   if (createError) {
@@ -91,18 +87,33 @@ export async function POST(request: NextRequest) {
     id: string
     program_name: string
     broadcast_start: string
+    created_by: string
+    status: string
+    responsible_pd?: string | null
+    venue?: string | null
+    location?: string | null
+    broadcast_end?: string | null
+    broadcast_at?: string | null
+    rehearsal_staff_at?: string | null
+    rehearsal_cast_at?: string | null
+    use_relay_car?: boolean | null
+    use_studio?: boolean | null
+    use_eng?: boolean | null
+    use_audio?: boolean | null
+    is_live?: boolean | null
+    record_content?: string | null
+    notes?: string | null
+    request_type?: string
   } | null
 
   if (!schedule?.id) {
     return NextResponse.json({ error: '생성된 의뢰서를 확인할 수 없습니다' }, { status: 500 })
   }
 
-  // 충돌 처리
-  if (conflictResult.hasConflict) {
-    // 충돌 대상 일정의 생성자들 조회 후 알림 발송
+  if (force && conflictResult.hasConflict) {
     const { data: conflictingSchedules } = await adminClient
       .from('schedules')
-      .select('created_by, program_name, profiles(fcm_token)')
+      .select('created_by, program_name, creator:profiles!schedules_created_by_fkey(fcm_token)')
       .in('id', conflictResult.conflictingScheduleIds)
 
     const tokens: string[] = []
@@ -114,11 +125,10 @@ export async function POST(request: NextRequest) {
         type: 'conflict_detected',
         message: notificationMessages.conflict_detected(schedule.program_name),
       })
-      const token = (cs as { profiles?: { fcm_token?: string } }).profiles?.fcm_token
+      const token = (cs as { creator?: { fcm_token?: string } }).creator?.fcm_token
       if (token) tokens.push(token)
     }
 
-    // 본인에게도 알림
     await saveNotification({
       supabase: adminClient as unknown as SupabaseClient,
       userId: user.id,
@@ -137,19 +147,6 @@ export async function POST(request: NextRequest) {
         scheduleId: schedule.id,
       })
     }
-  } else {
-    await notifyStaffApprovalRequested({
-      supabase: adminClient as unknown as SupabaseClient,
-      scheduleId: schedule.id,
-      programName: schedule.program_name,
-      scheduleResources: {
-        request_type: isDispatch ? 'dispatch' : 'recording',
-        use_relay_car: body.use_relay_car ?? false,
-        use_studio: body.use_studio ?? false,
-        use_eng: body.use_eng ?? false,
-        use_audio: body.use_audio ?? false,
-      },
-    })
   }
 
   void notifyAllUsersScheduleSubmitted({
@@ -161,6 +158,8 @@ export async function POST(request: NextRequest) {
     broadcastStart: schedule.broadcast_start,
     requestType: isDispatch ? 'dispatch' : 'recording',
   })
+
+  void dispatchWebhook('schedule.confirmed', schedule)
 
   return NextResponse.json(schedule, { status: 201 })
 }

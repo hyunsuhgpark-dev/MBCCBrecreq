@@ -136,11 +136,8 @@ const RESOURCE_COLORS = {
  * (역할명 ENG=기술국 vs 장비 ENG=취재 혼동 주의)
  */
 function getScheduleBorderColor(schedule: Schedule, viewerRole?: string | null): string {
-  const s = schedule.status
-  if (s === 'conflict')  return '#D97706'
-  if (s === 'rejected')  return '#BE185D'
+  if (schedule.status === 'rejected') return '#BE185D'
 
-  const isLit = s === 'confirmed' || s === 'assigned'
   let pair: { bright: string; dark: string }
 
   if (schedule.request_type === 'dispatch') {
@@ -163,7 +160,7 @@ function getScheduleBorderColor(schedule: Schedule, viewerRole?: string | null):
     pair = RESOURCE_COLORS.default
   }
 
-  return isLit ? pair.bright : pair.dark
+  return pair.bright
 }
 
 const DOW_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
@@ -871,12 +868,6 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     return vacations.filter((v) => v.start_date <= ymd && ymd <= v.end_date)
   }
 
-  function getApprovalRatio(schedule: Schedule) {
-    if (!schedule.approvals) return null
-    const approved = schedule.approvals.filter((a) => a.status === 'approved').length
-    return `${approved}/${schedule.approvals.length}`
-  }
-
   // Producer만 빈 셀 → 제작의뢰 / Admin·ENG → 송출/행정 모달
   const canCreateRecording = profile.role === 'Producer'
   const canEditOffice = profile.role === 'Admin' || profile.role === 'ENG'
@@ -1198,10 +1189,8 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                             <span className="text-[14px] font-semibold leading-snug" style={{ color: cfg.cardText }}>
                                               {schedule.program_name}
                                             </span>
-                                            {schedule.status === 'pending' && (
-                                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-slate-600 text-slate-400">
-                                                대기중
-                                              </span>
+                                            {schedule.has_conflict && (
+                                              <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                                             )}
                                             {schedule.is_live && (
                                               <span className="inline-flex items-center gap-1 bg-red-500 text-white px-1.5 py-0.5 rounded text-[10px] font-bold">
@@ -1413,7 +1402,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                       onClick={(e) => e.stopPropagation()}
                                     >
                                       <div
-                                        className={cn('cursor-pointer transition-colors hover:bg-white/[0.04]', isDesktop && 'flex items-center gap-1')}
+                                        className={cn('cursor-pointer transition-colors hover:bg-white/[0.04] flex items-center gap-0.5 min-w-0')}
                                         style={{
                                           backgroundColor: cfg.cardBg,
                                           borderLeft: isDesktop ? `2px solid ${getScheduleBorderColor(s, profile.role)}` : 'none',
@@ -1430,8 +1419,11 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                           }
                                         }}
                                       >
+                                        {s.has_conflict && (
+                                          <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
+                                        )}
                                         <span
-                                          className={cn('font-medium', isDesktop ? 'truncate' : 'block')}
+                                          className={cn('font-medium min-w-0', isDesktop ? 'truncate' : 'block')}
                                           style={{
                                             color: cfg.cardText,
                                             fontSize: isDesktop ? '11px' : '9px',
@@ -1612,7 +1604,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                             const borderColor = getScheduleBorderColor(s, profile.role)
                             // 바 배경: border 색에 불투명도 추가 (투명이면 바가 안보임)
                             const barBg = borderColor + '30'
-                            const barText = (s.status === 'pending') ? '#9ca3af' : cfg.cardText
+                            const barText = cfg.cardText
                             const startDt = parseISO(s.broadcast_start)
                             const endDt   = parseISO(s.broadcast_end)
                             const barKey  = `schbar-${s.id}-${wIdx}`
@@ -1652,6 +1644,9 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 1 }}>
                                   {s.program_name}
                                 </span>
+                                {s.has_conflict && (
+                                  <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" style={{ marginLeft: 3 }} />
+                                )}
 
                                 {/* hover 툴팁 */}
                                 {isDesktop && isHovered && (
@@ -1760,8 +1755,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
               <div className="space-y-1.5">
                 {displayedSchedules.map((schedule) => {
                   const cfg = getCfg(schedule.status)
-                  const Icon = cfg.icon
-                  const ratio = schedule.status === 'pending' ? getApprovalRatio(schedule) : null
+                  const Icon = schedule.has_conflict ? AlertTriangle : cfg.icon
                   const startDt = parseISO(schedule.broadcast_start)
                   const endDt = parseISO(schedule.broadcast_end)
                   const durationMin = Math.round((endDt.getTime() - startDt.getTime()) / 60000)
@@ -1808,17 +1802,13 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                             </div>
                           </div>
                           <div className="flex flex-col items-end gap-1.5 shrink-0">
-                            <span className={cn('inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded border', cfg.badge,
-                              schedule.status === 'pending'
-                                ? 'border-slate-600 bg-slate-800/50'
-                                : 'border-transparent'
+                            <span className={cn('inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded border',
+                              schedule.has_conflict ? 'text-amber-400 border-transparent' : cfg.badge,
+                              'border-transparent'
                             )}>
-                              <Icon className={cn('w-3 h-3', cfg.iconColor)} />
-                              {cfg.label}
+                              <Icon className={cn('w-3 h-3', schedule.has_conflict ? 'text-amber-400' : cfg.iconColor)} />
+                              {schedule.has_conflict ? '겹침' : cfg.label}
                             </span>
-                            {ratio && (
-                              <span className="text-[10px] tabular-nums" style={{ color: 'var(--text-muted)' }}>승인 {ratio}</span>
-                            )}
                           </div>
                         </div>
                       </div>

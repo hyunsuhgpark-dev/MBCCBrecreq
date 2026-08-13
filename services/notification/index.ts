@@ -161,7 +161,7 @@ export async function notifyProducer(params: {
 export const notificationMessages: Record<NotificationType, (name: string) => string> = {
   schedule_submitted: (name) => name, // 호출자가 직접 메시지 구성
   conflict_detected: (name) => `'${name}' 일정이 기존 일정과 충돌합니다. 협의가 필요합니다.`,
-  negotiation_complete: (name) => `'${name}' 협의가 완료되어 스태프 승인 단계로 이동했습니다.`,
+  negotiation_complete: (name) => `'${name}' 일정과 겹치던 충돌이 해소되었습니다.`,
   approval_requested: (name) => `'${name}' 일정의 승인 요청이 들어왔습니다.`,
   approved: (name) => `'${name}' 일정이 승인되었습니다.`,
   rejected: (name) => `'${name}' 일정이 반려되었습니다. 의뢰서를 확인하세요.`,
@@ -239,10 +239,7 @@ export async function notifyAllUsersScheduleSubmitted(params: {
 
   if (!allProfiles?.length) return
 
-  // 스태프 역할은 이미 approval_requested를 별도로 받으므로 제외 (중복 방지)
-  const targetProfiles = allProfiles.filter(
-    p => !(ALL_STAFF_ROLE_VALUES as readonly string[]).includes(p.role ?? '')
-  )
+  const targetProfiles = allProfiles
 
   if (!targetProfiles.length) return
 

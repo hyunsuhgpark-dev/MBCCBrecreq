@@ -2,7 +2,7 @@
  * Webhook Service
  *
  * 환경변수 WEBHOOK_URLS 에 콤마(,) 구분으로 URL을 등록하면
- * schedule.confirmed 이벤트 발생 시(스태프 최종 승인) 각 URL로 POST 요청을 발송합니다.
+ * schedule.confirmed 이벤트 발생 시(의뢰 즉시 확정 공개) 각 URL로 POST 요청을 발송합니다.
  *
  * 예) WEBHOOK_URLS=https://planner-ecru-beta.vercel.app/api/webhook/records
  *

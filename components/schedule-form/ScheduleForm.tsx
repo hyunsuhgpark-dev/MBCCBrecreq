@@ -12,8 +12,9 @@ import DateTimePicker from '@/components/ui/DateTimePicker'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { Schedule } from '@/lib/types'
+import type { OverlapEvent, Schedule } from '@/lib/types'
 import { useMobileKeyboard } from '@/lib/use-mobile-keyboard'
+import OverlapWarningDialog from '@/components/schedule-form/OverlapWarningDialog'
 
 const schema = z.object({
   program_name: z.string().min(1, '프로그램명을 입력하세요'),
@@ -92,6 +93,9 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
   const router = useNavRouter()
   const goBack = useAppBack('/calendar')
   const [loading, setLoading] = useState(false)
+  const [overlapOpen, setOverlapOpen] = useState(false)
+  const [overlaps, setOverlaps] = useState<OverlapEvent[]>([])
+  const [pendingPayload, setPendingPayload] = useState<Record<string, unknown> | null>(null)
   const { isKeyboardOpen, handleFocusCapture } = useMobileKeyboard()
   const isEdit = !!scheduleId
 
@@ -139,47 +143,58 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
   const watchLive = watch('is_live')
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
+    const broadcastStart = new Date(values.broadcast_start)
+    const broadcastEnd = new Date(values.broadcast_end)
+
+    const payload = {
+      program_name: values.program_name,
+      responsible_pd: values.responsible_pd,
+      broadcast_start: broadcastStart.toISOString(),
+      broadcast_end: broadcastEnd.toISOString(),
+      broadcast_at: values.broadcast_at ? new Date(values.broadcast_at).toISOString() : null,
+      rehearsal_staff_at: null,
+      rehearsal_cast_at: null,
+      venue: values.venue,
+      location: values.location,
+      use_relay_car: values.use_relay_car,
+      use_studio: values.use_studio,
+      use_eng: values.use_eng,
+      use_audio: values.use_audio,
+      is_live: values.is_live,
+      record_content: values.record_content,
+      notes: values.notes,
+    }
+
+    await submitSchedule(payload, false)
+  }
+
+  async function submitSchedule(payload: Record<string, unknown>, force: boolean) {
     setLoading(true)
     try {
-      const broadcastStart = new Date(values.broadcast_start)
-      const broadcastEnd = new Date(values.broadcast_end)
-
-      const payload = {
-        program_name: values.program_name,
-        responsible_pd: values.responsible_pd,
-        broadcast_start: broadcastStart.toISOString(),
-        broadcast_end: broadcastEnd.toISOString(),
-        broadcast_at: values.broadcast_at ? new Date(values.broadcast_at).toISOString() : null,
-        rehearsal_staff_at: null,
-        rehearsal_cast_at: null,
-        venue: values.venue,
-        location: values.location,
-        use_relay_car: values.use_relay_car,
-        use_studio: values.use_studio,
-        use_eng: values.use_eng,
-        use_audio: values.use_audio,
-        is_live: values.is_live,
-        record_content: values.record_content,
-        notes: values.notes,
-      }
-
       const url = isEdit ? `/api/schedules/${scheduleId}` : '/api/schedules'
       const method = isEdit ? 'PATCH' : 'POST'
 
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, force }),
       })
 
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error ?? '오류 발생')
+      const data = await res.json() as { error?: string; conflicts?: OverlapEvent[]; id?: string }
+
+      if (res.status === 409 && data.error === 'SCHEDULE_OVERLAP') {
+        setPendingPayload(payload)
+        setOverlaps(data.conflicts ?? [])
+        setOverlapOpen(true)
+        return
       }
 
-      const data = await res.json()
-      const targetId = isEdit ? scheduleId : data.id
+      if (!res.ok) {
+        throw new Error(data.error ?? '오류 발생')
+      }
 
+      setOverlapOpen(false)
+      const targetId = isEdit ? scheduleId : data.id
       toast.success(isEdit ? '일정이 수정되었습니다.' : '녹화 의뢰서가 등록되었습니다.')
       router.push(`/schedules/${targetId}`)
       router.refresh()
@@ -506,6 +521,15 @@ export default function ScheduleForm({ initialData, scheduleId, prefillDate }: S
       {!isKeyboardOpen && (
         <div className="md:hidden" style={{ height: 'calc(env(safe-area-inset-bottom, 0px) + 120px)' }} />
       )}
+      <OverlapWarningDialog
+        open={overlapOpen}
+        overlaps={overlaps}
+        loading={loading}
+        onEdit={() => setOverlapOpen(false)}
+        onForce={() => {
+          if (pendingPayload) void submitSchedule(pendingPayload, true)
+        }}
+      />
     </form>
   )
 }

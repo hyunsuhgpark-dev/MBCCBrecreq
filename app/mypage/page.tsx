@@ -85,6 +85,7 @@ type ScheduleRow = {
   venue: string | null
   broadcast_start: string
   broadcast_end: string
+  has_conflict?: boolean
   created_at: string
   creator: { full_name: string } | null
 }
@@ -116,7 +117,7 @@ export default async function MyPage() {
 
   let q = supabase
     .from('schedules')
-    .select('id, request_type, status, program_name, venue, broadcast_start, broadcast_end, created_at, creator:profiles!schedules_created_by_fkey(full_name)')
+    .select('id, request_type, status, program_name, venue, broadcast_start, broadcast_end, created_at, has_conflict, creator:profiles!schedules_created_by_fkey(full_name)')
     .order('created_at', { ascending: false })
     .limit(100)
 
@@ -129,16 +130,15 @@ export default async function MyPage() {
 
   /* ── 통계 ────────────────────────────────────────────── */
   const total     = schedules.length
-  const pending   = schedules.filter((s) => s.status === 'pending' || s.status === 'assigned').length
-  const confirmed = schedules.filter((s) => s.status === 'confirmed').length
-  const conflict  = schedules.filter((s) => s.status === 'conflict').length
+  const confirmed = schedules.filter((s) => s.status === 'confirmed' || s.status === 'assigned' || s.status === 'pending').length
+  const conflict  = schedules.filter((s) => s.has_conflict || s.status === 'conflict').length
   const rejected  = schedules.filter((s) => s.status === 'rejected').length
 
   /* ── 렌더 ─────────────────────────────────────────────── */
   return (
     <AppShell profile={profile} unreadCount={unreadCount ?? 0}>
-      <div className="flex min-h-[calc(100dvh-3.5rem-5rem)] sm:min-h-[calc(100dvh-3.5rem)] w-full items-center justify-center px-4 py-8">
-        <div className="w-full max-w-2xl space-y-5">
+      <div className="flex min-h-[calc(100dvh-3.5rem-5rem)] sm:min-h-[calc(100dvh-3.5rem)] w-full justify-center px-4 py-8 pb-28 sm:pb-10">
+        <div className="w-full max-w-2xl my-auto space-y-5">
 
         {/* ── 프로필 카드 ─────────────────────────────── */}
         <div
@@ -179,7 +179,7 @@ export default async function MyPage() {
         <div className="grid grid-cols-4 gap-2">
           {[
             { label: '전체', value: total,     cls: 'text-[var(--text-primary)]' },
-            { label: '진행 중', value: pending + conflict,  cls: 'text-amber-300' },
+            { label: '조율 필요', value: conflict,  cls: 'text-amber-300' },
             { label: '확정',   value: confirmed, cls: 'text-emerald-300' },
             { label: '반려',   value: rejected,  cls: 'text-rose-300' },
           ].map(({ label, value, cls }) => (
@@ -218,7 +218,9 @@ export default async function MyPage() {
           ) : (
             <ul className="space-y-2">
               {schedules.map((s) => {
-                const st = statusConfig[s.status as ScheduleStatus] ?? statusConfig.pending
+                const st = s.has_conflict
+                  ? statusConfig.conflict
+                  : (statusConfig[s.status as ScheduleStatus] ?? statusConfig.confirmed)
                 const StatusIcon = st.icon
                 const isDispatch = s.request_type === 'dispatch'
                 const TEAL = '#2DD4BF'

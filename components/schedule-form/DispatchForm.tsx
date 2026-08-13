@@ -12,8 +12,9 @@ import DateTimePicker from '@/components/ui/DateTimePicker'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { Schedule } from '@/lib/types'
+import type { OverlapEvent, Schedule } from '@/lib/types'
 import { useMobileKeyboard } from '@/lib/use-mobile-keyboard'
+import OverlapWarningDialog from '@/components/schedule-form/OverlapWarningDialog'
 
 /** 배차 신청서 스케일: 가로 0.9 / 세로 1.2 (기존 max-w-4xl=896 기준) */
 const FORM_MAX_W = Math.round(896 * 0.9) // 806
@@ -63,6 +64,9 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
   const router = useNavRouter()
   const goBack = useAppBack('/schedules/new')
   const [loading, setLoading] = useState(false)
+  const [overlapOpen, setOverlapOpen] = useState(false)
+  const [overlaps, setOverlaps] = useState<OverlapEvent[]>([])
+  const [pendingPayload, setPendingPayload] = useState<Record<string, unknown> | null>(null)
   const { isKeyboardOpen, handleFocusCapture } = useMobileKeyboard()
   const isEdit = !!scheduleId
 
@@ -94,47 +98,57 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
   })
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
+    const payload = {
+      request_type: 'dispatch' as const,
+      program_name: values.program_name,
+      responsible_pd: values.responsible_pd,
+      broadcast_start: new Date(values.broadcast_start).toISOString(),
+      broadcast_end: new Date(values.broadcast_end).toISOString(),
+      broadcast_at: null,
+      rehearsal_staff_at: null,
+      rehearsal_cast_at: null,
+      venue: values.venue,
+      location: '',
+      use_relay_car: false,
+      use_studio: false,
+      use_eng: false,
+      use_audio: false,
+      is_live: false,
+      record_content: '',
+      notes: values.notes,
+      passenger_count: values.passenger_count,
+      has_luggage: false,
+    }
+    await submitDispatch(payload, false)
+  }
+
+  async function submitDispatch(payload: Record<string, unknown>, force: boolean) {
     setLoading(true)
     try {
-      const payload = {
-        request_type: 'dispatch' as const,
-        program_name: values.program_name,
-        responsible_pd: values.responsible_pd,
-        broadcast_start: new Date(values.broadcast_start).toISOString(),
-        broadcast_end: new Date(values.broadcast_end).toISOString(),
-        broadcast_at: null,
-        rehearsal_staff_at: null,
-        rehearsal_cast_at: null,
-        venue: values.venue,
-        location: '',
-        use_relay_car: false,
-        use_studio: false,
-        use_eng: false,
-        use_audio: false,
-        is_live: false,
-        record_content: '',
-        notes: values.notes,
-        passenger_count: values.passenger_count,
-        has_luggage: false,
-      }
-
       const url = isEdit ? `/api/schedules/${scheduleId}` : '/api/schedules'
       const method = isEdit ? 'PATCH' : 'POST'
 
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, force }),
       })
 
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error ?? '오류 발생')
+      const data = await res.json() as { error?: string; conflicts?: OverlapEvent[]; id?: string }
+
+      if (res.status === 409 && data.error === 'SCHEDULE_OVERLAP') {
+        setPendingPayload(payload)
+        setOverlaps(data.conflicts ?? [])
+        setOverlapOpen(true)
+        return
       }
 
-      const data = await res.json()
-      const targetId = isEdit ? scheduleId : data.id
+      if (!res.ok) {
+        throw new Error(data.error ?? '오류 발생')
+      }
 
+      setOverlapOpen(false)
+      const targetId = isEdit ? scheduleId : data.id
       toast.success(isEdit ? '배차 신청이 수정되었습니다.' : '배차 신청서가 등록되었습니다.')
       router.push(`/schedules/${targetId}`)
       router.refresh()
@@ -348,6 +362,15 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
       {!isKeyboardOpen && (
         <div className="md:hidden" style={{ height: 'calc(env(safe-area-inset-bottom, 0px) + 120px)' }} />
       )}
+      <OverlapWarningDialog
+        open={overlapOpen}
+        overlaps={overlaps}
+        loading={loading}
+        onEdit={() => setOverlapOpen(false)}
+        onForce={() => {
+          if (pendingPayload) void submitDispatch(pendingPayload, true)
+        }}
+      />
     </form>
   )
 }

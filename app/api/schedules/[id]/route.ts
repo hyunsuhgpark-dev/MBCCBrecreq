@@ -1,10 +1,113 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { detectConflicts } from '@/lib/conflict-engine'
-import { notifyStaffApprovalRequested, notifyProducer } from '@/services/notification'
+import { notifyProducer } from '@/services/notification'
+import { dispatchWebhook } from '@/services/webhook'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createScheduleSchema, updateScheduleSchema } from '@/lib/validation/schedule'
-import { getRequiredApprovalParts } from '@/lib/roles'
+import { isStaffRole } from '@/lib/roles'
+import type { ConflictCheckInput } from '@/lib/types'
+
+type AffectedSchedule = {
+  id: string
+  created_by: string
+  request_type: string
+  program_name: string
+  broadcast_start: string
+  broadcast_end: string
+  venue: string
+  use_relay_car: boolean
+  use_studio: boolean
+  use_eng: boolean
+  use_audio: boolean
+  has_conflict: boolean
+}
+
+function toConflictInput(s: AffectedSchedule, excludeId: string): ConflictCheckInput {
+  return {
+    broadcastStart: s.broadcast_start,
+    broadcastEnd: s.broadcast_end,
+    venue: s.venue,
+    useRelayCar: s.use_relay_car,
+    useStudio: s.use_studio,
+    useEng: s.use_eng,
+    useAudio: s.use_audio,
+    excludeScheduleId: excludeId,
+    requestType: s.request_type === 'dispatch' ? 'dispatch' : 'recording',
+  }
+}
+
+const PEER_FIELDS =
+  'id, created_by, request_type, program_name, broadcast_start, broadcast_end, venue, use_relay_car, use_studio, use_eng, use_audio, has_conflict'
+
+async function collectPeerIds(
+  adminClient: Awaited<ReturnType<typeof createAdminClient>>,
+  scheduleId: string,
+): Promise<string[]> {
+  const [{ data: asSource }, { data: asTarget }] = await Promise.all([
+    adminClient.from('conflicts').select('conflicting_schedule_id').eq('schedule_id', scheduleId),
+    adminClient.from('conflicts').select('schedule_id').eq('conflicting_schedule_id', scheduleId),
+  ])
+  const ids = new Set<string>()
+  for (const row of asSource ?? []) {
+    if (row.conflicting_schedule_id) ids.add(row.conflicting_schedule_id)
+  }
+  for (const row of asTarget ?? []) {
+    if (row.schedule_id) ids.add(row.schedule_id)
+  }
+  ids.delete(scheduleId)
+  return [...ids]
+}
+
+async function recheckPeers(
+  adminClient: Awaited<ReturnType<typeof createAdminClient>>,
+  peerIds: string[],
+) {
+  if (peerIds.length === 0) return
+
+  const { data: peers, error } = await adminClient
+    .from('schedules')
+    .select(PEER_FIELDS)
+    .in('id', peerIds)
+
+  if (error) {
+    console.error('연관 일정 조회 실패:', error)
+    return
+  }
+
+  for (const affected of (peers ?? []) as AffectedSchedule[]) {
+    if (!affected.has_conflict) continue
+    const affectedId = affected.id
+
+    let recheck
+    try {
+      recheck = await detectConflicts(toConflictInput(affected, affectedId))
+    } catch (err) {
+      console.error('연관 일정 충돌 재검사 실패:', err)
+      continue
+    }
+
+    if (!recheck.hasConflict) {
+      const { error: releaseError } = await adminClient
+        .from('schedules')
+        .update({ has_conflict: false })
+        .eq('id', affectedId)
+      if (releaseError) {
+        console.error('연관 일정 충돌 해소 실패:', releaseError)
+        continue
+      }
+      await adminClient.from('conflicts').delete().eq('schedule_id', affectedId)
+
+      await notifyProducer({
+        supabase: adminClient as unknown as SupabaseClient,
+        userId: affected.created_by,
+        scheduleId: affectedId,
+        type: 'negotiation_complete',
+        programName: affected.program_name,
+      })
+    }
+  }
+}
 
 export async function PATCH(
   request: NextRequest,
@@ -16,9 +119,8 @@ export async function PATCH(
 
   if (!user) return NextResponse.json({ error: '인증 필요' }, { status: 401 })
 
-  const rawBody = await request.json()
+  const rawBody = await request.json() as Record<string, unknown>
 
-  // 기존 일정 조회
   const { data: existing } = await supabase
     .from('schedules')
     .select('*')
@@ -39,81 +141,43 @@ export async function PATCH(
 
   const isOwner = existing.created_by === user.id
   const isAdmin = profile?.role === 'Admin'
+  const canResolve = isAdmin || isStaffRole(profile.role)
+
+  const adminClient = await createAdminClient()
+
+  if (rawBody.action === 'resolve_conflict') {
+    if (!canResolve) {
+      return NextResponse.json({ error: '조율 완료는 기술국·영상국·관리자만 처리할 수 있습니다' }, { status: 403 })
+    }
+    if (!existing.has_conflict) {
+      return NextResponse.json({ error: '충돌 표시가 없는 일정입니다' }, { status: 409 })
+    }
+
+    const { error: resolveError } = await adminClient
+      .from('schedules')
+      .update({ has_conflict: false })
+      .eq('id', id)
+    if (resolveError) {
+      console.error('조율 완료 처리 실패:', resolveError)
+      return NextResponse.json({ error: '조율 완료 처리에 실패했습니다' }, { status: 500 })
+    }
+
+    await adminClient
+      .from('conflicts')
+      .update({ resolved: true })
+      .eq('schedule_id', id)
+
+    return NextResponse.json({ message: '조율 완료 처리됨' })
+  }
+
   if (!isOwner && !isAdmin) {
     return NextResponse.json({ error: '권한 없음' }, { status: 403 })
   }
 
-  if (existing.status === 'assigned' && !isAdmin) {
-    return NextResponse.json({ error: '배정 진행 중인 의뢰는 수정할 수 없습니다' }, { status: 409 })
-  }
+  const force = rawBody.force === true
+  const { force: _force, action: _action, ...rest } = rawBody
 
-  const adminClient = await createAdminClient()
-
-  // 관리자 승인 취소 (confirmed → pending, 승인 초기화)
-  if (rawBody.action === 'revoke_approval') {
-    if (!isAdmin) {
-      return NextResponse.json({ error: '관리자만 승인 취소가 가능합니다' }, { status: 403 })
-    }
-    if (existing.status !== 'confirmed' && existing.status !== 'assigned') {
-      return NextResponse.json({ error: '확정 또는 배정 대기 상태의 의뢰만 승인 취소할 수 있습니다' }, { status: 409 })
-    }
-
-    const requiredParts = getRequiredApprovalParts(existing)
-    const { error: revokeError } = await adminClient.rpc('update_schedule_request', {
-      p_schedule_id: id,
-      p_payload: {},
-      p_status: 'pending',
-      p_required_parts: requiredParts,
-      p_conflicting_ids: [],
-      p_conflict_type: null,
-    })
-    if (revokeError) {
-      console.error('승인 취소 실패:', revokeError)
-      return NextResponse.json({ error: '승인 취소에 실패했습니다' }, { status: 500 })
-    }
-
-    await notifyStaffApprovalRequested({
-      supabase: adminClient as unknown as SupabaseClient,
-      scheduleId: id,
-      programName: existing.program_name,
-      scheduleResources: existing,
-    })
-
-    return NextResponse.json({ message: '승인 취소 완료' })
-  }
-
-  // 협의 완료 처리 (의뢰자가 conflict → pending 전환)
-  if (rawBody.action === 'resolve_conflict') {
-    if (existing.status !== 'conflict') {
-      return NextResponse.json({ error: '충돌 상태의 의뢰만 협의 완료 처리할 수 있습니다' }, { status: 409 })
-    }
-
-    const requiredParts = getRequiredApprovalParts(existing)
-    const { error: resolveError } = await adminClient.rpc('update_schedule_request', {
-      p_schedule_id: id,
-      p_payload: {},
-      p_status: 'pending',
-      p_required_parts: requiredParts,
-      p_conflicting_ids: [],
-      p_conflict_type: null,
-    })
-    if (resolveError) {
-      console.error('협의 완료 처리 실패:', resolveError)
-      return NextResponse.json({ error: '협의 완료 처리에 실패했습니다' }, { status: 500 })
-    }
-
-    await notifyStaffApprovalRequested({
-      supabase: adminClient as unknown as SupabaseClient,
-      scheduleId: id,
-      programName: existing.program_name,
-      scheduleResources: existing,
-    })
-
-    return NextResponse.json({ message: '협의 완료 처리됨' })
-  }
-
-  // 일반 수정 — 상태 초기화
-  const parsedUpdate = updateScheduleSchema.safeParse(rawBody)
+  const parsedUpdate = updateScheduleSchema.safeParse(rest)
   if (!parsedUpdate.success) {
     return NextResponse.json(
       { error: parsedUpdate.error.issues[0]?.message ?? '입력값을 확인해주세요' },
@@ -155,23 +219,20 @@ export async function PATCH(
 
   const mergedBody = mergedResult.data
   const isDispatch = mergedBody.request_type === 'dispatch'
-  const broadcastStart = mergedBody.broadcast_start
-  const broadcastEnd = mergedBody.broadcast_end
 
   let conflictResult
   try {
-    conflictResult = isDispatch
-      ? { hasConflict: false, conflictingScheduleIds: [], conflictType: null }
-      : await detectConflicts({
-          broadcastStart,
-          broadcastEnd,
-          venue: mergedBody.venue,
-          useRelayCar: mergedBody.use_relay_car,
-          useStudio: mergedBody.use_studio,
-          useEng: mergedBody.use_eng,
-          useAudio: mergedBody.use_audio,
-          excludeScheduleId: id,
-        })
+    conflictResult = await detectConflicts({
+      broadcastStart: mergedBody.broadcast_start,
+      broadcastEnd: mergedBody.broadcast_end,
+      venue: mergedBody.venue,
+      useRelayCar: mergedBody.use_relay_car,
+      useStudio: mergedBody.use_studio,
+      useEng: mergedBody.use_eng,
+      useAudio: mergedBody.use_audio,
+      excludeScheduleId: id,
+      requestType: isDispatch ? 'dispatch' : 'recording',
+    })
   } catch (error) {
     console.error('일정 수정 충돌 검사 실패:', error)
     return NextResponse.json(
@@ -180,120 +241,40 @@ export async function PATCH(
     )
   }
 
-  const newStatus = conflictResult.hasConflict ? 'conflict' : 'pending'
+  if (conflictResult.hasConflict && !force) {
+    return NextResponse.json(
+      { error: 'SCHEDULE_OVERLAP', conflicts: conflictResult.overlaps },
+      { status: 409 },
+    )
+  }
 
-  const requiredParts = getRequiredApprovalParts(mergedBody)
+  const peerIds = await collectPeerIds(adminClient, id)
+
   const { error: updateError } = await adminClient.rpc('update_schedule_request', {
     p_schedule_id: id,
     p_payload: parsedUpdate.data,
-    p_status: newStatus,
-    p_required_parts: requiredParts,
-    p_conflicting_ids: conflictResult.conflictingScheduleIds,
-    p_conflict_type: conflictResult.conflictType,
+    p_status: 'confirmed',
+    p_required_parts: [],
+    p_conflicting_ids: force ? conflictResult.conflictingScheduleIds : [],
+    p_conflict_type: force ? conflictResult.conflictType : null,
   })
   if (updateError) {
     console.error('일정 원자적 수정 실패:', updateError)
     return NextResponse.json({ error: '의뢰서 수정에 실패했습니다' }, { status: 500 })
   }
 
-  // 수정 후: 이 일정과 충돌 중이던 타 의뢰서 자동 해소 체크
-  const { data: affectedConflicts, error: affectedError } = await adminClient
-    .from('conflicts')
-    .select('schedule_id, schedules!conflicts_schedule_id_fkey(created_by, request_type, program_name, broadcast_start, broadcast_end, venue, use_relay_car, use_studio, use_eng, use_audio, status)')
-    .eq('conflicting_schedule_id', id)
+  await recheckPeers(adminClient, peerIds)
 
-  if (affectedError) {
-    console.error('연관 충돌 조회 실패:', affectedError)
+  const { data: updated } = await adminClient
+    .from('schedules')
+    .select('*')
+    .eq('id', id)
+    .single()
+  if (updated) {
+    void dispatchWebhook('schedule.confirmed', updated)
   }
 
-  for (const conflict of affectedConflicts ?? []) {
-    const affected = conflict.schedules as unknown as {
-      created_by: string
-      request_type: string
-      program_name: string
-      broadcast_start: string
-      broadcast_end: string
-      venue: string
-      use_relay_car: boolean
-      use_studio: boolean
-      use_eng: boolean
-      use_audio: boolean
-      status: string
-    } | null
-    if (!affected || affected.status !== 'conflict') continue
-
-    const affectedId = conflict.schedule_id
-    let recheck
-    try {
-      recheck = await detectConflicts({
-        broadcastStart: affected.broadcast_start,
-        broadcastEnd: affected.broadcast_end,
-        venue: affected.venue,
-        useRelayCar: affected.use_relay_car,
-        useStudio: affected.use_studio,
-        useEng: affected.use_eng,
-        useAudio: affected.use_audio,
-        excludeScheduleId: affectedId,
-      })
-    } catch (error) {
-      console.error('연관 일정 충돌 재검사 실패:', error)
-      continue
-    }
-
-    if (!recheck.hasConflict) {
-      const affectedParts = getRequiredApprovalParts(affected)
-      const { error: releaseError } = await adminClient.rpc('update_schedule_request', {
-        p_schedule_id: affectedId,
-        p_payload: {},
-        p_status: 'pending',
-        p_required_parts: affectedParts,
-        p_conflicting_ids: [],
-        p_conflict_type: null,
-      })
-      if (releaseError) {
-        console.error('연관 일정 충돌 해소 실패:', releaseError)
-        continue
-      }
-
-      await notifyProducer({
-        supabase: adminClient as unknown as SupabaseClient,
-        userId: affected.created_by,
-        scheduleId: affectedId,
-        type: 'negotiation_complete',
-        programName: affected.program_name,
-      })
-
-      await notifyStaffApprovalRequested({
-        supabase: adminClient as unknown as SupabaseClient,
-        scheduleId: affectedId,
-        programName: affected.program_name,
-        scheduleResources: {
-          use_relay_car: affected.use_relay_car,
-          use_studio: affected.use_studio,
-          use_eng: affected.use_eng,
-          use_audio: affected.use_audio,
-        },
-      })
-    }
-  }
-
-  // 수정 후 충돌 없으면 스태프에게 재승인 요청
-  if (newStatus === 'pending') {
-    await notifyStaffApprovalRequested({
-      supabase: adminClient as unknown as SupabaseClient,
-      scheduleId: id,
-      programName: mergedBody.program_name,
-      scheduleResources: {
-        request_type: mergedBody.request_type,
-        use_relay_car: mergedBody.use_relay_car,
-        use_studio: mergedBody.use_studio,
-        use_eng: mergedBody.use_eng,
-        use_audio: mergedBody.use_audio,
-      },
-    })
-  }
-
-  return NextResponse.json({ message: '수정 완료', status: newStatus })
+  return NextResponse.json({ message: '수정 완료', status: 'confirmed' })
 }
 
 export async function DELETE(
@@ -330,15 +311,7 @@ export async function DELETE(
 
   const adminClient = await createAdminClient()
 
-  // 삭제 전: 이 일정과 충돌 중인 타 의뢰서 조회
-  const { data: affectedConflicts, error: affectedError } = await adminClient
-    .from('conflicts')
-    .select('schedule_id, schedules!conflicts_schedule_id_fkey(created_by, request_type, program_name, broadcast_start, broadcast_end, venue, use_relay_car, use_studio, use_eng, use_audio, status)')
-    .eq('conflicting_schedule_id', id)
-
-  if (affectedError) {
-    return NextResponse.json({ error: '연관 충돌 정보를 확인하지 못했습니다' }, { status: 500 })
-  }
+  const peerIds = await collectPeerIds(adminClient, id)
 
   const { data: deleted, error: deleteError } = await adminClient
     .from('schedules')
@@ -353,74 +326,7 @@ export async function DELETE(
     return NextResponse.json({ error: '이미 삭제된 의뢰입니다' }, { status: 409 })
   }
 
-  // 삭제 후: 충돌이 해소된 의뢰서들을 pending으로 전환
-  for (const conflict of affectedConflicts ?? []) {
-    const affected = conflict.schedules as unknown as {
-      created_by: string
-      request_type: string
-      program_name: string
-      broadcast_start: string
-      broadcast_end: string
-      venue: string
-      use_relay_car: boolean
-      use_studio: boolean
-      use_eng: boolean
-      use_audio: boolean
-      status: string
-    } | null
-    if (!affected || affected.status !== 'conflict') continue
-
-    const scheduleId = conflict.schedule_id
-
-    // 삭제된 일정 제외 후 재충돌 검사
-    let recheck
-    try {
-      recheck = await detectConflicts({
-        broadcastStart: affected.broadcast_start,
-        broadcastEnd: affected.broadcast_end,
-        venue: affected.venue,
-        useRelayCar: affected.use_relay_car,
-        useStudio: affected.use_studio,
-        useEng: affected.use_eng,
-        useAudio: affected.use_audio,
-        excludeScheduleId: scheduleId,
-      })
-    } catch (error) {
-      console.error('삭제 후 충돌 재검사 실패:', error)
-      continue
-    }
-
-    if (!recheck.hasConflict) {
-      // 충돌 해소 → pending 전환
-      const { error: releaseError } = await adminClient.rpc('update_schedule_request', {
-        p_schedule_id: scheduleId,
-        p_payload: {},
-        p_status: 'pending',
-        p_required_parts: getRequiredApprovalParts(affected),
-        p_conflicting_ids: [],
-        p_conflict_type: null,
-      })
-      if (releaseError) {
-        console.error('삭제 후 충돌 해소 실패:', releaseError)
-        continue
-      }
-
-      await notifyProducer({
-        supabase: adminClient as unknown as SupabaseClient,
-        userId: affected.created_by,
-        scheduleId,
-        type: 'negotiation_complete',
-        programName: affected.program_name,
-      })
-
-      await notifyStaffApprovalRequested({
-        supabase: adminClient as unknown as SupabaseClient,
-        scheduleId,
-        programName: affected.program_name,
-        scheduleResources: affected,
-      })
-    }
-  }
+  await recheckPeers(adminClient, peerIds)
 
   return NextResponse.json({ message: '삭제 완료' })
 }
