@@ -157,6 +157,7 @@ export async function POST(request: NextRequest) {
     programName: schedule.program_name,
     broadcastStart: schedule.broadcast_start,
     requestType: isDispatch ? 'dispatch' : 'recording',
+    notifyTech: isDispatch && body.notify_tech === true,
   })
 
   void dispatchWebhook('schedule.confirmed', schedule)

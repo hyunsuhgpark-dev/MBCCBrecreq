@@ -62,6 +62,7 @@ export interface Schedule {
   notes: string
   passenger_count: number | null
   has_luggage: boolean
+  notify_tech?: boolean
   assignment_vehicles: AssignmentVehicle[] | null
   assignment_director_accompany: boolean | null
   assignment_notes: string | null

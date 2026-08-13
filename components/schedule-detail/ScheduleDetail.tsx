@@ -119,10 +119,12 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
       {/* ── 상단 상태 바 ── */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3 no-print">
         <div className="flex items-center gap-2">
-          <Badge className={cn('border text-sm font-semibold px-3 py-1.5', statusInfo.color)}>
-            <StatusIcon className="w-6 h-6 mr-1.5" />
-            {statusInfo.label}
-          </Badge>
+          {schedule.has_conflict && !conflictCleared && (
+            <Badge className={cn('border text-sm font-semibold px-3 py-1.5', statusInfo.color)}>
+              <StatusIcon className="w-6 h-6 mr-1.5" />
+              {statusInfo.label}
+            </Badge>
+          )}
         </div>
 
         <div className="flex gap-2">
@@ -308,6 +310,10 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
             <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
               <div className={labelCls}>탑승 인원</div>
               <div className={valueCls}>{schedule.passenger_count ?? '-'}명</div>
+            </div>
+            <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
+              <div className={labelCls}>기술국 알림</div>
+              <div className={valueCls}>{schedule.notify_tech ? '예 (중계차 일정으로 표시)' : '아니오'}</div>
             </div>
             </>
             )}

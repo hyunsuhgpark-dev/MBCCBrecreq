@@ -28,6 +28,7 @@ const schema = z.object({
   broadcast_end: z.string().min(1, '이동 종료 시간을 입력하세요'),
   venue: z.string().min(1, '목적지를 입력하세요'),
   passenger_count: z.coerce.number().int().min(1, '탑승 인원을 입력하세요'),
+  notify_tech: z.boolean().default(false),
   notes: z.string().optional().default(''),
 }).refine(
   (data) => new Date(data.broadcast_end) > new Date(data.broadcast_start),
@@ -93,6 +94,7 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
       ),
       venue: initialData?.venue ?? '',
       passenger_count: initialData?.passenger_count ?? 1,
+      notify_tech: initialData?.notify_tech ?? false,
       notes: initialData?.notes ?? '',
     },
   })
@@ -118,6 +120,7 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
       notes: values.notes,
       passenger_count: values.passenger_count,
       has_luggage: false,
+      notify_tech: values.notify_tech,
     }
     await submitDispatch(payload, false)
   }
@@ -311,6 +314,23 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
               />
               <span className="text-sm" style={{ color: 'var(--text-muted)' }}>명</span>
               {errors.passenger_count && <p className="text-red-500 text-[11px]">{errors.passenger_count.message}</p>}
+            </div>
+          </div>
+
+          <div
+            className="grid border-b border-[var(--border-default)]"
+            style={{ gridTemplateColumns: `${labelW}px 1fr` }}
+          >
+            <div className={labelCls} style={cellPad}>기술국 알림</div>
+            <div className={cn(valueCls, 'border-l-0 flex items-center')} style={cellPad}>
+              <label className="flex items-center gap-3 cursor-pointer select-none py-1">
+                <input
+                  type="checkbox"
+                  {...register('notify_tech')}
+                  className="h-4 w-4 rounded border-[var(--border-default)] accent-violet-400"
+                />
+                <span className="text-sm text-[var(--text-primary)]">기술국에도 알리고, 중계차 일정으로 표시</span>
+              </label>
             </div>
           </div>
 

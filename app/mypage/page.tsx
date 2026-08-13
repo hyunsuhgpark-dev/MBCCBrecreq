@@ -180,7 +180,7 @@ export default async function MyPage() {
           {[
             { label: '전체', value: total,     cls: 'text-[var(--text-primary)]' },
             { label: '조율 필요', value: conflict,  cls: 'text-amber-300' },
-            { label: '확정',   value: confirmed, cls: 'text-emerald-300' },
+            { label: '등록',   value: confirmed, cls: 'text-emerald-300' },
             { label: '반려',   value: rejected,  cls: 'text-rose-300' },
           ].map(({ label, value, cls }) => (
             <div
@@ -257,10 +257,14 @@ export default async function MyPage() {
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                          <StatusIcon className={cn('w-3 h-3 shrink-0', st.textCls)} />
-                          <span className={cn('text-xs font-semibold', st.textCls)}>{st.label}</span>
+                          {s.has_conflict && (
+                            <>
+                              <StatusIcon className={cn('w-3 h-3 shrink-0', st.textCls)} />
+                              <span className={cn('text-xs font-semibold', st.textCls)}>겹침</span>
+                            </>
+                          )}
                           <span className="text-xs text-[var(--text-secondary)]">
-                            · {fmtShort(s.broadcast_start)}
+                            {s.has_conflict ? '· ' : ''}{fmtShort(s.broadcast_start)}
                           </span>
                           {isAdmin && s.creator && (
                             <span className="text-xs text-[var(--text-secondary)]">

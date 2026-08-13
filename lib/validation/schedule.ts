@@ -22,6 +22,7 @@ export const scheduleFieldsSchema = z.object({
   notes: z.string().max(10_000).default(''),
   passenger_count: z.number().int().min(1).max(100).nullable().optional(),
   has_luggage: z.boolean().default(false),
+  notify_tech: z.boolean().default(false),
 }).strict()
 
 function validateScheduleRange(

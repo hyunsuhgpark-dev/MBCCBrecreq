@@ -219,8 +219,13 @@ export async function notifyAllUsersScheduleSubmitted(params: {
   programName: string
   broadcastStart: string
   requestType?: 'recording' | 'dispatch'
+  notifyTech?: boolean
 }) {
-  const { supabase, scheduleId, submitterId, submitterName, programName, broadcastStart, requestType = 'recording' } = params
+  const {
+    supabase, scheduleId, submitterId, submitterName, programName, broadcastStart,
+    requestType = 'recording',
+    notifyTech = false,
+  } = params
 
   const kstDateTime = new Intl.DateTimeFormat('sv-SE', {
     timeZone: 'Asia/Seoul',
@@ -228,7 +233,10 @@ export async function notifyAllUsersScheduleSubmitted(params: {
     hour: '2-digit', minute: '2-digit', hour12: false,
   }).format(new Date(broadcastStart)).replace(' ', ' ').replace(/-/g, '/').replace('T', ' ')
 
-  const label = requestType === 'dispatch' ? '배차 신청' : '녹화 의뢰'
+  const isDispatch = requestType === 'dispatch'
+  const label = isDispatch
+    ? (notifyTech ? '배차 신청 (기술국 동행)' : '배차 신청')
+    : '녹화 의뢰'
   const message = `${submitterName}님이 ${kstDateTime}에 '${programName}' ${label} 요청했습니다.`
 
   const { data: allProfiles } = await supabase
@@ -239,7 +247,12 @@ export async function notifyAllUsersScheduleSubmitted(params: {
 
   if (!allProfiles?.length) return
 
-  const targetProfiles = allProfiles
+  const isTechRole = (role: string | null) =>
+    role === 'ENG' || role === 'ENG-M' || role === 'Staff_Office'
+
+  const targetProfiles = isDispatch
+    ? allProfiles.filter((p) => notifyTech || !isTechRole(p.role))
+    : allProfiles
 
   if (!targetProfiles.length) return
 
@@ -261,7 +274,9 @@ export async function notifyAllUsersScheduleSubmitted(params: {
     await sendPushNotification({
       tokens,
       type: 'schedule_submitted',
-      title: requestType === 'dispatch' ? '새 배차 신청' : '새 녹화 의뢰',
+      title: requestType === 'dispatch'
+        ? (notifyTech ? '기술국 동행 배차' : '새 배차 신청')
+        : '새 녹화 의뢰',
       body: message,
       scheduleId,
     })

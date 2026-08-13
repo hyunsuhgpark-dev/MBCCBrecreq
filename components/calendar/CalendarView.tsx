@@ -141,7 +141,10 @@ function getScheduleBorderColor(schedule: Schedule, viewerRole?: string | null):
   let pair: { bright: string; dark: string }
 
   if (schedule.request_type === 'dispatch') {
-    pair = RESOURCE_COLORS.dispatch
+    const techSeesAsRelay =
+      schedule.notify_tech &&
+      (viewerRole === 'ENG' || viewerRole === 'ENG-M' || viewerRole === 'Staff_Office')
+    pair = techSeesAsRelay ? RESOURCE_COLORS.relayCar : RESOURCE_COLORS.dispatch
   } else if (schedule.use_relay_car) {
     pair = RESOURCE_COLORS.relayCar
   } else if (schedule.use_studio) {
@@ -667,9 +670,11 @@ export default function CalendarView({ profile }: CalendarViewProps) {
       // Admin 등 다른 역할은 사이드바 체크를 그대로 적용해야 함.
       const alwaysShowOwn = isOwn && profile.role === 'Producer'
 
-      // 배차 — ENG / ENG-M 은 본인 일정 포함 전부 숨김
+      // 배차 — 기술국은 숨김. 단, 기술국 알림(사전답사 등)은 중계차 필터로 표시
       if (s.request_type === 'dispatch') {
-        if (profile.role === 'ENG' || profile.role === 'ENG-M') return false
+        if (profile.role === 'ENG' || profile.role === 'ENG-M') {
+          return Boolean(s.notify_tech) && filters.relayCar
+        }
         if (filters.myScheduleOnly && !isOwn) return false
         if (alwaysShowOwn) return true
         return filters.dispatch
@@ -1755,7 +1760,6 @@ export default function CalendarView({ profile }: CalendarViewProps) {
               <div className="space-y-1.5">
                 {displayedSchedules.map((schedule) => {
                   const cfg = getCfg(schedule.status)
-                  const Icon = schedule.has_conflict ? AlertTriangle : cfg.icon
                   const startDt = parseISO(schedule.broadcast_start)
                   const endDt = parseISO(schedule.broadcast_end)
                   const durationMin = Math.round((endDt.getTime() - startDt.getTime()) / 60000)
@@ -1802,13 +1806,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                             </div>
                           </div>
                           <div className="flex flex-col items-end gap-1.5 shrink-0">
-                            <span className={cn('inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded border',
-                              schedule.has_conflict ? 'text-amber-400 border-transparent' : cfg.badge,
-                              'border-transparent'
-                            )}>
-                              <Icon className={cn('w-3 h-3', schedule.has_conflict ? 'text-amber-400' : cfg.iconColor)} />
-                              {schedule.has_conflict ? '겹침' : cfg.label}
-                            </span>
+                            {schedule.has_conflict && (
+                              <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded text-amber-400">
+                                <AlertTriangle className="w-3 h-3 text-amber-400" />
+                                겹침
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

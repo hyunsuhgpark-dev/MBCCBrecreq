@@ -89,11 +89,13 @@ export function matchesScheduleFilter(
     use_studio: boolean
     use_eng: boolean
     use_audio: boolean
+    notify_tech?: boolean
   },
   filter: ScheduleFilter
 ): boolean {
   if (filter === 'all') return true
   if (schedule.request_type === 'dispatch') {
+    if (schedule.notify_tech && filter === 'tech') return true
     return filter === 'cam'
   }
   if (filter === 'tech') {

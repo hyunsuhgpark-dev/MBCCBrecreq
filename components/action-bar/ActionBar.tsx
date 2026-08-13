@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import {
-  CheckCircle2,
   AlertTriangle,
   Loader2,
   Pencil,
@@ -103,18 +102,6 @@ export default function ActionBar({ schedule, profile, onUpdate }: ActionBarProp
                 {loading && <Loader2 className="w-4 h-4 animate-spin text-amber-300" />}
               </label>
             )}
-          </div>
-        )}
-
-        {!hasConflict && (
-          <div
-            className="flex items-center gap-2 p-4 border rounded-xl"
-            style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)' }}
-          >
-            <CheckCircle2 className="w-5 h-5 text-emerald-300 shrink-0" />
-            <span className="text-emerald-200 font-medium text-sm">
-              {isDispatch ? '배차가 등록되었습니다.' : '이 일정은 확정 공개되었습니다.'}
-            </span>
           </div>
         )}
 

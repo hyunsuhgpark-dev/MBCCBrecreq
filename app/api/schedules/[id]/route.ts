@@ -208,6 +208,7 @@ export async function PATCH(
     notes: existing.notes,
     passenger_count: existing.passenger_count,
     has_luggage: existing.has_luggage,
+    notify_tech: existing.notify_tech,
     ...parsedUpdate.data,
   })
   if (!mergedResult.success) {
