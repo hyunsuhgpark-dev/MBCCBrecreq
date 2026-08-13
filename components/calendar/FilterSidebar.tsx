@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
+import { CALENDAR_ACCENT } from '@/lib/calendar-colors'
 import type { Profile } from '@/lib/types'
 import { VacationUploadModal } from '@/components/calendar/VacationUploadModal'
 import { FileSpreadsheet, RefreshCw } from 'lucide-react'
@@ -169,25 +170,25 @@ export default function FilterSidebar({
             label="중계차"
             checked={filters.relayCar}
             onChange={(v) => set('relayCar', v)}
-            accentColor="#A78BFA"
+            accentColor={CALENDAR_ACCENT.relayCar}
           />
           <CheckboxItem
             label="스튜디오"
             checked={filters.studio}
             onChange={(v) => set('studio', v)}
-            accentColor="#34D399"
+            accentColor={CALENDAR_ACCENT.studio}
           />
           <CheckboxItem
             label="ENG"
             checked={filters.eng}
             onChange={(v) => set('eng', v)}
-            accentColor="#60A5FA"
+            accentColor={CALENDAR_ACCENT.eng}
           />
           <CheckboxItem
             label="AUDIO"
             checked={filters.audio}
             onChange={(v) => set('audio', v)}
-            accentColor="#FBBF24"
+            accentColor={CALENDAR_ACCENT.audio}
           />
         </div>
       </div>
@@ -205,7 +206,7 @@ export default function FilterSidebar({
                 label="배차 정보"
                 checked={filters.dispatch}
                 onChange={(v) => set('dispatch', v)}
-                accentColor="#F472B6"
+                accentColor={CALENDAR_ACCENT.dispatch}
               />
             </div>
           </div>
@@ -227,7 +228,7 @@ export default function FilterSidebar({
                     label="송출/행정"
                     checked={filters.officeCalendar}
                     onChange={(v) => set('officeCalendar', v)}
-                    accentColor="rgba(255,255,255,0.55)"
+                    accentColor={CALENDAR_ACCENT.office}
                   />
                 </div>
                 {filters.officeCalendar && onOfficeRefresh && (
@@ -260,7 +261,7 @@ export default function FilterSidebar({
                 label="휴가 정보"
                 checked={filters.vacation}
                 onChange={(v) => set('vacation', v)}
-                accentColor="#F59E0B"
+                accentColor={CALENDAR_ACCENT.vacation}
               />
               {/* 엑셀 업로드 버튼 */}
               <button
