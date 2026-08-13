@@ -663,12 +663,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
       const alwaysShowOwn = isOwn && profile.role === 'Producer'
 
       // 배차 — 기술국은 숨김. 단, 기술국 알림(사전답사 등)은 중계차 필터로 표시
+      // PD도 배차는 「배차 정보」 체크로만 표시 (본인 일정이라도 해제 시 숨김)
       if (s.request_type === 'dispatch') {
         if (profile.role === 'ENG' || profile.role === 'ENG-M') {
           return Boolean(s.notify_tech) && filters.relayCar
         }
         if (filters.myScheduleOnly && !isOwn) return false
-        if (alwaysShowOwn) return true
         return filters.dispatch
       }
 
