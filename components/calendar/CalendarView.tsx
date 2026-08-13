@@ -614,15 +614,16 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     const rangeStart = viewMode === 'week' ? weekStart
       : viewMode === 'month' ? rollingStart
       : new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
-    const rangeEnd = viewMode === 'week' ? weekEnd
-      : viewMode === 'month' ? rollingEnd
-      : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59)
+    // rollingEnd/weekEnd는 마지막 날 00:00이라 lte(ISO)면 그날 일정이 빠짐
+    const rangeEndExclusive = viewMode === 'week' ? addDays(weekEnd, 1)
+      : viewMode === 'month' ? addDays(rollingEnd, 1)
+      : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)
 
     const { data, error } = await supabase
       .from('schedules')
       .select(`*, creator:profiles!schedules_created_by_fkey(id, full_name, role), approvals(id, part, status, reject_reason)`)
       .gte('broadcast_start', rangeStart.toISOString())
-      .lte('broadcast_start', rangeEnd.toISOString())
+      .lt('broadcast_start', rangeEndExclusive.toISOString())
       .order('broadcast_start', { ascending: true })
 
     if (requestId !== latestRequestIdRef.current) return
@@ -1182,7 +1183,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                       <div className="flex-1 min-w-0 px-5 py-2">
                                         <div className="flex flex-col gap-0.5">
                                           <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="text-[14px] font-semibold leading-snug" style={{ color: getScheduleBorderColor(schedule, profile.role) }}>
+                                            <span className="text-[14px] font-semibold leading-snug" style={{ color: cfg.cardText }}>
                                               {schedule.program_name}
                                             </span>
                                             {schedule.has_conflict && (
@@ -1263,7 +1264,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>불러오는 중...</p>
               </div>
             ) : (
-              <div className={cn('border border-white/[0.15] rounded', isDesktop ? 'flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden' : 'overflow-x-hidden overflow-y-visible')}>
+              <div className={cn('border border-white/[0.15] rounded overflow-hidden', isDesktop && 'flex flex-col flex-1 min-h-0')}>
                 {/* DOW header */}
                 <div className="grid grid-cols-7 border-b border-white/[0.15] shrink-0">
                   {DOW_LABELS.map((label, i) => (
@@ -1286,6 +1287,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   key={format(currentDate, 'yyyy-MM-dd')}
                   className={cn(
                     isDesktop ? 'flex flex-col flex-1 min-h-0' : '',
+                    'overflow-x-hidden',
                     slideDir === 'next' && 'cal-slide-next',
                     slideDir === 'prev' && 'cal-slide-prev',
                   )}
@@ -1308,14 +1310,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                   const dateNumH = isDesktop ? 24 : 21
 
                   return (
-                    <div
-                      key={wIdx}
-                      className="relative overflow-visible"
-                      style={{
-                        ...(isDesktop ? { flex: '1 0 auto', minHeight: 128 } : undefined),
-                        paddingBottom: wIdx === weekRows.length - 1 ? 8 : 0,
-                      }}
-                    >
+                    <div key={wIdx} className={cn('relative', isDesktop && 'flex-1 min-h-0')}>
                       <div className={cn('grid grid-cols-7', isDesktop && 'h-full')}>
                         {wDays.map((day, idx) => {
                           const globalIdx = wIdx * 7 + idx
@@ -1342,7 +1337,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                               key={globalIdx}
                               className="overflow-visible flex flex-col"
                               style={{
-                                minHeight: isDesktop ? '128px' : '96px',
+                                minHeight: isDesktop ? '100px' : '96px',
                                 backgroundColor: isTodayDate ? 'rgba(255,255,255,0.025)' : 'transparent',
                                 borderRight: idx !== 6 ? '1px solid rgba(255,255,255,0.15)' : 'none',
                                 borderBottom: wIdx < weekRows.length - 1 ? '1px solid rgba(255,255,255,0.15)' : 'none',
@@ -1379,7 +1374,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                               )}
 
                               {/* 방송 일정 칩 (상단 영역) — opacity 1 고정 */}
-                              <div className="min-h-0" style={{ padding: isDesktop ? '0 6px 2px' : '0 3px 2px', display: 'flex', flexDirection: 'column', gap: '2px', opacity: 1, overflow: 'visible' }}>
+                              <div className="flex-1 min-h-0" style={{ padding: isDesktop ? '0 6px 2px' : '0 3px 2px', display: 'flex', flexDirection: 'column', gap: '2px', opacity: 1, overflow: 'visible' }}>
                                 {/* 일반 일정 */}
                                 {daySchedules.slice(0, isDesktop ? 4 : 3).map((s) => {
                                   const cfg = getCfg(s.status)
@@ -1400,14 +1395,14 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                   return (
                                     <div
                                       key={cellKey}
-                                      className="relative shrink-0"
+                                      className="relative"
                                       onClick={(e) => e.stopPropagation()}
                                     >
                                       <div
                                         className={cn('cursor-pointer transition-colors hover:bg-white/[0.04] flex items-center gap-0.5 min-w-0')}
                                         style={{
                                           backgroundColor: cfg.cardBg,
-                                          borderLeft: `2px solid ${getScheduleBorderColor(s, profile.role)}`,
+                                          borderLeft: isDesktop ? `2px solid ${getScheduleBorderColor(s, profile.role)}` : 'none',
                                           padding: isDesktop ? '2px 5px' : '2px 4px',
                                         }}
                                         onMouseEnter={() => isDesktop && setHoveredScheduleId(cellKey)}
@@ -1427,7 +1422,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                         <span
                                           className={cn('font-medium min-w-0', isDesktop ? 'truncate' : 'block')}
                                           style={{
-                                            color: getScheduleBorderColor(s, profile.role),
+                                            color: cfg.cardText,
                                             fontSize: isDesktop ? '11px' : '9px',
                                             lineHeight: isDesktop ? '1.35' : '1.25',
                                             ...(isDesktop
@@ -1602,6 +1597,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                         >
                           {schLanes.map((sl) => {
                             const s = sl.schedule
+                            const cfg = getCfg(s.status)
                             const borderColor = getScheduleBorderColor(s, profile.role)
                             // 바 배경: border 색에 불투명도 추가 (투명이면 바가 안보임)
                             const barBg = borderColor + '30'
@@ -1624,7 +1620,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                   borderRadius: 3,
                                   backgroundColor: barBg,
                                   borderLeft: `2px solid ${borderColor}`,
-                                  color: borderColor,
+                                  color: cfg.cardText,
                                   fontSize: 10,
                                   paddingLeft: 5,
                                   paddingRight: 4,
@@ -1786,7 +1782,7 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                   <span className="w-1 h-1 bg-white rounded-full animate-pulse" />LIVE
                                 </span>
                               )}
-                              <h3 className="font-bold truncate text-[14px]" style={{ color: getScheduleBorderColor(schedule, profile.role) }}>
+                              <h3 className="font-bold truncate text-[14px]" style={{ color: cfg.cardText }}>
                                 {schedule.program_name}
                               </h3>
                             </div>

@@ -176,6 +176,9 @@ export async function PATCH(
 
   const force = rawBody.force === true
   const { force: _force, action: _action, ...rest } = rawBody
+  if ('notify_tech' in rest) {
+    rest.notify_tech = rest.notify_tech === true || rest.notify_tech === 'true'
+  }
 
   const parsedUpdate = updateScheduleSchema.safeParse(rest)
   if (!parsedUpdate.success) {
@@ -262,6 +265,16 @@ export async function PATCH(
   if (updateError) {
     console.error('일정 원자적 수정 실패:', updateError)
     return NextResponse.json({ error: '의뢰서 수정에 실패했습니다' }, { status: 500 })
+  }
+
+  if (isDispatch && typeof parsedUpdate.data.notify_tech === 'boolean') {
+    const { error: notifyTechError } = await adminClient
+      .from('schedules')
+      .update({ notify_tech: parsedUpdate.data.notify_tech })
+      .eq('id', id)
+    if (notifyTechError) {
+      console.error('기술국 알림 저장 실패:', notifyTechError)
+    }
   }
 
   await recheckPeers(adminClient, peerIds)

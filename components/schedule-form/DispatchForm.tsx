@@ -120,7 +120,7 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
       notes: values.notes,
       passenger_count: values.passenger_count,
       has_luggage: false,
-      notify_tech: values.notify_tech,
+      notify_tech: values.notify_tech === true,
     }
     await submitDispatch(payload, false)
   }
@@ -324,12 +324,21 @@ export default function DispatchForm({ initialData, scheduleId, prefillDate }: D
             <div className={labelCls} style={cellPad}>기술국 알림</div>
             <div className={cn(valueCls, 'border-l-0 flex items-center')} style={cellPad}>
               <label className="flex items-center gap-3 cursor-pointer select-none py-1">
-                <input
-                  type="checkbox"
-                  {...register('notify_tech')}
-                  className="h-4 w-4 rounded border-[var(--border-default)] accent-violet-400"
+                <Controller
+                  name="notify_tech"
+                  control={control}
+                  render={({ field }) => (
+                    <input
+                      type="checkbox"
+                      checked={!!field.value}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                      className="h-4 w-4 rounded border-[var(--border-default)] accent-violet-400"
+                    />
+                  )}
                 />
-                <span className="text-sm text-[var(--text-primary)]">기술국에도 알리고, 중계차 일정으로 표시</span>
+                <span className="text-sm text-[var(--text-primary)]">기술국에 알리기</span>
               </label>
             </div>
           </div>

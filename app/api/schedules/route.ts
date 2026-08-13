@@ -29,6 +29,9 @@ export async function POST(request: NextRequest) {
   const raw = await request.json() as Record<string, unknown>
   const force = raw.force === true
   const { force: _force, ...rest } = raw
+  if ('notify_tech' in rest) {
+    rest.notify_tech = rest.notify_tech === true || rest.notify_tech === 'true'
+  }
 
   const parsed = createScheduleSchema.safeParse(rest)
   if (!parsed.success) {

@@ -313,7 +313,7 @@ export default function ScheduleDetail({ schedule, profile }: ScheduleDetailProp
             </div>
             <div className="grid grid-cols-[112px_1fr] border-b border-[var(--border-default)]">
               <div className={labelCls}>기술국 알림</div>
-              <div className={valueCls}>{schedule.notify_tech ? '예 (중계차 일정으로 표시)' : '아니오'}</div>
+              <div className={valueCls}>{schedule.notify_tech ? '예' : '아니오'}</div>
             </div>
             </>
             )}
