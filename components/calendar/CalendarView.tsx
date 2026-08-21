@@ -46,6 +46,7 @@ import FilterSidebar, {
   LS_FILTER_KEY,
 } from '@/components/calendar/FilterSidebar'
 import { CALENDAR_ACCENT, RESOURCE_COLORS } from '@/lib/calendar-colors'
+import { DayEventsPopover, buildDayEventItems } from '@/components/calendar/DayEventsPopover'
 
 interface CalendarViewProps {
   profile: Profile
@@ -205,6 +206,12 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   // 월간 뷰 일정 칩 툴팁/팝오버
   const [hoveredScheduleId, setHoveredScheduleId] = useState<string | null>(null)
   const [tappedScheduleId, setTappedScheduleId] = useState<string | null>(null)
+
+  // 월간 "+N건 더" → 당일 전체 일정 팝오버
+  const [dayEventsPopover, setDayEventsPopover] = useState<{
+    date: Date
+    anchorRect: DOMRect | null
+  } | null>(null)
 
   // 마운트 후 실제 화면 크기 반영
   useEffect(() => {
@@ -701,6 +708,23 @@ export default function CalendarView({ profile }: CalendarViewProps) {
     return `${y}-${m}-${d}`
   }
 
+  function openDayEventsPopover(day: Date, anchorEl: HTMLElement) {
+    setDayEventsPopover({
+      date: day,
+      anchorRect: anchorEl.getBoundingClientRect(),
+    })
+  }
+
+  function handleDayPopoverScheduleClick(schedule: Schedule) {
+    setDayEventsPopover(null)
+    router.push(`/schedules/${schedule.id}`)
+  }
+
+  function handleDayPopoverOfficeClick(ev: OfficeEvent) {
+    setDayEventsPopover(null)
+    openOfficeEvent(ev, canEditOffice)
+  }
+
   function openOfficeCreate(date: Date) {
     const ymd = cellDateToYmd(date)
     setOfficeModalEvent(null)
@@ -851,6 +875,17 @@ export default function CalendarView({ profile }: CalendarViewProps) {
   const canCreateRecording = profile.role === 'Producer'
   const canEditOffice = profile.role === 'Admin' || profile.role === 'ENG'
   const displayedSchedules = applyFilters(schedules)
+
+  const dayPopoverItems = dayEventsPopover
+    ? buildDayEventItems(
+        dayEventsPopover.date,
+        getSchedulesForDay(dayEventsPopover.date),
+        getOfficeEventsForDay(dayEventsPopover.date),
+        getVacationsForDay(dayEventsPopover.date),
+        (s) => getScheduleBorderColor(s, profile.role),
+        officeTimeLabel,
+      )
+    : []
 
   return (
     <div className={cn('flex', isDesktop && 'overflow-hidden')} style={{ height: isDesktop ? 'calc(100vh - 56px)' : 'auto' }}>
@@ -1302,6 +1337,17 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                             format(parseISO(s.broadcast_start), 'yyyy-MM-dd') === format(parseISO(s.broadcast_end), 'yyyy-MM-dd')
                           )
                           const officeItems = getOfficeEventsForDay(day)
+                          const cellLimit = isDesktop ? 4 : 3
+                          const cellChipItems = buildDayEventItems(
+                            day,
+                            daySchedules,
+                            officeItems,
+                            [],
+                            (s) => getScheduleBorderColor(s, profile.role),
+                            officeTimeLabel,
+                          )
+                          const visibleCellItems = cellChipItems.slice(0, cellLimit)
+                          const cellOverflow = cellChipItems.length - cellLimit
                           const isInCurrentMonth = isSameMonth(day, currentDate)
                           const isTodayDate = isToday(day)
                           const dow = day.getDay()
@@ -1357,145 +1403,142 @@ export default function CalendarView({ profile }: CalendarViewProps) {
 
                               {/* 방송 일정 칩 (상단 영역) — opacity 1 고정 */}
                               <div className="flex-1 min-h-0" style={{ padding: isDesktop ? '0 6px 2px' : '0 3px 2px', display: 'flex', flexDirection: 'column', gap: '2px', opacity: 1, overflow: 'visible' }}>
-                                {/* 일반 일정 */}
-                                {daySchedules.slice(0, isDesktop ? 4 : 3).map((s) => {
-                                  const cfg = getCfg(s.status)
-                                  const startDt = parseISO(s.broadcast_start)
-                                  const endDt = parseISO(s.broadcast_end)
-                                  // 멀티데이 여부: 시작·종료 날짜가 다르면 날짜 포함 표시
-                                  const isMultiDay = format(startDt, 'yyyy-MM-dd') !== format(endDt, 'yyyy-MM-dd')
-                                  const timeLabel = isMultiDay
-                                    ? `${format(startDt, 'M/d HH:mm')}~${format(endDt, 'M/d HH:mm')}`
-                                    : `${format(startDt, 'HH:mm')}~${format(endDt, 'HH:mm')}`
-                                  // 셀별 고유 키 — 멀티데이 일정이 여러 셀에 렌더될 때 각 셀만 독립 동작
-                                  const cellKey = `${s.id}-${format(day, 'yyyy-MM-dd')}`
-                                  const isHovered = hoveredScheduleId === cellKey
-                                  const isTapped = tappedScheduleId === cellKey
-                                  // 마지막 두 열(토/일)은 툴팁을 왼쪽으로 표시
-                                  const isRightEdge = idx >= 5
+                                {visibleCellItems.map((item) => {
+                                  if (item.kind === 'schedule') {
+                                    const s = item.schedule
+                                    const cfg = getCfg(s.status)
+                                    const startDt = parseISO(s.broadcast_start)
+                                    const endDt = parseISO(s.broadcast_end)
+                                    const isMultiDay = format(startDt, 'yyyy-MM-dd') !== format(endDt, 'yyyy-MM-dd')
+                                    const timeLabel = isMultiDay
+                                      ? `${format(startDt, 'M/d HH:mm')}~${format(endDt, 'M/d HH:mm')}`
+                                      : `${format(startDt, 'HH:mm')}~${format(endDt, 'HH:mm')}`
+                                    const cellKey = `${s.id}-${format(day, 'yyyy-MM-dd')}`
+                                    const isHovered = hoveredScheduleId === cellKey
+                                    const isTapped = tappedScheduleId === cellKey
+                                    const isRightEdge = idx >= 5
 
-                                  return (
-                                    <div
-                                      key={cellKey}
-                                      className="relative"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
+                                    return (
                                       <div
-                                        className={cn('cursor-pointer transition-colors hover:bg-white/[0.04] flex items-center gap-0.5 min-w-0')}
-                                        style={{
-                                          backgroundColor: cfg.cardBg,
-                                          borderLeft: isDesktop ? `2px solid ${getScheduleBorderColor(s, profile.role)}` : 'none',
-                                          padding: isDesktop ? '2px 5px' : '2px 4px',
-                                        }}
-                                        onMouseEnter={() => isDesktop && setHoveredScheduleId(cellKey)}
-                                        onMouseLeave={() => isDesktop && setHoveredScheduleId(null)}
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          if (isDesktop) {
-                                            router.push(`/schedules/${s.id}`)
-                                          } else {
-                                            setTappedScheduleId(isTapped ? null : cellKey)
-                                          }
-                                        }}
+                                        key={cellKey}
+                                        className="relative"
+                                        onClick={(e) => e.stopPropagation()}
                                       >
-                                        {s.has_conflict && (
-                                          <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
-                                        )}
-                                        <span
-                                          className={cn('font-medium min-w-0', isDesktop ? 'truncate' : 'block')}
-                                          style={{
-                                            color: cfg.cardText,
-                                            fontSize: isDesktop ? '11px' : '9px',
-                                            lineHeight: isDesktop ? '1.35' : '1.25',
-                                            ...(isDesktop
-                                              ? {}
-                                              : {
-                                                  display: '-webkit-box',
-                                                  WebkitLineClamp: 2,
-                                                  WebkitBoxOrient: 'vertical' as const,
-                                                  overflow: 'hidden',
-                                                  wordBreak: 'break-all' as const,
-                                                }),
-                                          }}
-                                        >
-                                          {s.program_name}
-                                        </span>
-                                      </div>
-
-                                      {/* PC 호버 툴팁 */}
-                                      {isDesktop && isHovered && (
                                         <div
-                                          className="absolute z-50 rounded shadow-xl pointer-events-none"
+                                          className={cn('cursor-pointer transition-colors hover:bg-white/[0.04] flex items-center gap-0.5 min-w-0')}
                                           style={{
-                                            top: 0,
-                                            ...(isRightEdge
-                                              ? { right: '100%', marginRight: 4 }
-                                              : { left: '100%', marginLeft: 4 }),
-                                            backgroundColor: 'var(--bg-elevated)',
-                                            border: '1px solid rgba(255,255,255,0.12)',
-                                            minWidth: 160,
-                                            padding: '6px 10px',
-                                            whiteSpace: 'nowrap',
+                                            backgroundColor: cfg.cardBg,
+                                            borderLeft: isDesktop ? `2px solid ${getScheduleBorderColor(s, profile.role)}` : 'none',
+                                            padding: isDesktop ? '2px 5px' : '2px 4px',
                                           }}
-                                        >
-                                          <div className="text-[11px] font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
-                                            {s.program_name}
-                                          </div>
-                                          <div className="text-[11px] tabular-nums" style={{ color: '#9CA3AF' }}>
-                                            {timeLabel}
-                                          </div>
-                                          {s.venue && (
-                                            <div className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
-                                              {s.venue}
-                                            </div>
-                                          )}
-                                        </div>
-                                      )}
-
-                                      {/* 모바일 탭 팝오버 */}
-                                      {!isDesktop && isTapped && (
-                                        <div
-                                          className="absolute z-50 rounded shadow-xl"
-                                          style={{
-                                            top: '100%',
-                                            left: 0,
-                                            marginTop: 2,
-                                            backgroundColor: 'var(--bg-elevated)',
-                                            border: '1px solid rgba(255,255,255,0.15)',
-                                            minWidth: 160,
-                                            padding: '8px 12px',
-                                            whiteSpace: 'nowrap',
-                                          }}
+                                          onMouseEnter={() => isDesktop && setHoveredScheduleId(cellKey)}
+                                          onMouseLeave={() => isDesktop && setHoveredScheduleId(null)}
                                           onClick={(e) => {
                                             e.stopPropagation()
-                                            router.push(`/schedules/${s.id}`)
+                                            if (isDesktop) {
+                                              router.push(`/schedules/${s.id}`)
+                                            } else {
+                                              setTappedScheduleId(isTapped ? null : cellKey)
+                                            }
                                           }}
                                         >
-                                          <div className="text-[12px] font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>
-                                            {s.program_name}
-                                          </div>
-                                          <div className="text-[11px] tabular-nums" style={{ color: '#9CA3AF' }}>
-                                            {timeLabel}
-                                          </div>
-                                          {s.venue && (
-                                            <div className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
-                                              {s.venue}
-                                            </div>
+                                          {s.has_conflict && (
+                                            <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
                                           )}
-                                          <div className="text-[10px] mt-2" style={{ color: '#6B7280' }}>
-                                            탭하여 상세보기 →
-                                          </div>
+                                          <span
+                                            className={cn('font-medium min-w-0', isDesktop ? 'truncate' : 'block')}
+                                            style={{
+                                              color: cfg.cardText,
+                                              fontSize: isDesktop ? '11px' : '9px',
+                                              lineHeight: isDesktop ? '1.35' : '1.25',
+                                              ...(isDesktop
+                                                ? {}
+                                                : {
+                                                    display: '-webkit-box',
+                                                    WebkitLineClamp: 2,
+                                                    WebkitBoxOrient: 'vertical' as const,
+                                                    overflow: 'hidden',
+                                                    wordBreak: 'break-all' as const,
+                                                  }),
+                                            }}
+                                          >
+                                            {s.program_name}
+                                          </span>
                                         </div>
-                                      )}
-                                    </div>
-                                  )
-                                })}
 
-                                {/* 송출/행정 칩 */}
-                                {isDesktop && officeItems.slice(0, 1).map((ev) => {
-                                  const timeLbl = officeTimeLabel(ev, day)
+                                        {isDesktop && isHovered && (
+                                          <div
+                                            className="absolute z-50 rounded shadow-xl pointer-events-none"
+                                            style={{
+                                              top: 0,
+                                              ...(isRightEdge
+                                                ? { right: '100%', marginRight: 4 }
+                                                : { left: '100%', marginLeft: 4 }),
+                                              backgroundColor: 'var(--bg-elevated)',
+                                              border: '1px solid rgba(255,255,255,0.12)',
+                                              minWidth: 160,
+                                              padding: '6px 10px',
+                                              whiteSpace: 'nowrap',
+                                            }}
+                                          >
+                                            <div className="text-[11px] font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+                                              {s.program_name}
+                                            </div>
+                                            <div className="text-[11px] tabular-nums" style={{ color: '#9CA3AF' }}>
+                                              {timeLabel}
+                                            </div>
+                                            {s.venue && (
+                                              <div className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
+                                                {s.venue}
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+
+                                        {!isDesktop && isTapped && (
+                                          <div
+                                            className="absolute z-50 rounded shadow-xl"
+                                            style={{
+                                              top: '100%',
+                                              left: 0,
+                                              marginTop: 2,
+                                              backgroundColor: 'var(--bg-elevated)',
+                                              border: '1px solid rgba(255,255,255,0.15)',
+                                              minWidth: 160,
+                                              padding: '8px 12px',
+                                              whiteSpace: 'nowrap',
+                                            }}
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              router.push(`/schedules/${s.id}`)
+                                            }}
+                                          >
+                                            <div className="text-[12px] font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>
+                                              {s.program_name}
+                                            </div>
+                                            <div className="text-[11px] tabular-nums" style={{ color: '#9CA3AF' }}>
+                                              {timeLabel}
+                                            </div>
+                                            {s.venue && (
+                                              <div className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
+                                                {s.venue}
+                                              </div>
+                                            )}
+                                            <div className="text-[10px] mt-2" style={{ color: '#6B7280' }}>
+                                              탭하여 상세보기 →
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )
+                                  }
+
+                                  if (item.kind === 'office') {
+                                    const ev = item.office
+                                    const timeLbl = item.timeLabel
                                   const isOfficeHovered = hoveredScheduleId === `office-${ev.id}`
                                   const isRightEdgeOffice = idx >= 5
+
                                   return (
                                     <div
                                       key={ev.id}
@@ -1504,20 +1547,23 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                     >
                                       <div
                                         className="flex items-center gap-1 cursor-pointer hover:bg-white/[0.04] transition-colors"
-                                        style={{ borderLeft: '2px solid rgba(255,255,255,0.55)', padding: '2px 5px' }}
-                                        onMouseEnter={() => setHoveredScheduleId(`office-${ev.id}`)}
-                                        onMouseLeave={() => setHoveredScheduleId(null)}
+                                        style={{ borderLeft: '2px solid rgba(255,255,255,0.55)', padding: isDesktop ? '2px 5px' : '2px 4px' }}
+                                        onMouseEnter={() => isDesktop && setHoveredScheduleId(`office-${ev.id}`)}
+                                        onMouseLeave={() => isDesktop && setHoveredScheduleId(null)}
                                         onClick={(e) => {
                                           e.stopPropagation()
                                           openOfficeEvent(ev, canEditOffice)
                                         }}
                                       >
-                                        <span className="truncate text-[11px]" style={{ color: CALENDAR_ACCENT.office, fontSize: '11px' }}>
+                                        <span
+                                          className={cn('truncate font-medium', isDesktop ? 'text-[11px]' : 'text-[9px]')}
+                                          style={{ color: CALENDAR_ACCENT.office }}
+                                        >
                                           {ev.title}
                                         </span>
                                       </div>
 
-                                      {isOfficeHovered && (
+                                      {isDesktop && isOfficeHovered && (
                                         <div
                                           className="absolute z-50 rounded shadow-xl pointer-events-none"
                                           style={{
@@ -1552,19 +1598,25 @@ export default function CalendarView({ profile }: CalendarViewProps) {
                                       )}
                                     </div>
                                   )
+                                  }
+
+                                  return null
                                 })}
 
                                 {/* 더보기 */}
-                                {(() => {
-                                  const limit = isDesktop ? 4 : 3
-                                  const over = daySchedules.length + (isDesktop ? officeItems.length : 0) - limit
-                                  if (over <= 0) return null
-                                  return (
-                                    <div style={{ color: 'var(--text-muted)', fontSize: isDesktop ? '11px' : '9px', padding: isDesktop ? '1px 7px' : '0 4px' }}>
-                                      +{over}건 더
-                                    </div>
-                                  )
-                                })()}
+                                {cellOverflow > 0 && (
+                                  <button
+                                    type="button"
+                                    className="text-left w-full cursor-pointer hover:text-[var(--text-primary)] transition-colors"
+                                    style={{ color: 'var(--text-muted)', fontSize: isDesktop ? '11px' : '9px', padding: isDesktop ? '1px 7px' : '0 4px' }}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      openDayEventsPopover(day, e.currentTarget)
+                                    }}
+                                  >
+                                    +{cellOverflow}건 더
+                                  </button>
+                                )}
                               </div>
                             </div>
                           )
@@ -1873,6 +1925,17 @@ export default function CalendarView({ profile }: CalendarViewProps) {
         )}
 
       </div>
+
+      <DayEventsPopover
+        open={dayEventsPopover !== null}
+        onOpenChange={(open) => { if (!open) setDayEventsPopover(null) }}
+        date={dayEventsPopover?.date ?? null}
+        items={dayPopoverItems}
+        isDesktop={isDesktop}
+        anchorRect={dayEventsPopover?.anchorRect ?? null}
+        onScheduleClick={handleDayPopoverScheduleClick}
+        onOfficeClick={handleDayPopoverOfficeClick}
+      />
 
       <OfficeEventModal
         key={
