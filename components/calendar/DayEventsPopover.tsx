@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from
 import { createPortal } from 'react-dom'
 import { format, parseISO, startOfDay } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { AlertTriangle, X } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CALENDAR_ACCENT } from '@/lib/calendar-colors'
 import type { OfficeEvent, Schedule, Vacation } from '@/lib/types'
@@ -56,10 +56,12 @@ const SURFACE_STYLE: CSSProperties = {
   boxShadow: '0 12px 40px rgba(0,0,0,0.45)',
 }
 
-function kindLabel(kind: DayEventListItem['kind']): string {
-  if (kind === 'schedule') return '제작'
-  if (kind === 'office') return '송출/행정'
-  return '휴가'
+const BOX_PAD = '3pt'
+
+const KIND_SORT_ORDER: Record<DayEventListItem['kind'], number> = {
+  schedule: 0,
+  office: 1,
+  vacation: 2,
 }
 
 function EventRow({
@@ -67,117 +69,84 @@ function EventRow({
   onScheduleClick,
   onOfficeClick,
 }: {
-  item: DayEventListItem
+  item: Extract<DayEventListItem, { kind: 'schedule' | 'office' }>
   onScheduleClick: (s: Schedule) => void
   onOfficeClick: (o: OfficeEvent) => void
 }) {
-  const clickable = item.kind !== 'vacation'
+  const borderColor =
+    item.kind === 'schedule' ? item.borderColor : CALENDAR_ACCENT.office
+  const textColor =
+    item.kind === 'office' ? CALENDAR_ACCENT.office : 'var(--text-primary)'
 
   return (
     <button
       type="button"
-      disabled={!clickable}
       onClick={() => {
         if (item.kind === 'schedule') onScheduleClick(item.schedule)
-        if (item.kind === 'office') onOfficeClick(item.office)
+        else onOfficeClick(item.office)
       }}
-      className={cn(
-        'w-full text-left flex items-start gap-2.5 rounded-md px-2.5 py-2 transition-colors',
-        clickable ? 'cursor-pointer hover:bg-white/[0.06]' : 'cursor-default',
-      )}
+      className="w-full text-left flex items-center gap-2 py-0.5 cursor-pointer hover:bg-white/[0.06] transition-colors rounded-sm"
     >
       <div
-        className="w-[3px] self-stretch shrink-0 rounded-full mt-0.5"
-        style={{
-          backgroundColor:
-            item.kind === 'schedule'
-              ? item.borderColor
-              : item.kind === 'office'
-                ? CALENDAR_ACCENT.office
-                : CALENDAR_ACCENT.vacation,
-        }}
+        className="w-[3px] h-[15px] shrink-0 rounded-full"
+        style={{ backgroundColor: borderColor }}
       />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span
-            className="text-[10px] shrink-0 px-1 py-0.5 rounded"
-            style={{
-              backgroundColor: 'rgba(255,255,255,0.06)',
-              color: 'var(--text-muted)',
-            }}
-          >
-            {kindLabel(item.kind)}
-          </span>
-          {item.kind === 'schedule' && item.schedule.has_conflict && (
-            <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
-          )}
-          <span
-            className="text-[13px] font-medium truncate"
-            style={{
-              color:
-                item.kind === 'office'
-                  ? CALENDAR_ACCENT.office
-                  : item.kind === 'vacation'
-                    ? CALENDAR_ACCENT.vacation
-                    : 'var(--text-primary)',
-            }}
-          >
-            {item.title}
-          </span>
-        </div>
-        <div className="text-[11px] tabular-nums mt-0.5" style={{ color: '#9CA3AF' }}>
-          {item.timeLabel}
-        </div>
+      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+        {item.kind === 'schedule' && item.schedule.has_conflict && (
+          <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
+        )}
+        <span className="text-[13px] font-medium truncate" style={{ color: textColor }}>
+          {item.title}
+        </span>
       </div>
     </button>
   )
 }
 
 function PopoverBody({
-  date,
   items,
-  onClose,
   onScheduleClick,
   onOfficeClick,
 }: {
-  date: Date
   items: DayEventListItem[]
-  onClose: () => void
   onScheduleClick: (s: Schedule) => void
   onOfficeClick: (o: OfficeEvent) => void
 }) {
-  const header = format(date, 'M월 d일 (EEE) 일정 목록', { locale: ko })
+  const eventItems = items.filter(
+    (item): item is Extract<DayEventListItem, { kind: 'schedule' | 'office' }> =>
+      item.kind !== 'vacation',
+  )
+  const vacationNames = items
+    .filter((item): item is Extract<DayEventListItem, { kind: 'vacation' }> => item.kind === 'vacation')
+    .map((item) => item.title)
+
+  if (eventItems.length === 0 && vacationNames.length === 0) return null
 
   return (
-    <>
-      <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-white/[0.08] shrink-0">
-        <h3 className="text-[13px] font-semibold text-[var(--text-primary)]">{header}</h3>
-        <button
-          type="button"
-          aria-label="닫기"
-          onClick={onClose}
-          className="w-7 h-7 flex items-center justify-center rounded text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06] transition-colors"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-      <div className="overflow-y-auto overscroll-contain px-1 py-1.5" style={{ maxHeight: 'min(360px, 60vh)' }}>
-        {items.length === 0 ? (
-          <p className="text-center text-sm py-6" style={{ color: 'var(--text-muted)' }}>
-            표시할 일정이 없습니다.
-          </p>
-        ) : (
-          items.map((item) => (
-            <EventRow
-              key={`${item.kind}-${item.id}`}
-              item={item}
-              onScheduleClick={onScheduleClick}
-              onOfficeClick={onOfficeClick}
-            />
-          ))
-        )}
-      </div>
-    </>
+    <div
+      className="overflow-y-auto overscroll-contain flex flex-col gap-0.5"
+      style={{ padding: BOX_PAD, maxHeight: 'min(360px, 60vh)' }}
+    >
+      {eventItems.map((item) => (
+        <EventRow
+          key={`${item.kind}-${item.id}`}
+          item={item}
+          onScheduleClick={onScheduleClick}
+          onOfficeClick={onOfficeClick}
+        />
+      ))}
+      {vacationNames.length > 0 && (
+        <div className="flex items-center gap-2 py-0.5">
+          <div
+            className="w-[3px] h-[15px] shrink-0 rounded-full"
+            style={{ backgroundColor: CALENDAR_ACCENT.vacation }}
+          />
+          <span className="text-[13px] leading-snug truncate" style={{ color: CALENDAR_ACCENT.vacation }}>
+            {vacationNames.join(', ')}
+          </span>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -247,9 +216,7 @@ function DesktopFloatingPopover({
         onClick={(e) => e.stopPropagation()}
       >
         <PopoverBody
-          date={date}
           items={items}
-          onClose={() => onOpenChange(false)}
           onScheduleClick={onScheduleClick}
           onOfficeClick={onOfficeClick}
         />
@@ -280,11 +247,9 @@ export function DayEventsPopover(props: DayEventsPopoverProps) {
             {date ? format(date, 'M월 d일 일정 목록', { locale: ko }) : '일정 목록'}
           </DialogTitle>
         </DialogHeader>
-        {date && (
+        {date && items.length > 0 && (
           <PopoverBody
-            date={date}
             items={items}
-            onClose={() => onOpenChange(false)}
             onScheduleClick={onScheduleClick}
             onOfficeClick={onOfficeClick}
           />
@@ -295,7 +260,7 @@ export function DayEventsPopover(props: DayEventsPopoverProps) {
   )
 }
 
-/** 당일 제작·송출/행정·휴가를 시간순으로 정렬 */
+/** 당일 제작 → 송출/행정(시간순) → 휴가(맨 아래 이름 나열용) */
 export function buildDayEventItems(
   day: Date,
   schedules: Schedule[],
@@ -334,7 +299,7 @@ export function buildDayEventItems(
 
   for (const ev of officeEvents) {
     const sortKey =
-      ev.all_day || !ev.start_at ? dayStart - 1 : parseISO(ev.start_at).getTime()
+      ev.all_day || !ev.start_at ? dayStart : parseISO(ev.start_at).getTime()
     sorted.push({
       sortKey,
       tie: tie++,
@@ -349,7 +314,6 @@ export function buildDayEventItems(
   }
 
   for (const v of vacations) {
-    const timeLabel = v.half_day ? v.half_day : '종일'
     sorted.push({
       sortKey: dayStart,
       tie: tie++,
@@ -357,12 +321,17 @@ export function buildDayEventItems(
         kind: 'vacation',
         id: v.id,
         title: v.name,
-        timeLabel,
+        timeLabel: v.half_day ?? '종일',
         vacation: v,
       },
     })
   }
 
-  sorted.sort((a, b) => a.sortKey - b.sortKey || a.tie - b.tie)
+  sorted.sort((a, b) => {
+    const kindDiff = KIND_SORT_ORDER[a.item.kind] - KIND_SORT_ORDER[b.item.kind]
+    if (kindDiff !== 0) return kindDiff
+    return a.sortKey - b.sortKey || a.tie - b.tie
+  })
+
   return sorted.map((x) => x.item)
 }
